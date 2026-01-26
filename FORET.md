@@ -139,6 +139,8 @@ poker-coach/
     │   │   └── seed.ts         # Sample data
     │   └── src/
     │       ├── index.ts        # Express server entry
+    │       ├── lib/
+    │       │   └── prisma.ts   # PrismaClient singleton
     │       ├── middleware/
     │       │   └── auth.ts     # Clerk JWT verification
     │       ├── routes/
@@ -188,6 +190,8 @@ poker-coach/
 |------|-----|----------|
 | 2026-01-27 | Answer submission took 5-10 seconds | Parallelized DB queries with `Promise.all()` and moved achievement checking to background |
 | 2026-01-27 | Module showed "In Progress" even after completing with 100% | Changed from stored status to dynamic calculation based on accuracy |
+| 2026-01-27 | **SECURITY**: User sync endpoint had no authentication | Added `requireAuth` middleware; userId now comes from verified JWT token, not request body |
+| 2026-01-27 | Multiple PrismaClient instances (7 total) causing connection pool issues | Created singleton in `src/lib/prisma.ts`, updated all files to import from there |
 
 ### Lessons Learned
 
@@ -198,6 +202,10 @@ poker-coach/
 3. **Dynamic status > stored status** - Originally, module status was stored in the database and only updated on specific events. This led to stale states. Calculating status dynamically from accuracy data ensures it's always correct.
 
 4. **Optimistic patterns aren't always necessary** - With fast enough backend responses, you don't need complex optimistic UI updates. Focus on making the server fast first.
+
+5. **Never trust request body for user identity** - Always get the userId from the verified JWT token (set by auth middleware), never from `req.body`. An attacker could impersonate any user by sending a fake userId in the body.
+
+6. **Use a PrismaClient singleton** - Creating `new PrismaClient()` in every file creates multiple connection pools, which exhausts database connections. Create one instance in `lib/prisma.ts` and import it everywhere.
 
 ## Potential Pitfalls
 

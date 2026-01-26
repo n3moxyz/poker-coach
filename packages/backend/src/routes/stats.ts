@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { requireAuth } from '../middleware/auth.js';
+import prisma from '../lib/prisma.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Get user's detailed statistics
 router.get('/', requireAuth, async (req: Request, res: Response) => {

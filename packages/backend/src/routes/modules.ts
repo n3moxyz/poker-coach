@@ -1,10 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { requireAuth } from '../middleware/auth.js';
 import { ensureUserExists } from '../services/userService.js';
+import prisma from '../lib/prisma.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Get all modules with user progress
 router.get('/', requireAuth, async (req: Request, res: Response) => {

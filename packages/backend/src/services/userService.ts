@@ -1,6 +1,4 @@
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import prisma from '../lib/prisma.js';
 
 // Ensure user exists before creating related records
 export async function ensureUserExists(userId: string): Promise<void> {

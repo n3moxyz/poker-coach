@@ -1,13 +1,12 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { requireAuth } from '../middleware/auth.js';
 import { calculateXp, hasAnsweredToday, updateUserXp, getLevelFromXp } from '../services/xpService.js';
 import { updateStreak, getStreak } from '../services/streakService.js';
 import { checkAndAwardAchievements } from '../services/achievementService.js';
 import { ensureUserExists } from '../services/userService.js';
+import prisma from '../lib/prisma.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 const MASTERY_THRESHOLD = 80; // 80% accuracy required
 const MASTERY_MIN_QUESTIONS = 20;

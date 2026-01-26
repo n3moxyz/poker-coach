@@ -1,8 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { PrismaClient } from '@prisma/client';
 
+import prisma from './lib/prisma.js';
+import { requireAuth } from './middleware/auth.js';
 import modulesRouter from './routes/modules.js';
 import progressRouter from './routes/progress.js';
 import achievementsRouter from './routes/achievements.js';
@@ -13,7 +14,6 @@ import placementTestRouter from './routes/placementTest.js';
 dotenv.config();
 
 const app = express();
-const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
@@ -51,29 +51,44 @@ app.use('/api/achievements', achievementsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/placement-test', placementTestRouter);
 
-// User sync endpoint (called after Clerk auth)
-app.post('/api/users/sync', express.json(), async (req, res) => {
+// User sync endpoint - SECURED with Clerk token verification
+// userId comes from the verified JWT token, not the request body
+app.post('/api/users/sync', requireAuth, async (req, res) => {
   try {
-    const { userId, email, name, avatarUrl } = req.body;
+    // Get userId from verified token (set by requireAuth middleware)
+    const userId = req.auth!.userId;
 
-    if (!userId || !email) {
-      res.status(400).json({ error: 'userId and email are required' });
-      return;
+    // Get optional profile data from body (email, name, avatarUrl come from Clerk)
+    const { email, name, avatarUrl } = req.body;
+
+    // Validate email format if provided
+    if (email && typeof email === 'string') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        res.status(400).json({ error: 'Invalid email format' });
+        return;
+      }
     }
+
+    // Sanitize string inputs to prevent XSS
+    const sanitizedName = typeof name === 'string' ? name.slice(0, 255) : null;
+    const sanitizedAvatarUrl = typeof avatarUrl === 'string' && avatarUrl.startsWith('https://')
+      ? avatarUrl.slice(0, 2048)
+      : null;
 
     // Upsert user
     const user = await prisma.user.upsert({
       where: { id: userId },
       create: {
         id: userId,
-        email,
-        name,
-        avatarUrl,
+        email: email || `${userId}@clerk.user`,
+        name: sanitizedName,
+        avatarUrl: sanitizedAvatarUrl,
       },
       update: {
-        email,
-        name,
-        avatarUrl,
+        ...(email && { email }),
+        ...(sanitizedName && { name: sanitizedName }),
+        ...(sanitizedAvatarUrl && { avatarUrl: sanitizedAvatarUrl }),
       },
     });
 
@@ -93,7 +108,6 @@ app.post('/api/users/sync', express.json(), async (req, res) => {
 
     // Check if user needs placement test
     const needsPlacementTest = !user.placementTestCompleted;
-    console.log('User sync:', { userId, placementTestCompleted: user.placementTestCompleted, needsPlacementTest });
 
     // Only initialize first module if placement test is completed
     // (Placement test handles module unlocking for new users)

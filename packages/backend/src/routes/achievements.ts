@@ -1,10 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { requireAuth } from '../middleware/auth.js';
 import { getUserAchievements } from '../services/achievementService.js';
+import prisma from '../lib/prisma.js';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Get all achievements with user's unlock status
 router.get('/', requireAuth, async (req: Request, res: Response) => {
