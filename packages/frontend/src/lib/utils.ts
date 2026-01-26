@@ -59,6 +59,8 @@ export function getStatusColor(status: string): string {
   switch (status) {
     case 'MASTERED':
       return 'text-gold';
+    case 'COMPLETED':
+      return 'text-green-400';
     case 'IN_PROGRESS':
       return 'text-blue-400';
     case 'UNLOCKED':
@@ -75,6 +77,8 @@ export function getStatusLabel(status: string): string {
   switch (status) {
     case 'MASTERED':
       return 'Mastered';
+    case 'COMPLETED':
+      return 'Completed';
     case 'IN_PROGRESS':
       return 'In Progress';
     case 'UNLOCKED':

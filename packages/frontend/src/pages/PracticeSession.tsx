@@ -1,12 +1,36 @@
 import { useState, useEffect, useCallback, memo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, Zap, Trophy, ArrowRight } from 'lucide-react';
-import { useQuestions, useSubmitAnswer } from '@/hooks/useApi';
+import { ArrowLeft, CheckCircle, XCircle, Zap, Trophy, ArrowRight, Lightbulb, SkipForward } from 'lucide-react';
+import { useQuestions, useSubmitAnswer, useCompleteSession } from '@/hooks/useApi';
 import { cn, formatXp } from '@/lib/utils';
 import type { Question, AnswerResult } from '@/lib/api';
 import PlayingCard from '@/components/games/PlayingCard';
 
 const QUESTIONS_PER_SESSION = 10;
+
+// Generate contextual hints based on question type
+function getHintForQuestion(question: Question): string {
+  const content = question.content as Record<string, unknown>;
+
+  switch (question.type) {
+    case 'HAND_COMPARE':
+      return "Remember the hand rankings from highest to lowest: Royal Flush, Straight Flush, Four of a Kind, Full House, Flush, Straight, Three of a Kind, Two Pair, One Pair, High Card.";
+    case 'POSITION_ID':
+      return "Positions at the table go clockwise: Small Blind, Big Blind, Under the Gun (UTG), Middle Position (MP), Cutoff (CO), Button (BTN). The button is the best position because you act last.";
+    case 'ODDS_CALC':
+      return "Pot odds = (Cost to Call) / (Pot + Cost to Call). Compare this to your winning chances. If pot odds are better than your hand odds, it's mathematically correct to call.";
+    case 'PREFLOP':
+      return "In early position, play tight (only premium hands). In late position, you can play more hands. Suited connectors and pocket pairs gain value in late position.";
+    case 'SCENARIO':
+      return "Consider your position, stack sizes, and opponent tendencies. Think about what hands beat you and what you beat.";
+    default:
+      // Generic hint based on content
+      if (content.hint) {
+        return content.hint as string;
+      }
+      return "Take your time and consider all the options carefully. Think about the fundamental concepts you've learned.";
+  }
+}
 
 interface SessionState {
   currentIndex: number;
@@ -14,6 +38,7 @@ interface SessionState {
     questionId: string;
     answer: string;
     result: AnswerResult | null;
+    skipped?: boolean;
   }>;
   isComplete: boolean;
 }
@@ -22,6 +47,7 @@ export default function PracticeSession() {
   const { slug } = useParams<{ slug: string }>();
   const { data, isLoading, error } = useQuestions(slug || '', QUESTIONS_PER_SESSION);
   const submitAnswer = useSubmitAnswer();
+  const completeSession = useCompleteSession();
 
   const [session, setSession] = useState<SessionState>({
     currentIndex: 0,
@@ -32,10 +58,12 @@ export default function PracticeSession() {
   const [showResult, setShowResult] = useState(false);
   const [currentResult, setCurrentResult] = useState<AnswerResult | null>(null);
   const [startTime, setStartTime] = useState<number>(Date.now());
+  const [showHint, setShowHint] = useState(false);
 
-  // Reset start time when moving to next question
+  // Reset start time and hint when moving to next question
   useEffect(() => {
     setStartTime(Date.now());
+    setShowHint(false);
   }, [session.currentIndex]);
 
   const currentQuestion = data?.questions[session.currentIndex];
@@ -81,6 +109,30 @@ export default function PracticeSession() {
       setCurrentResult(null);
     }
   }, [session.currentIndex, data?.questions.length]);
+
+  const handleSkip = useCallback(() => {
+    if (showResult || submitAnswer.isPending) return;
+    if (!currentQuestion) return;
+
+    // Record as skipped (counts as incorrect)
+    setSession((prev) => ({
+      ...prev,
+      answers: [
+        ...prev.answers,
+        { questionId: currentQuestion.id, answer: '', result: null, skipped: true },
+      ],
+    }));
+
+    // Move to next question
+    if (session.currentIndex >= (data?.questions.length || 0) - 1) {
+      setSession((prev) => ({ ...prev, isComplete: true }));
+    } else {
+      setSession((prev) => ({ ...prev, currentIndex: prev.currentIndex + 1 }));
+      setSelectedAnswer(null);
+      setShowResult(false);
+      setCurrentResult(null);
+    }
+  }, [showResult, submitAnswer.isPending, currentQuestion, session.currentIndex, data?.questions.length]);
 
   if (isLoading) {
     return <PracticeSessionSkeleton />;
@@ -222,12 +274,50 @@ export default function PracticeSession() {
         </div>
       )}
 
-      {/* Action button */}
+      {/* Action buttons */}
       {submitAnswer.isPending && (
         <div className="text-center py-4 text-muted-foreground">
           Checking...
         </div>
       )}
+
+      {/* Hint and Skip buttons - show when not answered yet */}
+      {!showResult && !submitAnswer.isPending && (
+        <div className="flex gap-3 mb-4">
+          <button
+            onClick={() => setShowHint(!showHint)}
+            className={cn(
+              "flex-1 py-3 rounded-lg border-2 transition-all flex items-center justify-center gap-2",
+              showHint
+                ? "border-yellow-500/50 bg-yellow-500/10 text-yellow-400"
+                : "border-border hover:border-border-light text-muted-foreground hover:text-white"
+            )}
+          >
+            <Lightbulb className="w-4 h-4" />
+            {showHint ? 'Hide Hint' : 'Show Hint'}
+          </button>
+          <button
+            onClick={handleSkip}
+            className="flex-1 py-3 rounded-lg border-2 border-border hover:border-border-light text-muted-foreground hover:text-white transition-all flex items-center justify-center gap-2"
+          >
+            <SkipForward className="w-4 h-4" />
+            Skip Question
+          </button>
+        </div>
+      )}
+
+      {/* Hint display */}
+      {showHint && !showResult && currentQuestion && (
+        <div className="card border-yellow-500/30 bg-yellow-500/5 mb-4">
+          <div className="flex items-start gap-2">
+            <Lightbulb className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+            <p className="text-yellow-200/80 text-sm">
+              {getHintForQuestion(currentQuestion)}
+            </p>
+          </div>
+        </div>
+      )}
+
       {showResult && (
         <button onClick={handleNext} className="btn-primary w-full py-4 text-lg">
           {session.currentIndex >= data.questions.length - 1 ? (
@@ -358,15 +448,27 @@ const QuestionDisplay = memo(function QuestionDisplay({
 interface SessionSummaryProps {
   moduleName: string;
   slug: string;
-  answers: Array<{ questionId: string; answer: string; result: AnswerResult | null }>;
+  answers: Array<{ questionId: string; answer: string; result: AnswerResult | null; skipped?: boolean }>;
 }
 
 function SessionSummary({ moduleName, slug, answers }: SessionSummaryProps) {
   const navigate = useNavigate();
+  const completeSession = useCompleteSession();
 
   const totalCorrect = answers.filter((a) => a.result?.isCorrect).length;
+  const totalSkipped = answers.filter((a) => a.skipped).length;
+  const totalAnswered = answers.length - totalSkipped;
   const totalXp = answers.reduce((sum, a) => sum + (a.result?.xp.earned || 0), 0);
-  const accuracy = Math.round((totalCorrect / answers.length) * 100);
+  const accuracy = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
+
+  // Mark session as complete on mount
+  useEffect(() => {
+    completeSession.mutate({
+      moduleSlug: slug,
+      correctCount: totalCorrect,
+      totalCount: answers.length,
+    });
+  }, []);
 
   return (
     <div className="md:ml-64 pb-20 md:pb-6">
@@ -377,7 +479,7 @@ function SessionSummary({ moduleName, slug, answers }: SessionSummaryProps) {
 
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="card text-center">
-          <div className="text-3xl font-bold text-green-400">{totalCorrect}</div>
+          <div className="text-3xl font-bold text-green-400">{totalCorrect}/{answers.length}</div>
           <div className="text-sm text-muted-foreground">Correct</div>
         </div>
         <div className="card text-center">
@@ -390,6 +492,12 @@ function SessionSummary({ moduleName, slug, answers }: SessionSummaryProps) {
         </div>
       </div>
 
+      {totalSkipped > 0 && (
+        <div className="card mb-4 text-center">
+          <span className="text-yellow-400">{totalSkipped} question{totalSkipped > 1 ? 's' : ''} skipped</span>
+        </div>
+      )}
+
       {/* Answer breakdown */}
       <div className="card mb-6">
         <h2 className="text-lg font-semibold text-white mb-4">Results</h2>
@@ -399,10 +507,27 @@ function SessionSummary({ moduleName, slug, answers }: SessionSummaryProps) {
               key={i}
               className={cn(
                 'flex-1 h-2 rounded-full',
-                answer.result?.isCorrect ? 'bg-green-500' : 'bg-red-500'
+                answer.skipped
+                  ? 'bg-yellow-500'
+                  : answer.result?.isCorrect
+                  ? 'bg-green-500'
+                  : 'bg-red-500'
               )}
             />
           ))}
+        </div>
+        <div className="flex gap-4 mt-3 text-xs text-muted-foreground justify-center">
+          <span className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-green-500" /> Correct
+          </span>
+          <span className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-red-500" /> Incorrect
+          </span>
+          {totalSkipped > 0 && (
+            <span className="flex items-center gap-1">
+              <div className="w-3 h-3 rounded-full bg-yellow-500" /> Skipped
+            </span>
+          )}
         </div>
       </div>
 

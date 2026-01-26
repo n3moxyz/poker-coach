@@ -84,14 +84,18 @@ router.post('/answer', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
-    // Ensure user exists before creating records
+    // Ensure user exists first (required for foreign key constraints)
     await ensureUserExists(userId);
 
-    // Get the question with correct answer
-    const question = await prisma.question.findUnique({
-      where: { id: questionId },
-      include: { module: true },
-    });
+    // Run remaining queries in parallel for speed
+    const [question, answeredToday, streakUpdate] = await Promise.all([
+      prisma.question.findUnique({
+        where: { id: questionId },
+        include: { module: true },
+      }),
+      hasAnsweredToday(prisma, userId),
+      updateStreak(prisma, userId),
+    ]);
 
     if (!question) {
       res.status(404).json({ error: 'Question not found' });
@@ -102,10 +106,7 @@ router.post('/answer', requireAuth, async (req: Request, res: Response) => {
     const isCorrect = answer.toString().toLowerCase() === question.correctAnswer.toLowerCase();
 
     // Check if first answer today
-    const isFirstToday = !(await hasAnsweredToday(prisma, userId));
-
-    // Update streak
-    const streakUpdate = await updateStreak(prisma, userId);
+    const isFirstToday = !answeredToday;
 
     // Calculate XP earned (only for correct answers)
     let xpResult = { totalXp: 0, breakdown: { base: 0, difficultyBonus: 0, streakBonus: 0, dailyBonus: 0 } };
@@ -240,23 +241,28 @@ router.post('/answer', requireAuth, async (req: Request, res: Response) => {
       };
     });
 
-    // Get updated stats for level calculation
+    // Get updated stats for level calculation (include in same query batch)
     const updatedStats = await prisma.userStats.findUnique({
       where: { userId },
     });
 
-    const newLevel = getLevelFromXp(updatedStats?.totalXp || 0);
+    const currentTotalXp = (updatedStats?.totalXp || 0) + result.masteryBonus;
+    const newLevel = getLevelFromXp(currentTotalXp);
     const leveledUp = newLevel > (updatedStats?.level || 1);
 
+    // Update level if needed (don't await - not critical for response)
     if (leveledUp) {
-      await prisma.userStats.update({
+      prisma.userStats.update({
         where: { userId },
         data: { level: newLevel },
-      });
+      }).catch(err => console.error('Failed to update level:', err));
     }
 
-    // Check for new achievements
-    const newAchievements = await checkAndAwardAchievements(prisma, userId);
+    // Check for achievements in background (don't block response)
+    // Users will see new achievements on achievements page or next answer
+    checkAndAwardAchievements(prisma, userId).catch(err =>
+      console.error('Failed to check achievements:', err)
+    );
 
     res.json({
       isCorrect,
@@ -266,7 +272,7 @@ router.post('/answer', requireAuth, async (req: Request, res: Response) => {
         earned: xpResult.totalXp,
         breakdown: xpResult.breakdown,
         masteryBonus: result.masteryBonus,
-        total: (updatedStats?.totalXp || 0) + result.masteryBonus,
+        total: currentTotalXp,
       },
       streak: {
         current: streakUpdate.currentStreak,
@@ -280,17 +286,82 @@ router.post('/answer', requireAuth, async (req: Request, res: Response) => {
         questionsToMastery: Math.max(0, MASTERY_MIN_QUESTIONS - (result.progress.totalAnswers + 1)),
       },
       levelUp: leveledUp ? { newLevel } : null,
-      achievements: newAchievements.map((a) => ({
-        name: a.name,
-        description: a.description,
-        rarity: a.rarity,
-        xpReward: a.xpReward,
-        iconEmoji: a.iconEmoji,
-      })),
+      achievements: [], // Achievements processed in background
     });
   } catch (error) {
     console.error('Error submitting answer:', error);
     res.status(500).json({ error: 'Failed to submit answer' });
+  }
+});
+
+// Complete a practice session
+router.post('/complete-session', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.auth!.userId;
+    const { moduleSlug, correctCount, totalCount } = req.body;
+
+    console.log('Complete session called:', { moduleSlug, correctCount, totalCount });
+
+    if (!moduleSlug || correctCount === undefined || totalCount === undefined) {
+      res.status(400).json({ error: 'moduleSlug, correctCount, and totalCount are required' });
+      return;
+    }
+
+    // Get the module
+    const module = await prisma.module.findUnique({
+      where: { slug: moduleSlug },
+    });
+
+    if (!module) {
+      res.status(404).json({ error: 'Module not found' });
+      return;
+    }
+
+    // Get current progress
+    const progress = await prisma.userProgress.findUnique({
+      where: {
+        userId_moduleId: { userId, moduleId: module.id },
+      },
+    });
+
+    if (!progress) {
+      res.status(404).json({ error: 'No progress found for this module' });
+      return;
+    }
+
+    // Don't downgrade from MASTERED
+    if (progress.status === 'MASTERED') {
+      res.json({ status: 'MASTERED', message: 'Already mastered' });
+      return;
+    }
+
+    // Calculate session accuracy
+    const sessionAccuracy = totalCount > 0 ? (correctCount / totalCount) * 100 : 0;
+
+    // Determine new status based on session performance
+    // COMPLETED if >=50% correct, otherwise stays IN_PROGRESS
+    let newStatus = progress.status;
+    if (sessionAccuracy >= 50) {
+      newStatus = 'COMPLETED';
+    }
+
+    // Update progress
+    await prisma.userProgress.update({
+      where: { id: progress.id },
+      data: { status: newStatus },
+    });
+
+    console.log('Session completed:', { moduleSlug, oldStatus: progress.status, newStatus, sessionAccuracy });
+
+    res.json({
+      status: newStatus,
+      sessionAccuracy: Math.round(sessionAccuracy),
+      correctCount,
+      totalCount,
+    });
+  } catch (error) {
+    console.error('Error completing session:', error);
+    res.status(500).json({ error: 'Failed to complete session' });
   }
 });
 

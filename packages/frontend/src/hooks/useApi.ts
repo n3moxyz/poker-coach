@@ -103,6 +103,31 @@ export function useSubmitAnswer() {
   });
 }
 
+export function useCompleteSession() {
+  const getToken = useApiToken();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      moduleSlug,
+      correctCount,
+      totalCount,
+    }: {
+      moduleSlug: string;
+      correctCount: number;
+      totalCount: number;
+    }) => {
+      const token = await getToken();
+      return api.completeSession(token, moduleSlug, correctCount, totalCount);
+    },
+    onSuccess: () => {
+      // Invalidate modules to reflect new status
+      queryClient.invalidateQueries({ queryKey: ['modules'] });
+      queryClient.invalidateQueries({ queryKey: ['progress'] });
+    },
+  });
+}
+
 // Stats hooks
 export function useStats() {
   const getToken = useApiToken();

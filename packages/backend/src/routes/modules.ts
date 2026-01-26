@@ -38,10 +38,20 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       const userProgress = progressMap.get(module.id);
       const isUnlocked = totalXp >= module.unlockRequirement;
 
-      // Determine status
+      // Determine status based on accuracy
       let status = 'LOCKED';
       if (userProgress) {
-        status = userProgress.status;
+        // Keep MASTERED status (80%+ over 20+ questions)
+        if (userProgress.status === 'MASTERED') {
+          status = 'MASTERED';
+        } else if (userProgress.totalAnswers > 0) {
+          // Calculate accuracy
+          const accuracy = (userProgress.correctAnswers / userProgress.totalAnswers) * 100;
+          // >=70% correct = COMPLETED, <70% = IN_PROGRESS
+          status = accuracy >= 70 ? 'COMPLETED' : 'IN_PROGRESS';
+        } else {
+          status = 'UNLOCKED';
+        }
       } else if (isUnlocked) {
         status = 'UNLOCKED';
       }
@@ -137,6 +147,13 @@ router.get('/:slug', requireAuth, async (req: Request, res: Response) => {
       _count: true,
     });
 
+    // Calculate dynamic status based on accuracy
+    let calculatedStatus = progress.status;
+    if (progress.status !== 'MASTERED' && progress.totalAnswers > 0) {
+      const accuracy = (progress.correctAnswers / progress.totalAnswers) * 100;
+      calculatedStatus = accuracy >= 70 ? 'COMPLETED' : 'IN_PROGRESS';
+    }
+
     res.json({
       module: {
         id: module.id,
@@ -153,7 +170,7 @@ router.get('/:slug', requireAuth, async (req: Request, res: Response) => {
         })),
       },
       progress: {
-        status: progress.status,
+        status: calculatedStatus,
         correctAnswers: progress.correctAnswers,
         totalAnswers: progress.totalAnswers,
         masteryScore: progress.masteryScore,

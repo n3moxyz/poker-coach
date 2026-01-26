@@ -51,7 +51,7 @@ export interface Module {
   unlockRequirement: number;
   iconEmoji: string;
   questionCount: number;
-  status: 'LOCKED' | 'UNLOCKED' | 'IN_PROGRESS' | 'MASTERED';
+  status: 'LOCKED' | 'UNLOCKED' | 'IN_PROGRESS' | 'COMPLETED' | 'MASTERED';
   isUnlocked: boolean;
   progress: {
     correctAnswers: number;
@@ -209,6 +209,16 @@ export const api = {
       token,
       body: JSON.stringify({ questionId, answer, timeSpent }),
     }),
+
+  completeSession: (token: string, moduleSlug: string, correctCount: number, totalCount: number) =>
+    fetchApi<{ status: string; sessionAccuracy: number; correctCount: number; totalCount: number }>(
+      '/progress/complete-session',
+      {
+        method: 'POST',
+        token,
+        body: JSON.stringify({ moduleSlug, correctCount, totalCount }),
+      }
+    ),
 
   // Stats
   getStats: (token: string) =>

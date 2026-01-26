@@ -116,35 +116,22 @@ export default function ModuleList() {
                     <Lock className="w-5 h-5 text-muted" />
                   </div>
                 ) : module.progress ? (
-                  <div className="relative w-12 h-12">
-                    <svg className="w-12 h-12 transform -rotate-90">
-                      <circle
-                        cx="24"
-                        cy="24"
-                        r="20"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        fill="none"
-                        className="text-background-tertiary"
-                      />
-                      <circle
-                        cx="24"
-                        cy="24"
-                        r="20"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        fill="none"
-                        strokeLinecap="round"
-                        strokeDasharray={`${(module.progress.masteryScore / 100) * 125.6} 125.6`}
-                        className={isMastered ? 'text-gold' : 'text-felt-light'}
-                      />
-                    </svg>
-                    <span className={cn(
-                      "absolute inset-0 flex items-center justify-center text-xs font-bold",
-                      isMastered ? "text-gold" : "text-white"
-                    )}>
-                      {isMastered ? '✓' : `${Math.round(module.progress.masteryScore)}%`}
-                    </span>
+                  <div className="flex flex-col items-center justify-center min-w-[48px]">
+                    {isMastered ? (
+                      <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center">
+                        <CheckCircle className="w-6 h-6 text-gold" />
+                      </div>
+                    ) : (
+                      <>
+                        <span className={cn(
+                          "text-lg font-bold",
+                          module.status === 'COMPLETED' ? "text-green-400" : "text-white"
+                        )}>
+                          {module.progress.correctAnswers}/{module.progress.totalAnswers}
+                        </span>
+                        <span className="text-xs text-muted-foreground">correct</span>
+                      </>
+                    )}
                   </div>
                 ) : null}
               </div>
@@ -176,6 +163,10 @@ export default function ModuleList() {
             <span className="text-muted-foreground">In Progress</span>
           </div>
           <div className="flex items-center gap-2">
+            <CheckCircle className="w-4 h-4 text-green-400" />
+            <span className="text-muted-foreground">Completed</span>
+          </div>
+          <div className="flex items-center gap-2">
             <CheckCircle className="w-4 h-4 text-gold" />
             <span className="text-muted-foreground">Mastered</span>
           </div>
@@ -188,6 +179,8 @@ export default function ModuleList() {
 function getStatusIcon(status: string) {
   switch (status) {
     case 'MASTERED':
+      return CheckCircle;
+    case 'COMPLETED':
       return CheckCircle;
     case 'IN_PROGRESS':
       return PlayCircle;
