@@ -1,0 +1,200 @@
+# Poker Coach - FORET.md
+
+> A living document explaining the architecture, decisions, and lessons learned.
+
+## What Is This Project?
+
+Poker Coach is a gamified learning app for Texas Hold'em beginners. Think of it like Duolingo, but for poker. Instead of learning Spanish vocabulary, users practice hand rankings, pot odds, and position play through quick, bite-sized questions.
+
+The app uses a progression system where you unlock new modules as you gain XP from answering questions correctly. Get on a streak, and your XP multiplies. Miss a day, and you might lose that precious streak (unless you have a streak freeze!).
+
+## Architecture Overview
+
+### The Monorepo Approach
+
+We use a simple monorepo with two packages:
+
+```
+packages/
+├── backend/   → Express API (port 3001)
+└── frontend/  → React SPA (port 5173)
+```
+
+Why not a single full-stack framework like Next.js? A few reasons:
+1. **Clear separation** - API and UI concerns stay separate
+2. **Flexibility** - Could swap the frontend without touching backend
+3. **Matches the workspace pattern** - PA-portfolio-dash uses this same structure
+
+### How Data Flows
+
+```
+User → Clerk Auth → React App → API → Prisma → PostgreSQL
+                         ↑
+              React Query caches responses
+```
+
+1. **User authenticates** through Clerk (Google OAuth)
+2. **React app** makes API calls with the Clerk JWT
+3. **Express validates** the JWT via Clerk middleware
+4. **Prisma** handles all database operations
+5. **React Query** caches responses to minimize re-fetching
+
+### The Learning Content Model
+
+Content is structured in a hierarchy:
+
+```
+Module (e.g., "Hand Rankings")
+  └── Question (e.g., "Which hand wins?")
+        ├── content: JSON (flexible per question type)
+        ├── correctAnswer: string
+        └── explanation: string (beginner-friendly)
+```
+
+The `content` field is JSON to support different question types:
+- **HAND_COMPARE**: Two hands, pick the winner
+- **POSITION_ID**: Identify position on the table
+- **ODDS_CALC**: Calculate pot odds
+- **PREFLOP**: Should you call, raise, or fold?
+
+### XP and Gamification
+
+The XP system is designed to reward consistent practice:
+
+```typescript
+// Simplified XP calculation
+function calculateXP(difficulty: number, streak: number, isFirstToday: boolean) {
+  const base = 10;
+  const difficultyMultiplier = [1, 1.5, 2][difficulty - 1];
+  const streakMultiplier = getStreakMultiplier(streak); // 1.0 to 2.5x
+  const dailyBonus = isFirstToday ? 25 : 0;
+
+  return Math.round(base * difficultyMultiplier * streakMultiplier) + dailyBonus;
+}
+```
+
+Streaks are powerful motivators. Miss a day? Your streak resets to zero. But every 7-day streak earns you a "streak freeze" that protects one missed day.
+
+## Technologies Used
+
+### Why These Choices?
+
+| Tech | Why |
+|------|-----|
+| **React + Vite** | Fast dev experience, familiar ecosystem |
+| **Tailwind CSS** | Rapid styling, great for custom themes |
+| **shadcn/ui** | High-quality components, fully customizable |
+| **Express** | Simple, well-understood, easy to debug |
+| **Prisma** | Type-safe database access, great migrations |
+| **Clerk** | Auth is hard; Clerk makes it easy |
+| **PostgreSQL** | Reliable, supports JSON columns for flexible content |
+
+### The Casino Theme
+
+The UI uses a dark casino aesthetic:
+- **Background**: Deep blue-gray (#0f1419)
+- **Felt**: Dark green (#0d3320) for table surfaces
+- **Gold**: (#ffd700) for XP, achievements, highlights
+- **Cards**: White background with red/black suits
+
+This creates an immersive environment that makes practice feel like a game rather than homework.
+
+## Project Structure (Actual)
+
+```
+poker-coach/
+├── CLAUDE.md                   # Project instructions
+├── FORET.md                    # This documentation
+├── .env.example                # Environment template
+├── .gitignore
+└── packages/
+    ├── backend/
+    │   ├── package.json
+    │   ├── tsconfig.json
+    │   ├── .env.example
+    │   ├── prisma/
+    │   │   ├── schema.prisma   # Database models
+    │   │   └── seed.ts         # Sample data
+    │   └── src/
+    │       ├── index.ts        # Express server entry
+    │       ├── middleware/
+    │       │   └── auth.ts     # Clerk JWT verification
+    │       ├── routes/
+    │       │   ├── modules.ts      # Module CRUD + questions
+    │       │   ├── progress.ts     # Answer submission
+    │       │   ├── achievements.ts # Achievement tracking
+    │       │   └── stats.ts        # User stats + leaderboard
+    │       └── services/
+    │           ├── xpService.ts        # XP calculation
+    │           ├── streakService.ts    # Daily streak logic
+    │           └── achievementService.ts
+    └── frontend/
+        ├── package.json
+        ├── vite.config.ts
+        ├── tailwind.config.js
+        ├── tsconfig.json
+        ├── index.html
+        └── src/
+            ├── main.tsx            # React entry
+            ├── App.tsx             # Routes + auth
+            ├── index.css           # Tailwind + custom styles
+            ├── vite-env.d.ts
+            ├── components/
+            │   ├── AppShell.tsx    # Layout + navigation
+            │   └── games/
+            │       └── PlayingCard.tsx
+            ├── hooks/
+            │   └── useApi.ts       # React Query hooks
+            ├── lib/
+            │   ├── api.ts          # API client
+            │   └── utils.ts        # Helpers
+            └── pages/
+                ├── Dashboard.tsx
+                ├── ModuleList.tsx
+                ├── ModuleDetail.tsx
+                ├── PracticeSession.tsx
+                ├── Progress.tsx
+                ├── Achievements.tsx
+                └── Leaderboard.tsx
+```
+
+## Bugs Encountered & Lessons Learned
+
+### Bug Log
+
+*This section will be updated as bugs are discovered and fixed.*
+
+| Date | Bug | Solution |
+|------|-----|----------|
+| - | - | - |
+
+### Lessons Learned
+
+*Insights gained during development.*
+
+1. **TBD** - First lesson will go here
+
+## Potential Pitfalls
+
+### Authentication
+- Clerk tokens expire; handle 401 responses gracefully
+- The Clerk user ID is the primary key in our User table
+
+### XP Calculations
+- Always calculate XP on the server, never trust client
+- Use database transactions when updating XP + streak together
+
+### Question Content
+- JSON content must be validated before saving
+- Keep explanations beginner-friendly (no jargon)
+
+## Future Considerations
+
+- **Mobile app**: React Native could share component logic
+- **Social features**: Challenge friends, share achievements
+- **AI coaching**: Analyze play patterns, suggest focus areas
+- **Real hand history**: Import hands from PokerStars/etc.
+
+---
+
+*Last updated: Initial creation*

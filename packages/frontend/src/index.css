@@ -1,0 +1,434 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Playfair+Display:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-white antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom selection color */
+  ::selection {
+    @apply bg-gold/30 text-white;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border-light/50 rounded-full;
+    transition: background 0.2s;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-felt-light;
+  }
+
+  /* Headings with display font */
+  h1, h2, h3 {
+    @apply font-display tracking-tight;
+  }
+}
+
+/* Component styles */
+@layer components {
+  /* Card component base with enhanced depth */
+  .card {
+    @apply bg-background-secondary border border-border rounded-2xl p-5;
+    @apply shadow-card shadow-inner-glow;
+    @apply transition-all duration-300 ease-out-expo;
+  }
+
+  .card:hover {
+    @apply border-border-light;
+  }
+
+  /* Interactive card with lift effect */
+  .card-interactive {
+    @apply card cursor-pointer;
+  }
+
+  .card-interactive:hover {
+    @apply shadow-card-hover -translate-y-1;
+  }
+
+  /* Button variants with refined styling */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-xl font-semibold;
+    @apply transition-all duration-200 ease-out-expo;
+    @apply focus:outline-none focus:ring-2 focus:ring-gold/50 focus:ring-offset-2 focus:ring-offset-background;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none;
+    @apply active:scale-[0.98];
+  }
+
+  .btn-primary {
+    @apply btn bg-gradient-to-b from-gold to-gold-dark text-black;
+    @apply px-5 py-2.5;
+    @apply shadow-md shadow-gold/20;
+    @apply hover:from-gold-light hover:to-gold hover:shadow-lg hover:shadow-gold/30;
+  }
+
+  .btn-secondary {
+    @apply btn bg-gradient-to-b from-felt to-felt-dark;
+    @apply border border-border-light;
+    @apply px-5 py-2.5 text-white;
+    @apply hover:from-felt-light hover:to-felt hover:border-felt-light;
+  }
+
+  .btn-ghost {
+    @apply btn hover:bg-background-tertiary;
+    @apply px-4 py-2 text-muted-foreground hover:text-white;
+  }
+
+  /* Felt table background with noise texture overlay */
+  .felt-bg {
+    @apply relative overflow-hidden;
+    background: radial-gradient(ellipse at 30% 20%, #145a38 0%, #0d3320 40%, #071a11 100%);
+  }
+
+  .felt-bg::before {
+    content: '';
+    @apply absolute inset-0 opacity-[0.15] pointer-events-none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+
+  /* XP badge with shimmer effect */
+  .xp-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full;
+    @apply bg-gradient-to-r from-gold/20 to-gold/10;
+    @apply text-gold text-sm font-semibold;
+    @apply border border-gold/20;
+    @apply shadow-sm shadow-gold/10;
+  }
+
+  .xp-badge-animated {
+    @apply xp-badge animate-xp-pop;
+  }
+
+  /* Streak badge with fire effect */
+  .streak-badge {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full;
+    @apply bg-gradient-to-r from-orange-500/20 to-red-500/20;
+    @apply text-orange-400 font-semibold;
+    @apply border border-orange-500/30;
+  }
+
+  /* Module card with enhanced states */
+  .module-card {
+    @apply card-interactive;
+  }
+
+  .module-card:not(.locked):hover {
+    @apply shadow-glow-green;
+  }
+
+  .module-card.locked {
+    @apply opacity-50 cursor-not-allowed;
+    @apply grayscale-[30%];
+  }
+
+  .module-card.mastered {
+    @apply border-gold/40;
+  }
+
+  .module-card.mastered:hover {
+    @apply border-gold/60 shadow-glow-gold;
+  }
+
+  /* Playing card styles with 3D effect */
+  .playing-card {
+    @apply bg-white rounded-lg;
+    @apply flex flex-col items-center justify-between p-2;
+    @apply font-mono text-lg font-bold;
+    @apply shadow-card;
+    @apply transition-transform duration-200 ease-out-expo;
+    transform-style: preserve-3d;
+  }
+
+  .playing-card:hover {
+    @apply -translate-y-1 shadow-card-hover;
+  }
+
+  .playing-card.red {
+    @apply text-card-red;
+  }
+
+  .playing-card.black {
+    @apply text-card-black;
+  }
+
+  /* Progress bar with gradient */
+  .progress-bar {
+    @apply h-2.5 bg-background-tertiary rounded-full overflow-hidden;
+    @apply shadow-inner;
+  }
+
+  .progress-bar-fill {
+    @apply h-full rounded-full;
+    @apply bg-gradient-to-r from-felt-light via-emerald-500 to-gold;
+    @apply transition-all duration-700 ease-out-expo;
+    background-size: 200% 100%;
+  }
+
+  /* Achievement badge with rarity glow */
+  .achievement-badge {
+    @apply relative p-5 rounded-2xl border;
+    @apply transition-all duration-300 ease-out-expo;
+    @apply overflow-hidden;
+  }
+
+  .achievement-badge::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 pointer-events-none;
+    @apply transition-opacity duration-300;
+    background: radial-gradient(circle at center, currentColor, transparent 70%);
+  }
+
+  .achievement-badge:hover::before {
+    @apply opacity-5;
+  }
+
+  .achievement-badge.unlocked {
+    @apply bg-background-secondary border-gold/30;
+  }
+
+  .achievement-badge.unlocked:hover {
+    @apply border-gold/50 shadow-glow-gold;
+  }
+
+  .achievement-badge.locked {
+    @apply bg-background-tertiary/50 border-border;
+    @apply grayscale-[50%];
+  }
+
+  .achievement-badge.common { @apply border-gray-500/40; }
+  .achievement-badge.rare { @apply border-accent-blue/40; }
+  .achievement-badge.epic { @apply border-accent-purple/40; }
+  .achievement-badge.legendary {
+    @apply border-gold/60;
+    @apply shadow-glow-gold;
+  }
+
+  /* Stats card with subtle gradient */
+  .stat-card {
+    @apply card relative overflow-hidden;
+  }
+
+  .stat-card::after {
+    content: '';
+    @apply absolute top-0 left-0 right-0 h-1;
+    @apply bg-gradient-to-r from-transparent via-gold/30 to-transparent;
+  }
+
+  /* Answer option buttons */
+  .answer-option {
+    @apply w-full p-4 rounded-xl border-2;
+    @apply text-left transition-all duration-200 ease-out-expo;
+    @apply border-border hover:border-border-light;
+    @apply bg-background-tertiary/50 hover:bg-background-tertiary;
+  }
+
+  .answer-option.selected {
+    @apply border-gold bg-gold/10;
+    @apply shadow-md shadow-gold/20;
+  }
+
+  .answer-option.correct {
+    @apply border-emerald-500 bg-emerald-500/10;
+    @apply shadow-md shadow-emerald-500/20;
+  }
+
+  .answer-option.incorrect {
+    @apply border-red-500 bg-red-500/10;
+  }
+
+  /* Leaderboard entry */
+  .leaderboard-entry {
+    @apply flex items-center gap-4 p-4 rounded-xl;
+    @apply transition-all duration-200 ease-out-expo;
+    @apply bg-background-tertiary hover:bg-background-secondary;
+  }
+
+  .leaderboard-entry.current-user {
+    @apply bg-gold/10 border border-gold/30;
+    @apply hover:bg-gold/15;
+  }
+
+  /* Rank badge chip */
+  .rank-chip {
+    @apply w-10 h-10 rounded-full;
+    @apply flex items-center justify-center;
+    @apply font-display font-bold text-lg;
+    @apply shadow-md;
+  }
+
+  .rank-chip.gold {
+    @apply bg-gradient-to-br from-gold to-gold-dark text-black;
+    @apply shadow-gold/30;
+  }
+
+  .rank-chip.silver {
+    @apply bg-gradient-to-br from-gray-300 to-gray-500 text-gray-800;
+  }
+
+  .rank-chip.bronze {
+    @apply bg-gradient-to-br from-orange-400 to-orange-700 text-orange-100;
+  }
+}
+
+/* Utility classes */
+@layer utilities {
+  /* Text gradients */
+  .text-gradient-gold {
+    @apply bg-gradient-to-r from-gold via-gold-light to-gold bg-clip-text text-transparent;
+    background-size: 200% auto;
+  }
+
+  .text-gradient-gold-animated {
+    @apply text-gradient-gold animate-shimmer;
+  }
+
+  /* Glow effects */
+  .glow-gold {
+    filter: drop-shadow(0 0 8px rgba(245, 197, 24, 0.5));
+  }
+
+  .glow-green {
+    filter: drop-shadow(0 0 8px rgba(20, 90, 56, 0.6));
+  }
+
+  /* Stagger animation delays */
+  .stagger-1 { animation-delay: 0.05s; }
+  .stagger-2 { animation-delay: 0.1s; }
+  .stagger-3 { animation-delay: 0.15s; }
+  .stagger-4 { animation-delay: 0.2s; }
+  .stagger-5 { animation-delay: 0.25s; }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-background-secondary/80 backdrop-blur-md;
+  }
+
+  /* Noise overlay utility */
+  .noise-overlay {
+    position: relative;
+  }
+
+  .noise-overlay::after {
+    content: '';
+    @apply absolute inset-0 opacity-[0.08] pointer-events-none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  }
+
+  /* Card shine effect on hover */
+  .card-shine {
+    @apply relative overflow-hidden;
+  }
+
+  .card-shine::after {
+    content: '';
+    @apply absolute top-0 -left-full w-1/2 h-full;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: left 0.5s ease-out;
+  }
+
+  .card-shine:hover::after {
+    left: 100%;
+  }
+
+  /* Hide scrollbar but allow scroll */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Focus ring utility */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-gold/50 focus:ring-offset-2 focus:ring-offset-background;
+  }
+}
+
+/* Custom animations */
+@keyframes animate-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: animate-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Level up celebration effect */
+@keyframes level-up {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-level-up {
+  animation: level-up 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Correct answer celebration */
+@keyframes correct-answer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Chip spin for loading */
+@keyframes chip-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-chip-spin {
+  animation: chip-spin 1s linear infinite;
+}

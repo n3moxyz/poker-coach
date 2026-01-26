@@ -1,0 +1,162 @@
+// Poker Coach Database Schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// User Models
+// ============================================
+
+model User {
+  id        String   @id // Clerk user ID
+  email     String   @unique
+  name      String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  progress     UserProgress[]
+  answers      UserAnswer[]
+  stats        UserStats?
+  streak       UserStreak?
+  achievements UserAchievement[]
+}
+
+model UserStats {
+  id             String @id @default(cuid())
+  userId         String @unique
+  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalXp        Int    @default(0)
+  level          Int    @default(1)
+  totalQuestions Int    @default(0)
+  totalCorrect   Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserStreak {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  currentStreak    Int      @default(0)
+  longestStreak    Int      @default(0)
+  lastActivityDate DateTime @default(now())
+  streakFreezes    Int      @default(0) // Earned every 7-day streak, max 3
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model UserProgress {
+  id             String @id @default(cuid())
+  userId         String
+  user           User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  moduleId       String
+  module         Module @relation(fields: [moduleId], references: [id])
+  status         String @default("LOCKED") // LOCKED, UNLOCKED, IN_PROGRESS, MASTERED
+  correctAnswers Int    @default(0)
+  totalAnswers   Int    @default(0)
+  masteryScore   Float  @default(0) // 0-100, weighted average
+  currentStreak  Int    @default(0) // Per-module streak
+
+  // Track last 10 answers for weighted mastery calculation
+  recentAnswers Json @default("[]") // Array of booleans [true, false, true, ...]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, moduleId])
+}
+
+model UserAnswer {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+  answer     String
+  isCorrect  Boolean
+  xpEarned   Int      @default(0)
+  timeSpent  Int? // Seconds spent on question
+
+  createdAt DateTime @default(now())
+}
+
+// ============================================
+// Learning Content Models
+// ============================================
+
+model Module {
+  id                String @id @default(cuid())
+  slug              String @unique // "hand-rankings", "position", etc.
+  name              String
+  description       String
+  difficulty        Int // 1-3
+  orderIndex        Int
+  unlockRequirement Int // XP needed to unlock
+  iconEmoji         String @default("🎴")
+  masteryXpBonus    Int    @default(500) // XP awarded on mastery
+
+  questions Question[]
+  progress  UserProgress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Question {
+  id            String @id @default(cuid())
+  moduleId      String
+  module        Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  type          String // HAND_COMPARE, POSITION_ID, ODDS_CALC, PREFLOP, SCENARIO
+  difficulty    Int // 1 = Easy, 2 = Medium, 3 = Hard
+  content       Json // Flexible structure per question type
+  correctAnswer String
+  explanation   String // Beginner-friendly explanation
+  xpValue       Int    @default(10)
+
+  answers UserAnswer[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// Gamification Models
+// ============================================
+
+model Achievement {
+  id          String @id @default(cuid())
+  slug        String @unique
+  name        String
+  description String
+  category    String // PROGRESS, STREAK, MASTERY, SPECIAL
+  rarity      String // COMMON, RARE, EPIC, LEGENDARY
+  xpReward    Int    @default(50)
+  iconEmoji   String @default("🏆")
+
+  // Unlock condition stored as JSON
+  // e.g., { "type": "streak", "value": 7 } or { "type": "xp", "value": 1000 }
+  condition Json
+
+  users UserAchievement[]
+
+  createdAt DateTime @default(now())
+}
+
+model UserAchievement {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  unlockedAt    DateTime    @default(now())
+
+  @@unique([userId, achievementId])
+}
