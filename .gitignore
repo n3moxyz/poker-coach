@@ -39,3 +39,4 @@ packages/backend/prisma/migrations/*_migration_lock.toml
 
 # Local development
 *.local
+.claude/
