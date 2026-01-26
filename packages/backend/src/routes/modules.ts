@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { ensureUserExists } from '../services/userService.js';
+import { calculateModuleStatus, calculateProgressStatus } from '../services/moduleStatusService.js';
 import prisma from '../lib/prisma.js';
 
 const router = Router();
@@ -37,23 +38,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       const userProgress = progressMap.get(module.id);
       const isUnlocked = totalXp >= module.unlockRequirement;
 
-      // Determine status based on accuracy
-      let status = 'LOCKED';
-      if (userProgress) {
-        // Keep MASTERED status (80%+ over 20+ questions)
-        if (userProgress.status === 'MASTERED') {
-          status = 'MASTERED';
-        } else if (userProgress.totalAnswers > 0) {
-          // Calculate accuracy
-          const accuracy = (userProgress.correctAnswers / userProgress.totalAnswers) * 100;
-          // >=70% correct = COMPLETED, <70% = IN_PROGRESS
-          status = accuracy >= 70 ? 'COMPLETED' : 'IN_PROGRESS';
-        } else {
-          status = 'UNLOCKED';
-        }
-      } else if (isUnlocked) {
-        status = 'UNLOCKED';
-      }
+      // Use shared status calculation logic
+      const status = calculateModuleStatus({ userProgress, isUnlocked });
 
       return {
         id: module.id,
@@ -146,12 +132,12 @@ router.get('/:slug', requireAuth, async (req: Request, res: Response) => {
       _count: true,
     });
 
-    // Calculate dynamic status based on accuracy
-    let calculatedStatus = progress.status;
-    if (progress.status !== 'MASTERED' && progress.totalAnswers > 0) {
-      const accuracy = (progress.correctAnswers / progress.totalAnswers) * 100;
-      calculatedStatus = accuracy >= 70 ? 'COMPLETED' : 'IN_PROGRESS';
-    }
+    // Use shared status calculation logic
+    const calculatedStatus = calculateProgressStatus(
+      progress.status,
+      progress.correctAnswers,
+      progress.totalAnswers
+    );
 
     res.json({
       module: {
