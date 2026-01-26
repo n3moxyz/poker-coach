@@ -75,6 +75,28 @@ function calculateXP(difficulty: number, streak: number, isFirstToday: boolean) 
 
 Streaks are powerful motivators. Miss a day? Your streak resets to zero. But every 7-day streak earns you a "streak freeze" that protects one missed day.
 
+### Module Status System
+
+Module status is calculated **dynamically** based on your accuracy:
+
+```
+LOCKED      → Not enough XP to access
+UNLOCKED    → Available, no progress yet
+IN_PROGRESS → Started, but <70% accuracy
+COMPLETED   → ≥70% accuracy (green checkmark)
+MASTERED    → 80%+ over 20+ questions (gold checkmark)
+```
+
+This means if you're at 65% and get a few more right, your status automatically updates to COMPLETED without needing to "finish" anything specific.
+
+### Practice Session Features
+
+Each practice session includes quality-of-life features:
+
+- **Hints**: Click "Show Hint" for contextual help based on question type. Hints don't affect XP—use them freely while learning!
+- **Skip**: Stuck on a question? Skip it. Skipped questions appear yellow in your results and don't count toward accuracy.
+- **Progress Display**: The module list shows "X/Y correct" (e.g., "14/14") instead of a confusing percentage circle.
+
 ## Technologies Used
 
 ### Why These Choices?
@@ -162,17 +184,20 @@ poker-coach/
 
 ### Bug Log
 
-*This section will be updated as bugs are discovered and fixed.*
-
 | Date | Bug | Solution |
 |------|-----|----------|
-| - | - | - |
+| 2026-01-27 | Answer submission took 5-10 seconds | Parallelized DB queries with `Promise.all()` and moved achievement checking to background |
+| 2026-01-27 | Module showed "In Progress" even after completing with 100% | Changed from stored status to dynamic calculation based on accuracy |
 
 ### Lessons Learned
 
-*Insights gained during development.*
+1. **Parallelize independent database queries** - The original answer submission did 15+ sequential DB queries. By running independent queries in parallel with `Promise.all()`, response time dropped from 5-10s to under 1s. Don't await things that don't depend on each other!
 
-1. **TBD** - First lesson will go here
+2. **Fire-and-forget for non-critical operations** - Achievement checking doesn't need to block the response. Running it in the background with `.catch()` error handling keeps the UX snappy while still recording data.
+
+3. **Dynamic status > stored status** - Originally, module status was stored in the database and only updated on specific events. This led to stale states. Calculating status dynamically from accuracy data ensures it's always correct.
+
+4. **Optimistic patterns aren't always necessary** - With fast enough backend responses, you don't need complex optimistic UI updates. Focus on making the server fast first.
 
 ## Potential Pitfalls
 
@@ -197,4 +222,4 @@ poker-coach/
 
 ---
 
-*Last updated: Initial creation*
+*Last updated: 2026-01-27 - Added practice session features, dynamic status, performance fixes*

@@ -95,18 +95,37 @@ cd packages/frontend && npm run dev
 ## API Endpoints
 
 ### Modules
-- `GET /api/modules` - List all modules with user progress
+- `GET /api/modules` - List all modules with user progress (status calculated dynamically)
 - `GET /api/modules/:slug` - Single module detail
 - `GET /api/modules/:slug/questions` - Get practice questions
 
 ### Progress
 - `GET /api/progress` - User's overall stats
-- `POST /api/progress/answer` - Submit answer
+- `POST /api/progress/answer` - Submit answer (optimized with parallel DB queries)
+- `POST /api/progress/complete-session` - Mark session as completed
 
 ### Stats & Achievements
 - `GET /api/stats` - User statistics
 - `GET /api/stats/leaderboard` - Rankings
 - `GET /api/achievements` - Achievement list
+
+## Module Status System
+
+Status is calculated **dynamically** based on accuracy:
+
+| Status | Condition |
+|--------|-----------|
+| LOCKED | User lacks XP to unlock |
+| UNLOCKED | Available but no progress yet |
+| IN_PROGRESS | <70% accuracy |
+| COMPLETED | ≥70% accuracy |
+| MASTERED | 80%+ accuracy over 20+ questions |
+
+## Practice Session Features
+
+- **Hints**: Contextual hints based on question type (hand rankings, positions, pot odds)
+- **Skip**: Skip difficult questions (counts as unanswered, shown yellow in results)
+- **Progress Display**: Shows X/Y correct instead of percentage
 
 ## Learning Modules
 
