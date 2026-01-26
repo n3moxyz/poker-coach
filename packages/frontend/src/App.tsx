@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import {
   SignedIn,
   SignedOut,
@@ -16,18 +16,57 @@ import PracticeSession from '@/pages/PracticeSession';
 import Progress from '@/pages/Progress';
 import Achievements from '@/pages/Achievements';
 import Leaderboard from '@/pages/Leaderboard';
+import PlacementTest from '@/pages/PlacementTest';
 
 function AuthenticatedApp() {
   const { isSignedIn } = useAuth();
   const { user } = useUser();
+  const location = useLocation();
   const syncUser = useSyncUser();
+  const [needsPlacementTest, setNeedsPlacementTest] = useState<boolean | null>(null);
+  const [syncAttempted, setSyncAttempted] = useState(false);
 
-  // Sync user on sign-in
+  // Sync user on sign-in and check placement test status
   useEffect(() => {
-    if (isSignedIn && user) {
-      syncUser.mutate();
-    }
-  }, [isSignedIn, user?.id]);
+    const doSync = async () => {
+      if (isSignedIn && user && !syncAttempted && !syncUser.isPending) {
+        setSyncAttempted(true);
+        try {
+          const result = await syncUser.mutateAsync();
+          console.log('Sync result:', result);
+          setNeedsPlacementTest(result.needsPlacementTest);
+        } catch (error) {
+          console.error('Sync failed:', error);
+          // Default to not needing placement test on error
+          setNeedsPlacementTest(false);
+        }
+      }
+    };
+    doSync();
+  }, [isSignedIn, user?.id, syncAttempted, syncUser.isPending]);
+
+  // Show loading while syncing
+  if (!syncAttempted || syncUser.isPending || needsPlacementTest === null) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-gold text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  // Redirect to placement test if needed (unless already there)
+  if (needsPlacementTest && location.pathname !== '/placement-test') {
+    return <Navigate to="/placement-test" replace />;
+  }
+
+  // Placement test page renders without AppShell
+  if (location.pathname === '/placement-test') {
+    return (
+      <Routes>
+        <Route path="/placement-test" element={<PlacementTest />} />
+      </Routes>
+    );
+  }
 
   return (
     <AppShell>

@@ -20,6 +20,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Placement test tracking
+  placementTestCompleted Boolean @default(false)
+  placementTestScore     Int?
+
   progress     UserProgress[]
   answers      UserAnswer[]
   stats        UserStats?
@@ -111,15 +115,16 @@ model Module {
 }
 
 model Question {
-  id            String @id @default(cuid())
-  moduleId      String
-  module        Module @relation(fields: [moduleId], references: [id], onDelete: Cascade)
-  type          String // HAND_COMPARE, POSITION_ID, ODDS_CALC, PREFLOP, SCENARIO
-  difficulty    Int // 1 = Easy, 2 = Medium, 3 = Hard
-  content       Json // Flexible structure per question type
-  correctAnswer String
-  explanation   String // Beginner-friendly explanation
-  xpValue       Int    @default(10)
+  id              String  @id @default(cuid())
+  moduleId        String
+  module          Module  @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  type            String // HAND_COMPARE, POSITION_ID, ODDS_CALC, PREFLOP, SCENARIO
+  difficulty      Int // 1 = Easy, 2 = Medium, 3 = Hard
+  content         Json // Flexible structure per question type
+  correctAnswer   String
+  explanation     String // Beginner-friendly explanation
+  xpValue         Int     @default(10)
+  isPlacementTest Boolean @default(false) // Used for initial placement test
 
   answers UserAnswer[]
 

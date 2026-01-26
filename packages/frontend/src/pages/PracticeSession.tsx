@@ -40,20 +40,19 @@ export default function PracticeSession() {
 
   const currentQuestion = data?.questions[session.currentIndex];
 
-  const handleSelectAnswer = useCallback((answer: string) => {
-    if (showResult) return;
+  const handleSelectAnswer = useCallback(async (answer: string) => {
+    if (showResult || submitAnswer.isPending) return;
     setSelectedAnswer(answer);
-  }, [showResult]);
 
-  const handleSubmit = useCallback(async () => {
-    if (!selectedAnswer || !currentQuestion || showResult) return;
+    // Auto-submit when an answer is selected
+    if (!currentQuestion) return;
 
     const timeSpent = Math.round((Date.now() - startTime) / 1000);
 
     try {
       const result = await submitAnswer.mutateAsync({
         questionId: currentQuestion.id,
-        answer: selectedAnswer,
+        answer: answer,
         timeSpent,
       });
 
@@ -64,13 +63,13 @@ export default function PracticeSession() {
         ...prev,
         answers: [
           ...prev.answers,
-          { questionId: currentQuestion.id, answer: selectedAnswer, result },
+          { questionId: currentQuestion.id, answer: answer, result },
         ],
       }));
     } catch (err) {
       console.error('Failed to submit answer:', err);
     }
-  }, [selectedAnswer, currentQuestion, submitAnswer, startTime, showResult]);
+  }, [showResult, submitAnswer, currentQuestion, startTime]);
 
   const handleNext = useCallback(() => {
     if (session.currentIndex >= (data?.questions.length || 0) - 1) {
@@ -224,15 +223,12 @@ export default function PracticeSession() {
       )}
 
       {/* Action button */}
-      {!showResult ? (
-        <button
-          onClick={handleSubmit}
-          disabled={!selectedAnswer || submitAnswer.isPending}
-          className="btn-primary w-full py-4 text-lg"
-        >
-          {submitAnswer.isPending ? 'Checking...' : 'Submit Answer'}
-        </button>
-      ) : (
+      {submitAnswer.isPending && (
+        <div className="text-center py-4 text-muted-foreground">
+          Checking...
+        </div>
+      )}
+      {showResult && (
         <button onClick={handleNext} className="btn-primary w-full py-4 text-lg">
           {session.currentIndex >= data.questions.length - 1 ? (
             'See Results'

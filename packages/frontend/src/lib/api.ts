@@ -149,11 +149,36 @@ export interface LeaderboardEntry {
   isCurrentUser: boolean;
 }
 
+export interface PlacementQuestion {
+  id: string;
+  type: string;
+  difficulty: number;
+  content: Record<string, unknown>;
+  moduleName: string;
+}
+
+export interface PlacementResult {
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  level: string;
+  xpGranted: number;
+  modulesUnlocked: number;
+}
+
+export interface PlacementAnswerFeedback {
+  questionId: string;
+  isCorrect: boolean;
+  correctAnswer: string;
+  explanation: string;
+  questionText?: string; // The question that was asked
+}
+
 // API functions
 export const api = {
   // User sync
   syncUser: (token: string, data: { userId: string; email: string; name?: string; avatarUrl?: string }) =>
-    fetchApi<{ user: unknown }>('/users/sync', {
+    fetchApi<{ user: unknown; needsPlacementTest: boolean }>('/users/sync', {
       method: 'POST',
       token,
       body: JSON.stringify(data),
@@ -208,6 +233,33 @@ export const api = {
       achievements: { unlocked: Achievement[]; locked: Achievement[] };
       byCategory: { unlocked: Record<string, Achievement[]>; locked: Record<string, Achievement[]> };
     }>('/achievements', { token }),
+
+  // Placement Test
+  getPlacementQuestions: (token: string) =>
+    fetchApi<{ totalQuestions: number; questions: PlacementQuestion[] }>(
+      '/placement-test/questions',
+      { token }
+    ),
+
+  submitPlacementTest: (token: string, answers: Array<{ questionId: string; answer: string }>) =>
+    fetchApi<{
+      success: boolean;
+      result: PlacementResult;
+      answers: PlacementAnswerFeedback[];
+    }>('/placement-test/submit', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ answers }),
+    }),
+
+  skipPlacementTest: (token: string) =>
+    fetchApi<{ success: boolean; result: PlacementResult }>('/placement-test/skip', {
+      method: 'POST',
+      token,
+    }),
+
+  getPlacementTestStatus: (token: string) =>
+    fetchApi<{ needsPlacementTest: boolean }>('/placement-test/status', { token }),
 };
 
 export { ApiError };

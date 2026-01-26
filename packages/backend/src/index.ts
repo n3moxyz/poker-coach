@@ -7,6 +7,7 @@ import modulesRouter from './routes/modules.js';
 import progressRouter from './routes/progress.js';
 import achievementsRouter from './routes/achievements.js';
 import statsRouter from './routes/stats.js';
+import placementTestRouter from './routes/placementTest.js';
 
 // Load environment variables
 dotenv.config();
@@ -17,7 +18,23 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc)
+    if (!origin) return callback(null, true);
+
+    // Allow localhost on any port for development
+    if (origin.startsWith('http://localhost:')) {
+      return callback(null, true);
+    }
+
+    // Allow configured frontend URL
+    const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
+    if (origin === allowedOrigin) {
+      return callback(null, true);
+    }
+
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 app.use(express.json());
@@ -32,6 +49,7 @@ app.use('/api/modules', modulesRouter);
 app.use('/api/progress', progressRouter);
 app.use('/api/achievements', achievementsRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/placement-test', placementTestRouter);
 
 // User sync endpoint (called after Clerk auth)
 app.post('/api/users/sync', express.json(), async (req, res) => {
@@ -73,29 +91,36 @@ app.post('/api/users/sync', express.json(), async (req, res) => {
       update: {},
     });
 
-    // Initialize first module as unlocked if no progress exists
-    const existingProgress = await prisma.userProgress.findFirst({
-      where: { userId },
-    });
+    // Check if user needs placement test
+    const needsPlacementTest = !user.placementTestCompleted;
+    console.log('User sync:', { userId, placementTestCompleted: user.placementTestCompleted, needsPlacementTest });
 
-    if (!existingProgress) {
-      const firstModule = await prisma.module.findFirst({
-        where: { unlockRequirement: 0 },
-        orderBy: { orderIndex: 'asc' },
+    // Only initialize first module if placement test is completed
+    // (Placement test handles module unlocking for new users)
+    if (user.placementTestCompleted) {
+      const existingProgress = await prisma.userProgress.findFirst({
+        where: { userId },
       });
 
-      if (firstModule) {
-        await prisma.userProgress.create({
-          data: {
-            userId,
-            moduleId: firstModule.id,
-            status: 'UNLOCKED',
-          },
+      if (!existingProgress) {
+        const firstModule = await prisma.module.findFirst({
+          where: { unlockRequirement: 0 },
+          orderBy: { orderIndex: 'asc' },
         });
+
+        if (firstModule) {
+          await prisma.userProgress.create({
+            data: {
+              userId,
+              moduleId: firstModule.id,
+              status: 'UNLOCKED',
+            },
+          });
+        }
       }
     }
 
-    res.json({ user });
+    res.json({ user, needsPlacementTest });
   } catch (error) {
     console.error('Error syncing user:', error);
     res.status(500).json({ error: 'Failed to sync user' });

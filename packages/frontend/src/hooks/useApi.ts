@@ -159,11 +159,84 @@ export function useSyncUser() {
         avatarUrl: user.imageUrl || undefined,
       });
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       // Invalidate user-specific queries after sync
       queryClient.invalidateQueries({ queryKey: ['progress'] });
       queryClient.invalidateQueries({ queryKey: ['modules'] });
       queryClient.invalidateQueries({ queryKey: ['achievements'] });
+      // Update placement test status
+      queryClient.setQueryData(['placementTestStatus'], {
+        needsPlacementTest: data.needsPlacementTest,
+      });
+    },
+  });
+}
+
+// Placement Test hooks
+export function usePlacementQuestions() {
+  const getToken = useApiToken();
+
+  return useQuery({
+    queryKey: ['placementQuestions'],
+    queryFn: async () => {
+      const token = await getToken();
+      return api.getPlacementQuestions(token);
+    },
+    staleTime: Infinity, // Keep questions fresh during test
+    gcTime: 0, // Don't cache between sessions
+  });
+}
+
+export function useSubmitPlacementTest() {
+  const getToken = useApiToken();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (answers: Array<{ questionId: string; answer: string }>) => {
+      const token = await getToken();
+      return api.submitPlacementTest(token, answers);
+    },
+    onSuccess: () => {
+      // Invalidate all relevant queries after placement test
+      queryClient.invalidateQueries({ queryKey: ['progress'] });
+      queryClient.invalidateQueries({ queryKey: ['modules'] });
+      queryClient.invalidateQueries({ queryKey: ['placementTestStatus'] });
+      queryClient.setQueryData(['placementTestStatus'], {
+        needsPlacementTest: false,
+      });
+    },
+  });
+}
+
+export function useSkipPlacementTest() {
+  const getToken = useApiToken();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      return api.skipPlacementTest(token);
+    },
+    onSuccess: () => {
+      // Invalidate all relevant queries after skipping
+      queryClient.invalidateQueries({ queryKey: ['progress'] });
+      queryClient.invalidateQueries({ queryKey: ['modules'] });
+      queryClient.invalidateQueries({ queryKey: ['placementTestStatus'] });
+      queryClient.setQueryData(['placementTestStatus'], {
+        needsPlacementTest: false,
+      });
+    },
+  });
+}
+
+export function usePlacementTestStatus() {
+  const getToken = useApiToken();
+
+  return useQuery({
+    queryKey: ['placementTestStatus'],
+    queryFn: async () => {
+      const token = await getToken();
+      return api.getPlacementTestStatus(token);
     },
   });
 }
