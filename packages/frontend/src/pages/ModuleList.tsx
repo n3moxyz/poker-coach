@@ -155,7 +155,7 @@ export default function ModuleList() {
             <span className="text-muted-foreground">Locked</span>
           </div>
           <div className="flex items-center gap-2">
-            <Circle className="w-4 h-4 text-green-400" />
+            <Circle className="w-4 h-4 text-cyan-400" />
             <span className="text-muted-foreground">Ready</span>
           </div>
           <div className="flex items-center gap-2">

@@ -64,7 +64,7 @@ export function getStatusColor(status: string): string {
     case 'IN_PROGRESS':
       return 'text-blue-400';
     case 'UNLOCKED':
-      return 'text-green-400';
+      return 'text-cyan-400';
     case 'LOCKED':
       return 'text-gray-500';
     default:
