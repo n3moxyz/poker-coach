@@ -47,7 +47,6 @@ export default function PracticeSession() {
   const { slug } = useParams<{ slug: string }>();
   const { data, isLoading, error } = useQuestions(slug || '', QUESTIONS_PER_SESSION);
   const submitAnswer = useSubmitAnswer();
-  const completeSession = useCompleteSession();
 
   const [session, setSession] = useState<SessionState>({
     currentIndex: 0,

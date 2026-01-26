@@ -1,4 +1,4 @@
-import { useState, useCallback, memo, useEffect } from 'react';
+import { useState, useCallback, memo } from 'react';
 import {
   BookOpen,
   Rocket,
