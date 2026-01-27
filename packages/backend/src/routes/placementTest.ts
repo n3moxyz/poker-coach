@@ -121,6 +121,7 @@ router.post('/submit', requireAuth, async (req: Request, res: Response) => {
         const content = question?.content as Record<string, unknown> | undefined;
         return {
           questionId: a.questionId,
+          userAnswer: a.answer,
           isCorrect: a.isCorrect,
           correctAnswer: question?.correctAnswer,
           explanation: question?.explanation,

@@ -168,6 +168,7 @@ export interface PlacementResult {
 
 export interface PlacementAnswerFeedback {
   questionId: string;
+  userAnswer: string;
   isCorrect: boolean;
   correctAnswer: string;
   explanation: string;

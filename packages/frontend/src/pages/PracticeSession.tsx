@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, memo } from 'react';
+import { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, XCircle, Zap, Trophy, ArrowRight, Lightbulb, SkipForward } from 'lucide-react';
 import { useQuestions, useSubmitAnswer, useCompleteSession } from '@/hooks/useApi';
+import { useHotkeys } from '@/hooks/useHotkeys';
 import { cn, formatXp } from '@/lib/utils';
 import type { Question, AnswerResult } from '@/lib/api';
 import PlayingCard from '@/components/games/PlayingCard';
@@ -132,6 +133,75 @@ export default function PracticeSession() {
       setCurrentResult(null);
     }
   }, [showResult, submitAnswer.isPending, currentQuestion, session.currentIndex, data?.questions.length]);
+
+  const toggleHint = useCallback(() => {
+    if (!showResult && !submitAnswer.isPending) {
+      setShowHint((prev) => !prev);
+    }
+  }, [showResult, submitAnswer.isPending]);
+
+  // Get options for current question (for number key selection)
+  const currentOptions = useMemo(() => {
+    if (!currentQuestion) return [];
+    const content = currentQuestion.content as Record<string, unknown>;
+    if (currentQuestion.type === 'HAND_COMPARE') {
+      return ['hand1', 'hand2'];
+    }
+    return (content.options as string[]) || [];
+  }, [currentQuestion]);
+
+  // Keyboard shortcuts
+  useHotkeys(
+    useMemo(
+      () => [
+        // Next question (after answering)
+        {
+          key: 'ArrowRight',
+          callback: handleNext,
+          enabled: showResult,
+        },
+        {
+          key: 'Enter',
+          callback: handleNext,
+          enabled: showResult,
+        },
+        {
+          key: ' ', // Space
+          callback: handleNext,
+          enabled: showResult,
+        },
+        // Number keys to select answers (1, 2, 3)
+        {
+          key: '1',
+          callback: () => currentOptions[0] && handleSelectAnswer(currentOptions[0]),
+          enabled: !showResult && !submitAnswer.isPending && currentOptions.length >= 1,
+        },
+        {
+          key: '2',
+          callback: () => currentOptions[1] && handleSelectAnswer(currentOptions[1]),
+          enabled: !showResult && !submitAnswer.isPending && currentOptions.length >= 2,
+        },
+        {
+          key: '3',
+          callback: () => currentOptions[2] && handleSelectAnswer(currentOptions[2]),
+          enabled: !showResult && !submitAnswer.isPending && currentOptions.length >= 3,
+        },
+        // Hint toggle
+        {
+          key: 'h',
+          callback: toggleHint,
+          enabled: !showResult && !submitAnswer.isPending,
+        },
+        // Skip question
+        {
+          key: 's',
+          callback: handleSkip,
+          enabled: !showResult && !submitAnswer.isPending,
+        },
+      ],
+      [showResult, submitAnswer.isPending, currentOptions, handleNext, handleSelectAnswer, toggleHint, handleSkip]
+    )
+  );
 
   if (isLoading) {
     return <PracticeSessionSkeleton />;
@@ -284,7 +354,7 @@ export default function PracticeSession() {
       {!showResult && !submitAnswer.isPending && (
         <div className="flex gap-3 mb-4">
           <button
-            onClick={() => setShowHint(!showHint)}
+            onClick={toggleHint}
             className={cn(
               "flex-1 py-3 rounded-lg border-2 transition-all flex items-center justify-center gap-2",
               showHint
@@ -294,6 +364,7 @@ export default function PracticeSession() {
           >
             <Lightbulb className="w-4 h-4" />
             {showHint ? 'Hide Hint' : 'Show Hint'}
+            <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-xs bg-background-tertiary rounded">H</kbd>
           </button>
           <button
             onClick={handleSkip}
@@ -301,6 +372,7 @@ export default function PracticeSession() {
           >
             <SkipForward className="w-4 h-4" />
             Skip Question
+            <kbd className="hidden sm:inline-block ml-1 px-1.5 py-0.5 text-xs bg-background-tertiary rounded">S</kbd>
           </button>
         </div>
       )}
@@ -318,13 +390,17 @@ export default function PracticeSession() {
       )}
 
       {showResult && (
-        <button onClick={handleNext} className="btn-primary w-full py-4 text-lg">
+        <button onClick={handleNext} className="btn-primary w-full py-4 text-lg group">
           {session.currentIndex >= data.questions.length - 1 ? (
-            'See Results'
+            <>
+              See Results
+              <kbd className="hidden sm:inline-block ml-2 px-1.5 py-0.5 text-xs bg-black/20 rounded group-hover:bg-black/30">Enter</kbd>
+            </>
           ) : (
             <>
               Next Question
               <ArrowRight className="w-5 h-5 ml-2" />
+              <kbd className="hidden sm:inline-block ml-2 px-1.5 py-0.5 text-xs bg-black/20 rounded group-hover:bg-black/30">→</kbd>
             </>
           )}
         </button>
@@ -362,15 +438,15 @@ const QuestionDisplay = memo(function QuestionDisplay({
         </h2>
         <div className="grid md:grid-cols-2 gap-6">
           {[
-            { hand: hand1, value: 'hand1' },
-            { hand: hand2, value: 'hand2' },
-          ].map(({ hand, value }) => (
+            { hand: hand1, value: 'hand1', num: 1 },
+            { hand: hand2, value: 'hand2', num: 2 },
+          ].map(({ hand, value, num }) => (
             <button
               key={value}
               onClick={() => onSelect(value)}
               disabled={showResult}
               className={cn(
-                'p-4 rounded-xl border-2 transition-all',
+                'p-4 rounded-xl border-2 transition-all relative',
                 selectedAnswer === value
                   ? 'border-gold bg-gold/10'
                   : 'border-border hover:border-border-light',
@@ -383,6 +459,11 @@ const QuestionDisplay = memo(function QuestionDisplay({
                   'border-red-500 bg-red-500/10'
               )}
             >
+              {!showResult && (
+                <kbd className="hidden sm:flex absolute top-2 left-2 items-center justify-center w-6 h-6 text-xs bg-background-tertiary rounded text-muted-foreground">
+                  {num}
+                </kbd>
+              )}
               <div className="text-sm text-muted-foreground mb-2">
                 {hand.name}
               </div>
@@ -417,13 +498,13 @@ const QuestionDisplay = memo(function QuestionDisplay({
 
       {/* Options */}
       <div className="space-y-3">
-        {options.map((option) => (
+        {options.map((option, index) => (
           <button
             key={option}
             onClick={() => onSelect(option)}
             disabled={showResult}
             className={cn(
-              'w-full p-4 rounded-xl border-2 text-left transition-all',
+              'w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-3',
               selectedAnswer === option
                 ? 'border-gold bg-gold/10'
                 : 'border-border hover:border-border-light',
@@ -436,6 +517,11 @@ const QuestionDisplay = memo(function QuestionDisplay({
                 'border-red-500 bg-red-500/10'
             )}
           >
+            {!showResult && (
+              <kbd className="hidden sm:flex items-center justify-center w-6 h-6 text-xs bg-background-tertiary rounded text-muted-foreground flex-shrink-0">
+                {index + 1}
+              </kbd>
+            )}
             <span className="text-white">{option}</span>
           </button>
         ))}
@@ -460,6 +546,9 @@ function SessionSummary({ moduleName, slug, answers }: SessionSummaryProps) {
   const totalXp = answers.reduce((sum, a) => sum + (a.result?.xp.earned || 0), 0);
   const accuracy = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
 
+  // Module is considered completed at 70%+ accuracy
+  const isModuleCompleted = accuracy >= 70;
+
   // Mark session as complete on mount
   useEffect(() => {
     completeSession.mutate({
@@ -472,8 +561,18 @@ function SessionSummary({ moduleName, slug, answers }: SessionSummaryProps) {
   return (
     <div className="md:ml-64 pb-20 md:pb-6">
       <div className="card felt-bg text-center mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">Session Complete!</h1>
-        <p className="text-muted-foreground">{moduleName}</p>
+        {isModuleCompleted ? (
+          <>
+            <div className="text-5xl mb-3">🎉</div>
+            <h1 className="text-2xl font-bold text-white mb-2">Module Completed!</h1>
+            <p className="text-green-400">{moduleName}</p>
+          </>
+        ) : (
+          <>
+            <h1 className="text-2xl font-bold text-white mb-2">Session Complete!</h1>
+            <p className="text-muted-foreground">{moduleName}</p>
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
@@ -530,20 +629,63 @@ function SessionSummary({ moduleName, slug, answers }: SessionSummaryProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <button
-          onClick={() => navigate(`/practice/${slug}`)}
-          className="btn-primary py-4"
-        >
-          Practice Again
-        </button>
-        <button
-          onClick={() => navigate(`/modules/${slug}`)}
-          className="btn-secondary py-4"
-        >
-          Back to Module
-        </button>
-      </div>
+      {isModuleCompleted ? (
+        <>
+          {/* Completion message */}
+          <div className="card border-green-500/30 bg-green-500/10 mb-6 text-center">
+            <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
+            <p className="text-green-400 font-medium">
+              You've achieved {accuracy}% accuracy!
+            </p>
+            <p className="text-muted-foreground text-sm mt-1">
+              This module is now marked as completed.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => navigate(`/practice/${slug}`)}
+              className="btn-secondary py-4"
+            >
+              Practice More
+            </button>
+            <button
+              onClick={() => navigate('/modules')}
+              className="btn-primary py-4 flex items-center justify-center gap-2"
+            >
+              <CheckCircle className="w-5 h-5" />
+              Complete
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Encouragement message */}
+          <div className="card border-yellow-500/30 bg-yellow-500/10 mb-6 text-center">
+            <p className="text-yellow-400 font-medium">
+              Need 70% accuracy to complete this module
+            </p>
+            <p className="text-muted-foreground text-sm mt-1">
+              You got {accuracy}%. Keep practicing!
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => navigate(`/practice/${slug}`)}
+              className="btn-primary py-4"
+            >
+              Practice Again
+            </button>
+            <button
+              onClick={() => navigate(`/modules/${slug}`)}
+              className="btn-secondary py-4"
+            >
+              Back to Module
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

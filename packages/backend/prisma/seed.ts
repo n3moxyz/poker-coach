@@ -224,10 +224,8 @@ async function main() {
       type: 'POSITION_ID',
       difficulty: 1,
       content: {
-        position: 'BTN',
-        question: 'What is the name of this position?',
+        question: 'What does the abbreviation "BTN" stand for in poker?',
         options: ['Button', 'Big Blind', 'Cutoff'],
-        description: 'The player with the dealer button, who acts last post-flop.',
       },
       correctAnswer: 'Button',
       explanation: 'The Button (BTN) is the best position at the table. You act last on every street after the flop, giving you maximum information.',

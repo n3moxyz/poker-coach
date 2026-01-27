@@ -4,12 +4,9 @@ import {
   Rocket,
   ArrowRight,
   ArrowLeft,
-  Trophy,
-  Zap,
   Loader2,
   CheckCircle,
   XCircle,
-  ChevronDown,
   ChevronUp,
 } from 'lucide-react';
 import {
@@ -17,7 +14,7 @@ import {
   useSubmitPlacementTest,
   useSkipPlacementTest,
 } from '@/hooks/useApi';
-import { cn, formatXp } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import type { PlacementQuestion, PlacementResult, PlacementAnswerFeedback } from '@/lib/api';
 import PlayingCard from '@/components/games/PlayingCard';
 
@@ -304,7 +301,6 @@ interface ResultsScreenProps {
 
 function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScreenProps) {
   const [showReview, setShowReview] = useState(false);
-  const wrongAnswers = feedback.filter((a) => !a.isCorrect);
 
   const getLevelEmoji = (level: string) => {
     switch (level) {
@@ -336,16 +332,13 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
     }
   };
 
-  // Get question text from questions array if not in feedback
-  const getQuestionText = (questionId: string, feedbackItem: PlacementAnswerFeedback) => {
-    if (feedbackItem.questionText) return feedbackItem.questionText;
-    const question = questions.find((q) => q.id === questionId);
-    const content = question?.content as Record<string, unknown> | undefined;
-    return content?.question as string | undefined;
-  };
+  const wrongAnswers = feedback.filter((a) => !a.isCorrect);
+
+  // When review is shown, don't use fixed footer so user can scroll to see all content
+  const useFixedFooter = !showReview;
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-6 pb-24">
+    <div className={cn('min-h-screen bg-background p-4 sm:p-6', useFixedFooter ? 'pb-40' : 'pb-6')}>
       <div className="max-w-2xl mx-auto">
         {/* Celebration header */}
         <div className="card felt-bg text-center mb-6">
@@ -358,55 +351,25 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
           </p>
         </div>
 
-        {/* Stats grid */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        {/* Stats - simplified */}
+        <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="card text-center">
             <div className="text-3xl font-bold text-green-400">
-              {result.score}
+              {result.score}/{result.totalQuestions}
             </div>
-            <div className="text-sm text-muted-foreground">
-              of {result.totalQuestions} correct
-            </div>
-          </div>
-          <div className="card text-center">
-            <div className="text-3xl font-bold text-gold">
-              {formatXp(result.xpGranted)}
-            </div>
-            <div className="text-sm text-muted-foreground">Starting XP</div>
+            <div className="text-sm text-muted-foreground">Questions Correct</div>
           </div>
           <div className="card text-center">
             <div className="text-3xl font-bold text-blue-400">
               {result.modulesUnlocked}
             </div>
-            <div className="text-sm text-muted-foreground">Modules Unlocked</div>
-          </div>
-        </div>
-
-        {/* What's unlocked */}
-        <div className="card mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-gold" />
-            What You've Unlocked
-          </h2>
-          <div className="space-y-3">
-            {result.xpGranted > 0 && (
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-gold/10 border border-gold/20">
-                <Zap className="w-5 h-5 text-gold" />
-                <span className="text-white">
-                  {formatXp(result.xpGranted)} starting XP
-                </span>
-              </div>
-            )}
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-              <BookOpen className="w-5 h-5 text-blue-400" />
-              <span className="text-white">
-                {result.modulesUnlocked} module{result.modulesUnlocked !== 1 ? 's' : ''} ready to play
-              </span>
+            <div className="text-sm text-muted-foreground">
+              Module{result.modulesUnlocked !== 1 ? 's' : ''} Unlocked
             </div>
           </div>
         </div>
 
-        {/* Answer breakdown with visual bar */}
+        {/* Answer summary visual bar */}
         {feedback.length > 0 && (
           <div className="card mb-6">
             <h2 className="text-lg font-semibold text-white mb-4">
@@ -427,7 +390,7 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                 </div>
               ))}
             </div>
-            <div className="flex justify-between text-sm text-muted-foreground mb-4">
+            <div className="flex justify-between text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <CheckCircle className="w-4 h-4 text-green-400" />
                 {feedback.filter((a) => a.isCorrect).length} correct
@@ -437,112 +400,151 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                 {wrongAnswers.length} incorrect
               </span>
             </div>
-
-            {/* Toggle review button */}
-            <button
-              onClick={() => setShowReview(!showReview)}
-              className="w-full flex items-center justify-center gap-2 py-2 text-gold hover:text-gold-light transition-colors"
-            >
-              {showReview ? (
-                <>
-                  <ChevronUp className="w-4 h-4" />
-                  Hide Review
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-4 h-4" />
-                  Review All Answers
-                </>
-              )}
-            </button>
           </div>
         )}
 
-        {/* Detailed answer review */}
-        {showReview && feedback.length > 0 && (
+        {/* Detailed review of wrong answers only */}
+        {showReview && wrongAnswers.length > 0 && (
           <div className="space-y-4 mb-6">
-            {/* Wrong answers first */}
-            {wrongAnswers.length > 0 && (
-              <>
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <XCircle className="w-5 h-5 text-red-400" />
-                  Questions to Review ({wrongAnswers.length})
-                </h3>
-                {wrongAnswers.map((answer) => {
-                  const questionNum = feedback.findIndex((f) => f.questionId === answer.questionId) + 1;
-                  const questionText = getQuestionText(answer.questionId, answer);
-                  return (
-                    <div
-                      key={answer.questionId}
-                      className="card border-l-4 border-l-red-500"
-                    >
-                      <div className="text-sm text-muted-foreground mb-2">
-                        Question {questionNum}
-                      </div>
-                      {questionText && (
-                        <p className="text-white font-medium mb-3">
-                          {questionText}
-                        </p>
-                      )}
-                      <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3 mb-3">
-                        <div className="text-sm text-green-400 font-medium mb-1">
-                          Correct Answer
-                        </div>
-                        <div className="text-white">{answer.correctAnswer}</div>
-                      </div>
-                      <p className="text-muted-foreground text-sm">
-                        {answer.explanation}
-                      </p>
-                    </div>
-                  );
-                })}
-              </>
-            )}
+            {feedback
+              .map((answer, originalIndex) => ({ answer, originalIndex }))
+              .filter(({ answer }) => !answer.isCorrect)
+              .map(({ answer, originalIndex }) => {
+                const question = questions.find((q) => q.id === answer.questionId);
+                const content = question?.content as Record<string, unknown> | undefined;
+                const questionText = answer.questionText || (content?.question as string);
 
-            {/* Correct answers */}
-            {feedback.filter((a) => a.isCorrect).length > 0 && (
-              <>
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2 mt-6">
-                  <CheckCircle className="w-5 h-5 text-green-400" />
-                  Correct Answers ({feedback.filter((a) => a.isCorrect).length})
-                </h3>
-                {feedback
-                  .filter((a) => a.isCorrect)
-                  .map((answer) => {
-                    const questionNum = feedback.findIndex((f) => f.questionId === answer.questionId) + 1;
-                    const questionText = getQuestionText(answer.questionId, answer);
-                    return (
-                      <div
-                        key={answer.questionId}
-                        className="card border-l-4 border-l-green-500 bg-green-500/5"
-                      >
-                        <div className="text-sm text-muted-foreground mb-2">
-                          Question {questionNum}
+                // For hand comparison questions, get the hand names
+                const isHandCompare = question?.type === 'HAND_COMPARE';
+                const hand1 = content?.hand1 as { cards: string[]; name: string } | undefined;
+                const hand2 = content?.hand2 as { cards: string[]; name: string } | undefined;
+
+                // Get display text for user's answer
+                const getUserAnswerDisplay = () => {
+                  if (isHandCompare && hand1 && hand2) {
+                    return answer.userAnswer === 'hand1' ? hand1.name : hand2.name;
+                  }
+                  return answer.userAnswer;
+                };
+
+                // Get display text for correct answer
+                const getCorrectAnswerDisplay = () => {
+                  if (isHandCompare && hand1 && hand2) {
+                    return answer.correctAnswer === 'hand1' ? hand1.name : hand2.name;
+                  }
+                  return answer.correctAnswer;
+                };
+
+                return (
+                  <div
+                    key={answer.questionId}
+                    className="card border-l-4 border-l-red-500"
+                  >
+                    <div className="text-sm text-muted-foreground mb-2">
+                      Question {originalIndex + 1}
+                    </div>
+
+                    {/* Question text */}
+                    {questionText && (
+                      <p className="text-white font-medium mb-4">{questionText}</p>
+                    )}
+
+                    {/* For hand compare questions, show the cards */}
+                    {isHandCompare && hand1 && hand2 && (
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        {[
+                          { hand: hand1, value: 'hand1' },
+                          { hand: hand2, value: 'hand2' },
+                        ].map(({ hand, value }) => (
+                          <div
+                            key={value}
+                            className={cn(
+                              'p-3 rounded-lg border-2',
+                              answer.correctAnswer === value
+                                ? 'border-green-500 bg-green-500/10'
+                                : answer.userAnswer === value
+                                ? 'border-red-500 bg-red-500/10'
+                                : 'border-border'
+                            )}
+                          >
+                            <div className="text-sm text-muted-foreground mb-2 text-center">
+                              {hand.name}
+                            </div>
+                            <div className="flex justify-center gap-1 flex-wrap">
+                              {hand.cards.map((card, i) => (
+                                <PlayingCard key={i} card={card} size="sm" />
+                              ))}
+                            </div>
+                            {answer.correctAnswer === value && (
+                              <div className="text-center mt-2 text-green-400 text-sm font-medium">
+                                ✓ Correct
+                              </div>
+                            )}
+                            {answer.userAnswer === value && answer.correctAnswer !== value && (
+                              <div className="text-center mt-2 text-red-400 text-sm font-medium">
+                                ✗ Your pick
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* For non-hand-compare questions, show text answers */}
+                    {!isHandCompare && (
+                      <div className="space-y-2 mb-4">
+                        <div className="flex items-center gap-2">
+                          <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                          <span className="text-red-400">You chose: <span className="line-through">{getUserAnswerDisplay() || '(unknown)'}</span></span>
                         </div>
-                        {questionText && (
-                          <p className="text-white font-medium mb-2">
-                            {questionText}
-                          </p>
-                        )}
-                        <div className="text-green-400 font-medium">
-                          ✓ {answer.correctAnswer}
+                        <div className="flex items-center gap-2">
+                          <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
+                          <span className="text-green-400">Correct: {getCorrectAnswerDisplay()}</span>
                         </div>
                       </div>
-                    );
-                  })}
-              </>
-            )}
+                    )}
+
+                    {/* Explanation */}
+                    <p className="text-muted-foreground text-sm">
+                      {answer.explanation}
+                    </p>
+                  </div>
+                );
+              })}
           </div>
         )}
 
-        {/* Continue button - sticky at bottom */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background border-t border-border">
-          <div className="max-w-2xl mx-auto">
+        {/* Action buttons - fixed when review hidden, inline when review shown */}
+        <div className={cn(
+          'p-4 bg-background',
+          useFixedFooter
+            ? 'fixed bottom-0 left-0 right-0 border-t border-border'
+            : 'mt-6'
+        )}>
+          <div className={cn('space-y-3', useFixedFooter && 'max-w-2xl mx-auto')}>
+            {wrongAnswers.length > 0 && (
+              <button
+                onClick={() => setShowReview(!showReview)}
+                className="btn-secondary w-full py-4 text-lg"
+              >
+                {showReview ? (
+                  <>
+                    <ChevronUp className="w-5 h-5 mr-2" />
+                    Hide Review
+                  </>
+                ) : (
+                  <>
+                    <BookOpen className="w-5 h-5 mr-2" />
+                    Review Wrong Answers ({wrongAnswers.length})
+                  </>
+                )}
+              </button>
+            )}
             <button
               onClick={onContinue}
               className="btn-primary w-full py-4 text-lg"
             >
-              Continue to Dashboard
+              Go to Dashboard
               <ArrowRight className="w-5 h-5 ml-2" />
             </button>
           </div>
