@@ -127,15 +127,35 @@ Status is calculated **dynamically** based on accuracy:
 - **Skip**: Skip difficult questions (counts as unanswered, shown yellow in results)
 - **Progress Display**: Shows X/Y correct instead of percentage
 
-## Learning Modules
+## Learning Modules (10-Module Curriculum)
 
-| Order | Module | Unlock Requirement |
-|-------|--------|-------------------|
-| 1 | Hand Rankings | 0 XP (default) |
-| 2 | Table Position | 100 XP |
-| 3 | Pot Odds | 250 XP |
-| 4 | Preflop Strategy | 450 XP |
-| 5 | Scenarios | 700 XP |
+| Order | Module | Slug | Unlock XP |
+|-------|--------|------|-----------|
+| 1 | Hand Rankings | `hand-rankings` | 0 |
+| 2 | Board Reading | `board-reading` | 75 |
+| 3 | How a Hand Works | `hand-flow` | 150 |
+| 4 | Table Position | `position` | 250 |
+| 5 | Starting Hands | `preflop` | 375 |
+| 6 | Betting Basics | `betting-basics` | 525 |
+| 7 | Flop Play | `flop-play` | 700 |
+| 8 | Outs & Pot Odds | `pot-odds` | 900 |
+| 9 | Bluffing & Reading | `bluffing` | 1125 |
+| 10 | Mental Game | `mental-game` | 1375 |
+
+### Question Types by Module
+
+| Module | Question Types |
+|--------|---------------|
+| Hand Rankings | HAND_COMPARE, HAND_RANK |
+| Board Reading | MULTIWAY_SHOWDOWN, SPLIT_POT |
+| Hand Flow | ACTION_AVAILABLE, STREET_ORDER, BLIND_STRUCTURE, TURN_ORDER |
+| Position | POSITION_ID, POSITION_ADVANTAGE, POSITION_ORDER, POSITION_STRATEGY |
+| Starting Hands | PLAY_FOLD, PREFLOP, HAND_CATEGORY |
+| Betting Basics | BET_INTENT, BET_RESPONSE, BET_SIZE |
+| Flop Play | HAND_STRENGTH, BOARD_TEXTURE, FLOP_ACTION |
+| Outs & Pot Odds | ODDS_CALC, OUTS_COUNT, ODDS_CONVERT, DECISION, RULE_OF |
+| Bluffing | STORY_CONSISTENT, BLUFF_SPOT, VALUE_OR_BLUFF, BLUFF_FREQUENCY |
+| Mental Game | SPOT_MISTAKE, TILT_RESPONSE, RESULTS_VS_DECISION, BANKROLL, SESSION_MANAGEMENT |
 
 ## XP System
 

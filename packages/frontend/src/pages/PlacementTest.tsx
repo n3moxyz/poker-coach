@@ -1,4 +1,4 @@
-import { useState, useCallback, memo } from 'react';
+import { useState, useCallback, useRef, memo } from 'react';
 import {
   BookOpen,
   Rocket,
@@ -29,6 +29,8 @@ export default function PlacementTest() {
   const [currentIndex, setCurrentIndex] = useState(0);
   // Store answers as a map for easy update when going back
   const [answersMap, setAnswersMap] = useState<Record<string, string>>({});
+  // Use ref to track answers synchronously (avoids stale closure issues)
+  const answersRef = useRef<Record<string, string>>({});
   const [result, setResult] = useState<PlacementResult | null>(null);
   const [answerFeedback, setAnswerFeedback] = useState<PlacementAnswerFeedback[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,7 +57,8 @@ export default function PlacementTest() {
   const handleSelectAnswer = useCallback(async (answer: string) => {
     if (!currentQuestion || isSubmitting) return;
 
-    // Store the answer
+    // Store the answer in both state (for UI) and ref (for synchronous access)
+    answersRef.current[currentQuestion.id] = answer;
     setAnswersMap((prev) => ({
       ...prev,
       [currentQuestion.id]: answer,
@@ -68,9 +71,10 @@ export default function PlacementTest() {
       // This is the last question - submit all answers
       setIsSubmitting(true);
       try {
+        // Use the ref for synchronous access to all answers
         const allAnswers = questions.map((q) => ({
           questionId: q.id,
-          answer: q.id === currentQuestion.id ? answer : answersMap[q.id] || '',
+          answer: answersRef.current[q.id] || '',
         }));
         const response = await submitTest.mutateAsync(allAnswers);
         setResult(response.result);
@@ -85,7 +89,7 @@ export default function PlacementTest() {
       // Move to next question
       setCurrentIndex((prev) => prev + 1);
     }
-  }, [currentQuestion, currentIndex, questions, answersMap, submitTest, isSubmitting]);
+  }, [currentQuestion, currentIndex, questions, submitTest, isSubmitting]);
 
   const handleGoBack = useCallback(() => {
     if (currentIndex > 0) {
@@ -413,6 +417,9 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                 const question = questions.find((q) => q.id === answer.questionId);
                 const content = question?.content as Record<string, unknown> | undefined;
                 const questionText = answer.questionText || (content?.question as string);
+                const situation = content?.situation as string | undefined;
+                const setup = content?.setup as string | undefined;
+                const options = content?.options as string[] | undefined;
 
                 // For hand comparison questions, get the hand names
                 const isHandCompare = question?.type === 'HAND_COMPARE';
@@ -424,7 +431,11 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                   if (isHandCompare && hand1 && hand2) {
                     return answer.userAnswer === 'hand1' ? hand1.name : hand2.name;
                   }
-                  return answer.userAnswer;
+                  // Return the user's answer, or a meaningful fallback
+                  if (answer.userAnswer && answer.userAnswer.trim()) {
+                    return answer.userAnswer;
+                  }
+                  return null; // Will be handled by the display logic
                 };
 
                 // Get display text for correct answer
@@ -435,6 +446,8 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                   return answer.correctAnswer;
                 };
 
+                const userAnswerDisplay = getUserAnswerDisplay();
+
                 return (
                   <div
                     key={answer.questionId}
@@ -443,6 +456,13 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                     <div className="text-sm text-muted-foreground mb-2">
                       Question {originalIndex + 1}
                     </div>
+
+                    {/* Situation/setup context */}
+                    {(situation || setup) && (
+                      <div className="bg-background-tertiary rounded-lg p-3 mb-3 text-sm text-muted-foreground">
+                        {situation || setup}
+                      </div>
+                    )}
 
                     {/* Question text */}
                     {questionText && (
@@ -495,12 +515,25 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                       <div className="space-y-2 mb-4">
                         <div className="flex items-center gap-2">
                           <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                          <span className="text-red-400">You chose: <span className="line-through">{getUserAnswerDisplay() || '(unknown)'}</span></span>
+                          <span className="text-red-400">
+                            You chose:{' '}
+                            {userAnswerDisplay ? (
+                              <span className="line-through">{userAnswerDisplay}</span>
+                            ) : (
+                              <span className="italic text-red-400/70">(no answer recorded)</span>
+                            )}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
                           <span className="text-green-400">Correct: {getCorrectAnswerDisplay()}</span>
                         </div>
+                        {/* Show available options for context if user answer wasn't recorded */}
+                        {!userAnswerDisplay && options && options.length > 0 && (
+                          <div className="text-xs text-muted-foreground mt-2">
+                            Options were: {options.join(' / ')}
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -617,12 +650,22 @@ const QuestionDisplay = memo(function QuestionDisplay({
   // Multiple choice questions
   const options = content.options as string[];
   const questionText = content.question as string;
+  const situation = content.situation as string | undefined;
+  const setup = content.setup as string | undefined;
 
   return (
     <div>
       <div className="text-xs text-muted-foreground mb-2">
         {question.moduleName}
       </div>
+
+      {/* Show situation/setup context if present */}
+      {(situation || setup) && (
+        <div className="bg-background-tertiary rounded-lg p-3 mb-4 text-sm text-muted-foreground">
+          {situation || setup}
+        </div>
+      )}
+
       <h2 className="text-lg font-semibold text-white mb-6">{questionText}</h2>
 
       {/* Show hand if present */}

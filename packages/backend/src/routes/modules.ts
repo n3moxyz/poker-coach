@@ -195,7 +195,7 @@ router.get('/:slug/questions', requireAuth, async (req: Request, res: Response) 
       return;
     }
 
-    // Get random questions
+    // Get random questions (excluding placement test questions)
     // Using a raw query for true randomness
     const questions = await prisma.$queryRaw<
       Array<{
@@ -209,6 +209,7 @@ router.get('/:slug/questions', requireAuth, async (req: Request, res: Response) 
       SELECT id, type, difficulty, content, "xpValue"
       FROM "Question"
       WHERE "moduleId" = ${module.id}
+      AND "isPlacementTest" = false
       ORDER BY RANDOM()
       LIMIT ${count}
     `;

@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, Zap, Trophy, ArrowRight, Lightbulb, SkipForward } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Zap, Trophy, ArrowRight, Lightbulb, SkipForward, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useQuestions, useSubmitAnswer, useCompleteSession } from '@/hooks/useApi';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { cn, formatXp } from '@/lib/utils';
 import type { Question, AnswerResult } from '@/lib/api';
 import PlayingCard from '@/components/games/PlayingCard';
+import TableView from '@/components/games/TableView';
 
 const QUESTIONS_PER_SESSION = 10;
 
@@ -15,17 +16,51 @@ function getHintForQuestion(question: Question): string {
 
   switch (question.type) {
     case 'HAND_COMPARE':
+    case 'HAND_RANK':
       return "Remember the hand rankings from highest to lowest: Royal Flush, Straight Flush, Four of a Kind, Full House, Flush, Straight, Three of a Kind, Two Pair, One Pair, High Card.";
+    case 'MULTIWAY_SHOWDOWN':
+    case 'SPLIT_POT':
+      return "Each player makes their best 5-card hand from 7 cards (2 hole + 5 board). Look for the highest hand ranking first, then compare kickers if tied.";
+    case 'ACTION_AVAILABLE':
+    case 'STREET_ORDER':
+    case 'BLIND_STRUCTURE':
+    case 'TURN_ORDER':
+      return "Streets go: Preflop → Flop (3 cards) → Turn (1 card) → River (1 card). Actions: Check (no bet to call), Bet (first to put money in), Call, Raise, Fold.";
     case 'POSITION_ID':
-      return "Positions at the table go clockwise: Small Blind, Big Blind, Under the Gun (UTG), Middle Position (MP), Cutoff (CO), Button (BTN). The button is the best position because you act last.";
-    case 'ODDS_CALC':
-      return "Pot odds = (Cost to Call) / (Pot + Cost to Call). Compare this to your winning chances. If pot odds are better than your hand odds, it's mathematically correct to call.";
+    case 'POSITION_ADVANTAGE':
+    case 'POSITION_ORDER':
+    case 'POSITION_STRATEGY':
+      return "Positions clockwise: SB, BB, UTG, MP, CO, BTN. Button acts last post-flop = information advantage. Late position can play more hands.";
+    case 'PLAY_FOLD':
     case 'PREFLOP':
-      return "In early position, play tight (only premium hands). In late position, you can play more hands. Suited connectors and pocket pairs gain value in late position.";
-    case 'SCENARIO':
-      return "Consider your position, stack sizes, and opponent tendencies. Think about what hands beat you and what you beat.";
+    case 'HAND_CATEGORY':
+      return "Premium hands: AA, KK, QQ, AK. In early position, play tight. On the button, you can play more hands due to position advantage.";
+    case 'BET_INTENT':
+    case 'BET_RESPONSE':
+    case 'BET_SIZE':
+      return "Three reasons to bet: Value (want calls from worse), Bluff (want better hands to fold), Protection (deny free cards to draws).";
+    case 'HAND_STRENGTH':
+    case 'BOARD_TEXTURE':
+    case 'FLOP_ACTION':
+      return "Categorize your hand: Strong (top pair+), Medium (middle pair), Weak (bottom pair/no pair), Draw (flush/straight draw). Dry boards = few draws, Wet boards = many draws.";
+    case 'ODDS_CALC':
+    case 'OUTS_COUNT':
+    case 'ODDS_CONVERT':
+    case 'DECISION':
+    case 'RULE_OF':
+      return "Rule of 2 and 4: Multiply outs by 2 for one card, by 4 for two cards. Flush draw = 9 outs (~36% with two cards). OESD = 8 outs (~32%).";
+    case 'STORY_CONSISTENT':
+    case 'BLUFF_SPOT':
+    case 'VALUE_OR_BLUFF':
+    case 'BLUFF_FREQUENCY':
+      return "Good bluffs tell a consistent story. Bluff in position, with scare cards, against players who can fold. Small bets usually want calls (value), big bets apply pressure.";
+    case 'SPOT_MISTAKE':
+    case 'TILT_RESPONSE':
+    case 'RESULTS_VS_DECISION':
+    case 'BANKROLL':
+    case 'SESSION_MANAGEMENT':
+      return "Focus on decision quality, not results. Good decisions can lose, bad decisions can win. Take breaks when tilting. Have 20+ buy-ins for your stake.";
     default:
-      // Generic hint based on content
       if (content.hint) {
         return content.hint as string;
       }
@@ -146,6 +181,13 @@ export default function PracticeSession() {
     const content = currentQuestion.content as Record<string, unknown>;
     if (currentQuestion.type === 'HAND_COMPARE') {
       return ['hand1', 'hand2'];
+    }
+    if (currentQuestion.type === 'PLAY_FOLD') {
+      return ['Play', 'Fold'];
+    }
+    if (currentQuestion.type === 'MULTIWAY_SHOWDOWN') {
+      const players = content.players as Array<{ name: string }>;
+      return players?.map(p => p.name) || [];
     }
     return (content.options as string[]) || [];
   }, [currentQuestion]);
@@ -426,6 +468,146 @@ const QuestionDisplay = memo(function QuestionDisplay({
 }: QuestionDisplayProps) {
   const content = question.content as Record<string, unknown>;
 
+  // Multi-way showdown questions (TableView)
+  if (question.type === 'MULTIWAY_SHOWDOWN' || question.type === 'SPLIT_POT') {
+    const board = content.board as string[];
+    const players = content.players as Array<{ seat: number; name: string; cards: string[] }>;
+
+    return (
+      <div>
+        <h2 className="text-lg font-semibold text-white mb-6 text-center">
+          {content.question as string}
+        </h2>
+
+        {question.type === 'SPLIT_POT' && content.options ? (
+          // Split pot uses options for answer selection
+          <>
+            <TableView
+              board={board}
+              players={players}
+              disabled={true}
+              className="mb-6"
+            />
+            <div className="space-y-3">
+              {(content.options as string[]).map((option, index) => (
+                <button
+                  key={option}
+                  onClick={() => onSelect(option)}
+                  disabled={showResult}
+                  className={cn(
+                    'w-full p-4 rounded-xl border-2 text-left transition-all flex items-center gap-3',
+                    selectedAnswer === option
+                      ? 'border-gold bg-gold/10'
+                      : 'border-border hover:border-border-light',
+                    showResult && correctAnswer === option && 'border-green-500 bg-green-500/10',
+                    showResult && selectedAnswer === option && correctAnswer !== option && 'border-red-500 bg-red-500/10'
+                  )}
+                >
+                  {!showResult && (
+                    <kbd className="hidden sm:flex items-center justify-center w-6 h-6 text-xs bg-background-tertiary rounded text-muted-foreground flex-shrink-0">
+                      {index + 1}
+                    </kbd>
+                  )}
+                  <span className="text-white">{option}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          // Multi-way showdown - click on player to select winner
+          <TableView
+            board={board}
+            players={players}
+            selectedPlayer={selectedAnswer || undefined}
+            onSelectPlayer={onSelect}
+            disabled={showResult}
+            showResult={showResult}
+            correctAnswer={correctAnswer}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Play/Fold questions (binary buttons)
+  if (question.type === 'PLAY_FOLD') {
+    const hand = content.hand as string[];
+    const position = content.position as string;
+
+    return (
+      <div>
+        <h2 className="text-lg font-semibold text-white mb-4 text-center">
+          {content.question as string}
+        </h2>
+
+        {/* Position indicator */}
+        <div className="text-center text-sm text-muted-foreground mb-4">
+          Position: <span className="text-gold">{position}</span>
+        </div>
+
+        {/* Show the hand */}
+        <div className="flex justify-center gap-2 mb-8">
+          {hand.map((card, i) => (
+            <PlayingCard key={i} card={card} size="lg" />
+          ))}
+        </div>
+
+        {/* Play / Fold buttons */}
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={() => onSelect('Fold')}
+            disabled={showResult}
+            className={cn(
+              'p-6 rounded-xl border-2 transition-all flex flex-col items-center gap-2',
+              selectedAnswer === 'Fold'
+                ? 'border-red-500 bg-red-500/20'
+                : 'border-border hover:border-red-500/50 hover:bg-red-500/10',
+              showResult && correctAnswer === 'Fold' && 'border-green-500 bg-green-500/10',
+              showResult && selectedAnswer === 'Fold' && correctAnswer !== 'Fold' && 'border-red-500 bg-red-500/10'
+            )}
+          >
+            <ThumbsDown className={cn(
+              'w-8 h-8',
+              selectedAnswer === 'Fold' ? 'text-red-400' : 'text-muted-foreground'
+            )} />
+            <span className={cn(
+              'text-lg font-semibold',
+              selectedAnswer === 'Fold' ? 'text-red-400' : 'text-white'
+            )}>Fold</span>
+            {!showResult && (
+              <kbd className="px-2 py-1 text-xs bg-background-tertiary rounded text-muted-foreground">2</kbd>
+            )}
+          </button>
+
+          <button
+            onClick={() => onSelect('Play')}
+            disabled={showResult}
+            className={cn(
+              'p-6 rounded-xl border-2 transition-all flex flex-col items-center gap-2',
+              selectedAnswer === 'Play'
+                ? 'border-green-500 bg-green-500/20'
+                : 'border-border hover:border-green-500/50 hover:bg-green-500/10',
+              showResult && correctAnswer === 'Play' && 'border-green-500 bg-green-500/10',
+              showResult && selectedAnswer === 'Play' && correctAnswer !== 'Play' && 'border-red-500 bg-red-500/10'
+            )}
+          >
+            <ThumbsUp className={cn(
+              'w-8 h-8',
+              selectedAnswer === 'Play' ? 'text-green-400' : 'text-muted-foreground'
+            )} />
+            <span className={cn(
+              'text-lg font-semibold',
+              selectedAnswer === 'Play' ? 'text-green-400' : 'text-white'
+            )}>Play</span>
+            {!showResult && (
+              <kbd className="px-2 py-1 text-xs bg-background-tertiary rounded text-muted-foreground">1</kbd>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Hand comparison questions
   if (question.type === 'HAND_COMPARE') {
     const hand1 = content.hand1 as { cards: string[]; name: string };
@@ -479,26 +661,67 @@ const QuestionDisplay = memo(function QuestionDisplay({
     );
   }
 
-  // Multiple choice questions
+  // Multiple choice questions (default)
   const options = content.options as string[];
   const questionText = content.question as string;
+
+  // Extract hand cards if present (for various question types)
+  const handCards = content.hand
+    ? (Array.isArray(content.hand) ? content.hand : (content.hand as { cards: string[] }).cards) as string[]
+    : null;
+
+  // Extract board cards if present (for HAND_STRENGTH, BOARD_TEXTURE, etc.)
+  const boardCards = content.board as string[] | undefined;
 
   return (
     <div>
       <h2 className="text-lg font-semibold text-white mb-6">{questionText}</h2>
 
+      {/* Show situation/scenario context if present */}
+      {typeof content.situation === 'string' && (
+        <div className="bg-background-tertiary p-4 rounded-lg mb-6 text-muted-foreground">
+          {content.situation}
+        </div>
+      )}
+
+      {/* Show setup context if present (for SCENARIO type) */}
+      {typeof content.setup === 'string' && (
+        <div className="bg-background-tertiary p-4 rounded-lg mb-6 text-muted-foreground">
+          {content.setup}
+        </div>
+      )}
+
+      {/* Show betting line if present (for STORY_CONSISTENT type) */}
+      {typeof content.line === 'string' && (
+        <div className="bg-background-tertiary p-4 rounded-lg mb-6 text-muted-foreground italic">
+          "{content.line}"
+        </div>
+      )}
+
       {/* Show hand if present */}
-      {Boolean(content.hand) && (
-        <div className="flex justify-center gap-1 mb-6">
-          {((content.hand as { cards: string[] }).cards || []).map((card, i) => (
+      {handCards && handCards.length > 0 && (
+        <div className="flex flex-wrap justify-center gap-1 mb-4">
+          {handCards.map((card, i) => (
             <PlayingCard key={i} card={card} size="sm" />
           ))}
         </div>
       )}
 
+      {/* Show board if present */}
+      {boardCards && boardCards.length > 0 && (
+        <div className="mb-6">
+          <div className="text-xs text-muted-foreground text-center mb-2">Board</div>
+          <div className="flex justify-center gap-1">
+            {boardCards.map((card, i) => (
+              <PlayingCard key={i} card={card} size="sm" />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Options */}
       <div className="space-y-3">
-        {options.map((option, index) => (
+        {options?.map((option, index) => (
           <button
             key={option}
             onClick={() => onSelect(option)}

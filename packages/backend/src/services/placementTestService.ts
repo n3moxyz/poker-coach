@@ -1,12 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 
-// Score to starting level mapping
+// Score to starting level mapping (updated for 10-module curriculum)
+// Module unlock XP: 0, 75, 150, 250, 375, 525, 700, 900, 1125, 1375
 const PLACEMENT_LEVELS = [
-  { minScore: 0, maxScore: 3, level: 'Beginner', xp: 0, modulesUnlocked: 1 },
-  { minScore: 4, maxScore: 5, level: 'Knows Basics', xp: 100, modulesUnlocked: 2 },
-  { minScore: 6, maxScore: 7, level: 'Intermediate', xp: 250, modulesUnlocked: 3 },
-  { minScore: 8, maxScore: 9, level: 'Advanced', xp: 450, modulesUnlocked: 4 },
-  { minScore: 10, maxScore: 10, level: 'Expert', xp: 700, modulesUnlocked: 5 },
+  { minScore: 0, maxScore: 2, level: 'Beginner', xp: 0, modulesUnlocked: 1 },
+  { minScore: 3, maxScore: 4, level: 'Knows Basics', xp: 150, modulesUnlocked: 3 },
+  { minScore: 5, maxScore: 6, level: 'Intermediate', xp: 375, modulesUnlocked: 5 },
+  { minScore: 7, maxScore: 8, level: 'Advanced', xp: 700, modulesUnlocked: 7 },
+  { minScore: 9, maxScore: 10, level: 'Expert', xp: 1125, modulesUnlocked: 9 },
 ];
 
 export interface PlacementResult {
