@@ -207,8 +207,10 @@ export function usePlacementQuestions() {
       const token = await getToken();
       return api.getPlacementQuestions(token);
     },
-    staleTime: Infinity, // Keep questions fresh during test
+    staleTime: 0, // Always refetch on mount
     gcTime: 0, // Don't cache between sessions
+    retry: false, // Don't retry on error (e.g., "already completed")
+    refetchOnMount: 'always', // Always fetch fresh data when component mounts
   });
 }
 
@@ -263,5 +265,7 @@ export function usePlacementTestStatus() {
       const token = await getToken();
       return api.getPlacementTestStatus(token);
     },
+    staleTime: 0, // Always refetch on mount
+    refetchOnMount: 'always', // Always fetch fresh status
   });
 }

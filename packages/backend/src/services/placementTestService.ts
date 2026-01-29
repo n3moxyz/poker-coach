@@ -80,61 +80,67 @@ export async function applyPlacementResults(
     orderBy: { orderIndex: 'asc' },
   });
 
-  // Use transaction for consistency
-  await prisma.$transaction(async (tx) => {
-    // Update user with placement test results
-    await tx.user.update({
-      where: { id: userId },
-      data: {
-        placementTestCompleted: true,
-        placementTestScore: score,
-      },
-    });
-
-    // Update or create user stats with starting XP
-    await tx.userStats.upsert({
-      where: { userId },
-      create: {
-        userId,
-        totalXp: placement.xp,
-        level: 1,
-      },
-      update: {
-        totalXp: placement.xp,
-      },
-    });
-
-    // Unlock modules based on placement
-    for (let i = 0; i < placement.modulesUnlocked && i < modules.length; i++) {
-      const module = modules[i];
-      await tx.userProgress.upsert({
-        where: {
-          userId_moduleId: { userId, moduleId: module.id },
-        },
-        create: {
-          userId,
-          moduleId: module.id,
-          status: 'UNLOCKED',
-        },
-        update: {
-          status: 'UNLOCKED',
+  // Use transaction with extended timeout for consistency
+  await prisma.$transaction(
+    async (tx) => {
+      // Update user with placement test results
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          placementTestCompleted: true,
+          placementTestScore: score,
         },
       });
-    }
 
-    // Record placement test answers (without XP, for tracking only)
-    for (const answer of answers) {
-      await tx.userAnswer.create({
-        data: {
+      // Update or create user stats with starting XP
+      await tx.userStats.upsert({
+        where: { userId },
+        create: {
+          userId,
+          totalXp: placement.xp,
+          level: 1,
+        },
+        update: {
+          totalXp: placement.xp,
+        },
+      });
+
+      // Unlock modules based on placement (batch with Promise.all)
+      const moduleUnlockPromises = modules
+        .slice(0, placement.modulesUnlocked)
+        .map((module) =>
+          tx.userProgress.upsert({
+            where: {
+              userId_moduleId: { userId, moduleId: module.id },
+            },
+            create: {
+              userId,
+              moduleId: module.id,
+              status: 'UNLOCKED',
+            },
+            update: {
+              status: 'UNLOCKED',
+            },
+          })
+        );
+      await Promise.all(moduleUnlockPromises);
+
+      // Record placement test answers (batch with createMany)
+      await tx.userAnswer.createMany({
+        data: answers.map((answer) => ({
           userId,
           questionId: answer.questionId,
           answer: answer.answer,
           isCorrect: answer.isCorrect,
           xpEarned: 0, // No XP for placement test answers
-        },
+        })),
       });
+    },
+    {
+      maxWait: 10000, // 10 seconds max wait to acquire connection
+      timeout: 30000, // 30 seconds timeout for transaction
     }
-  });
+  );
 
   return {
     score,

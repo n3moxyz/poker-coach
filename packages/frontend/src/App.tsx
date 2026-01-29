@@ -37,8 +37,8 @@ function AuthenticatedApp() {
           setNeedsPlacementTest(result.needsPlacementTest);
         } catch (error) {
           console.error('Sync failed:', error);
-          // Default to not needing placement test on error
-          setNeedsPlacementTest(false);
+          // Default to needing placement test on error (safer for new users)
+          setNeedsPlacementTest(true);
         }
       }
     };

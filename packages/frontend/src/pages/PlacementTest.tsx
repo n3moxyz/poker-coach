@@ -13,6 +13,7 @@ import {
   usePlacementQuestions,
   useSubmitPlacementTest,
   useSkipPlacementTest,
+  usePlacementTestStatus,
 } from '@/hooks/useApi';
 import { cn } from '@/lib/utils';
 import type { PlacementQuestion, PlacementResult, PlacementAnswerFeedback } from '@/lib/api';
@@ -21,7 +22,8 @@ import PlayingCard from '@/components/games/PlayingCard';
 type TestPhase = 'welcome' | 'testing' | 'results';
 
 export default function PlacementTest() {
-  const { data: questionsData, isLoading: questionsLoading } = usePlacementQuestions();
+  const { data: statusData, isLoading: statusLoading } = usePlacementTestStatus();
+  const { data: questionsData, isLoading: questionsLoading, error: questionsError } = usePlacementQuestions();
   const submitTest = useSubmitPlacementTest();
   const skipTest = useSkipPlacementTest();
 
@@ -34,6 +36,7 @@ export default function PlacementTest() {
   const [result, setResult] = useState<PlacementResult | null>(null);
   const [answerFeedback, setAnswerFeedback] = useState<PlacementAnswerFeedback[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
 
   const questions = questionsData?.questions || [];
   const currentQuestion = questions[currentIndex];
@@ -44,12 +47,15 @@ export default function PlacementTest() {
   }, []);
 
   const handleSkipTest = useCallback(async () => {
+    // Set phase to results BEFORE mutation to prevent redirect race condition
+    setPhase('results');
     try {
       const response = await skipTest.mutateAsync();
       setResult(response.result);
-      setPhase('results');
     } catch (error) {
       console.error('Failed to skip placement test:', error);
+      // Revert phase on error
+      setPhase('welcome');
     }
   }, [skipTest]);
 
@@ -70,6 +76,9 @@ export default function PlacementTest() {
     if (currentIndex >= questions.length - 1) {
       // This is the last question - submit all answers
       setIsSubmitting(true);
+      // Set phase to results BEFORE mutation to prevent redirect race condition
+      // (mutation's onSuccess updates statusData before our code continues)
+      setPhase('results');
       try {
         // Use the ref for synchronous access to all answers
         const allAnswers = questions.map((q) => ({
@@ -79,9 +88,11 @@ export default function PlacementTest() {
         const response = await submitTest.mutateAsync(allAnswers);
         setResult(response.result);
         setAnswerFeedback(response.answers);
-        setPhase('results');
       } catch (error) {
         console.error('Failed to submit placement test:', error);
+        setSubmitError(true);
+        // Revert phase on error so user can retry
+        setPhase('testing');
       } finally {
         setIsSubmitting(false);
       }
@@ -102,10 +113,69 @@ export default function PlacementTest() {
     window.location.href = '/';
   }, []);
 
-  if (questionsLoading) {
+  // RESULTS SCREEN - Check this FIRST to prevent any other checks from interfering
+  // This must come before loading/error checks because queries get invalidated after submission
+  if (phase === 'results') {
+    if (result) {
+      return (
+        <ResultsScreen
+          result={result}
+          feedback={answerFeedback}
+          questions={questions}
+          onContinue={handleContinue}
+        />
+      );
+    }
+    // Still waiting for result after submission
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-gold mx-auto mb-4" />
+          <p className="text-muted-foreground">Calculating your results...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state (only when not showing results)
+  if (statusLoading || questionsLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-gold" />
+      </div>
+    );
+  }
+
+  // If placement test already completed, redirect to dashboard
+  if (statusData && !statusData.needsPlacementTest) {
+    window.location.href = '/';
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-gold mx-auto mb-4" />
+          <p className="text-muted-foreground">Placement test already completed. Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If API error (likely already completed), show message with redirect option
+  if (questionsError || questions.length === 0) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <h2 className="text-xl font-semibold text-white mb-4">Unable to Load Questions</h2>
+          <p className="text-muted-foreground mb-6">
+            The placement test may have already been completed or there was an error loading questions.
+          </p>
+          <button
+            onClick={handleContinue}
+            className="btn-primary"
+          >
+            Go to Dashboard
+            <ArrowRight className="w-5 h-5 ml-2" />
+          </button>
+        </div>
       </div>
     );
   }
@@ -117,17 +187,6 @@ export default function PlacementTest() {
         onSkip={handleSkipTest}
         isSkipping={skipTest.isPending}
         totalQuestions={questions.length}
-      />
-    );
-  }
-
-  if (phase === 'results' && result) {
-    return (
-      <ResultsScreen
-        result={result}
-        feedback={answerFeedback}
-        questions={questions}
-        onContinue={handleContinue}
       />
     );
   }
@@ -199,8 +258,32 @@ export default function PlacementTest() {
           </div>
         )}
 
+        {/* Error state */}
+        {submitError && !isSubmitting && (
+          <div className="text-center space-y-3">
+            <p className="text-red-400">Failed to submit test. Please try again.</p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={() => {
+                  setSubmitError(false);
+                  handleSelectAnswer(currentAnswer || '');
+                }}
+                className="btn-primary"
+              >
+                Retry
+              </button>
+              <button
+                onClick={handleContinue}
+                className="btn-secondary"
+              >
+                Skip to Dashboard
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Instruction hint */}
-        {!isSubmitting && (
+        {!isSubmitting && !submitError && (
           <p className="text-center text-sm text-muted-foreground">
             Click an answer to continue
             {currentIndex > 0 && ' • Use the back arrow to change previous answers'}
@@ -304,7 +387,9 @@ interface ResultsScreenProps {
 }
 
 function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScreenProps) {
-  const [showReview, setShowReview] = useState(false);
+  const wrongAnswers = feedback.filter((a) => !a.isCorrect);
+  // Auto-show review if there are wrong answers
+  const [showReview, setShowReview] = useState(wrongAnswers.length > 0);
 
   const getLevelEmoji = (level: string) => {
     switch (level) {
@@ -335,8 +420,6 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
         return 'text-gray-400';
     }
   };
-
-  const wrongAnswers = feedback.filter((a) => !a.isCorrect);
 
   // When review is shown, don't use fixed footer so user can scroll to see all content
   const useFixedFooter = !showReview;
