@@ -16,6 +16,18 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Allowed origins for CORS
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://pokercoach.vercel.app',
+];
+
+// Add FRONTEND_URL from env if set
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 // Middleware
 app.use(cors({
   origin: (origin, callback) => {
@@ -27,12 +39,12 @@ app.use(cors({
       return callback(null, true);
     }
 
-    // Allow configured frontend URL
-    const allowedOrigin = process.env.FRONTEND_URL || 'http://localhost:5173';
-    if (origin === allowedOrigin) {
+    // Check against allowed origins list
+    if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
 
+    console.log('CORS blocked origin:', origin);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
