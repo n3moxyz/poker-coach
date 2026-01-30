@@ -79,6 +79,56 @@ interface SessionState {
   isComplete: boolean;
 }
 
+// Session storage for resume functionality
+interface SavedSession {
+  moduleSlug: string;
+  questionIds: string[];
+  currentIndex: number;
+  answers: SessionState['answers'];
+  savedAt: number;
+}
+
+const SESSION_STORAGE_KEY = 'poker-coach-session';
+const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+function getSavedSession(slug: string): SavedSession | null {
+  try {
+    const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!saved) return null;
+    const session: SavedSession = JSON.parse(saved);
+    // Check if session is for this module and not expired
+    if (session.moduleSlug === slug && Date.now() - session.savedAt < SESSION_EXPIRY_MS) {
+      return session;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function saveSession(slug: string, questionIds: string[], state: SessionState): void {
+  try {
+    const session: SavedSession = {
+      moduleSlug: slug,
+      questionIds,
+      currentIndex: state.currentIndex,
+      answers: state.answers,
+      savedAt: Date.now(),
+    };
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+function clearSavedSession(): void {
+  try {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export default function PracticeSession() {
   const { slug } = useParams<{ slug: string }>();
   const { data, isLoading, error } = useQuestions(slug || '', QUESTIONS_PER_SESSION);
@@ -97,6 +147,45 @@ export default function PracticeSession() {
   const [startTime, setStartTime] = useState<number>(Date.now());
   const [showHint, setShowHint] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [hasRestoredSession, setHasRestoredSession] = useState(false);
+
+  // Check for saved session and restore if questions match
+  useEffect(() => {
+    if (!slug || !data?.questions || hasRestoredSession) return;
+
+    const saved = getSavedSession(slug);
+    if (saved && saved.questionIds.length === data.questions.length) {
+      // Check if question IDs match (same session)
+      const currentIds = data.questions.map(q => q.id);
+      const idsMatch = saved.questionIds.every((id, i) => id === currentIds[i]);
+
+      if (idsMatch && saved.currentIndex > 0) {
+        // Restore the session
+        setSession({
+          currentIndex: saved.currentIndex,
+          answers: saved.answers,
+          isComplete: false,
+        });
+      }
+    }
+    setHasRestoredSession(true);
+  }, [slug, data?.questions, hasRestoredSession]);
+
+  // Save session whenever answers change
+  useEffect(() => {
+    if (!slug || !data?.questions || session.isComplete) return;
+    if (session.answers.length > 0) {
+      const questionIds = data.questions.map(q => q.id);
+      saveSession(slug, questionIds, session);
+    }
+  }, [slug, data?.questions, session]);
+
+  // Clear saved session when complete
+  useEffect(() => {
+    if (session.isComplete) {
+      clearSavedSession();
+    }
+  }, [session.isComplete]);
 
   // Reset start time and hint when moving to next question
   useEffect(() => {

@@ -7,6 +7,10 @@
 
 export type ModuleStatus = 'LOCKED' | 'UNLOCKED' | 'IN_PROGRESS' | 'COMPLETED' | 'MASTERED';
 
+// Minimum questions needed for COMPLETED status
+const MIN_QUESTIONS_FOR_COMPLETION = 20;
+const COMPLETION_ACCURACY = 70;
+
 interface UserProgress {
   status: string;
   correctAnswers: number;
@@ -24,8 +28,8 @@ interface CalculateStatusParams {
  * Status rules:
  * - LOCKED: User doesn't have enough XP to access
  * - UNLOCKED: Available but no progress yet
- * - IN_PROGRESS: Started, but <70% accuracy
- * - COMPLETED: >=70% accuracy
+ * - IN_PROGRESS: Started, but either < 20 questions OR < 70% accuracy
+ * - COMPLETED: 20+ questions AND >= 70% accuracy
  * - MASTERED: Stored as MASTERED (80%+ over 20+ questions, calculated elsewhere)
  */
 export function calculateModuleStatus({
@@ -42,10 +46,13 @@ export function calculateModuleStatus({
   }
 
   if (userProgress.totalAnswers > 0) {
-    // Calculate accuracy
     const accuracy = (userProgress.correctAnswers / userProgress.totalAnswers) * 100;
-    // >=70% correct = COMPLETED, <70% = IN_PROGRESS
-    return accuracy >= 70 ? 'COMPLETED' : 'IN_PROGRESS';
+    // Need both minimum questions AND good accuracy for COMPLETED
+    if (userProgress.totalAnswers >= MIN_QUESTIONS_FOR_COMPLETION && accuracy >= COMPLETION_ACCURACY) {
+      return 'COMPLETED';
+    }
+    // Any progress but not meeting completion requirements = IN_PROGRESS
+    return 'IN_PROGRESS';
   }
 
   return 'UNLOCKED';
@@ -67,7 +74,11 @@ export function calculateProgressStatus(
 
   if (totalAnswers > 0) {
     const accuracy = (correctAnswers / totalAnswers) * 100;
-    return accuracy >= 70 ? 'COMPLETED' : 'IN_PROGRESS';
+    // Need both minimum questions AND good accuracy for COMPLETED
+    if (totalAnswers >= MIN_QUESTIONS_FOR_COMPLETION && accuracy >= COMPLETION_ACCURACY) {
+      return 'COMPLETED';
+    }
+    return 'IN_PROGRESS';
   }
 
   return currentStatus as ModuleStatus;
