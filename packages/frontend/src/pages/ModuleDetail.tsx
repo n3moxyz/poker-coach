@@ -156,24 +156,18 @@ export default function ModuleDetail() {
       {/* Question types */}
       {module.questionTypes && module.questionTypes.length > 0 && (
         <div className="card mb-6">
-          <h2 className="text-lg font-semibold text-white mb-4">
-            Question Types
+          <h2 className="text-lg font-semibold text-white mb-3">
+            What You'll Practice
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <ul className="space-y-2">
             {module.questionTypes.map((qt) => (
-              <div
-                key={qt.type}
-                className="p-3 rounded-lg bg-background-tertiary border border-border"
-              >
-                <div className="font-medium text-white">
-                  {formatQuestionType(qt.type)}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {qt.count} questions
-                </div>
-              </div>
+              <li key={qt.type} className="flex items-center gap-2 text-muted-foreground">
+                <span className="w-1.5 h-1.5 rounded-full bg-gold flex-shrink-0" />
+                <span>{formatQuestionType(qt.type)}</span>
+                <span className="text-sm text-muted">({qt.count})</span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       )}
 
@@ -199,22 +193,55 @@ export default function ModuleDetail() {
 
 function formatQuestionType(type: string): string {
   const types: Record<string, string> = {
-    HAND_COMPARE: 'Hand Comparison',
-    HAND_RANK: 'Hand Rankings',
-    POSITION_ID: 'Position ID',
-    POSITION_ADVANTAGE: 'Position Strategy',
-    POSITION_ORDER: 'Position Order',
-    POSITION_STRATEGY: 'Position Play',
-    ODDS_CALC: 'Pot Odds',
-    OUTS_COUNT: 'Counting Outs',
-    ODDS_CONVERT: 'Odds Conversion',
-    DECISION: 'Decision Making',
-    RULE_OF: 'Rules of Thumb',
-    PREFLOP: 'Preflop Decisions',
-    HAND_CATEGORY: 'Hand Categories',
-    SCENARIO: 'Game Scenarios',
+    // Hand Rankings (Module 1)
+    HAND_COMPARE: 'Compare two poker hands',
+    HAND_RANK: 'Identify hand rankings',
+    // Board Reading (Module 2)
+    MULTIWAY_SHOWDOWN: 'Find the winner at showdown',
+    SPLIT_POT: 'Identify split pot situations',
+    // Hand Flow (Module 3)
+    STREET_ORDER: 'Order of betting rounds',
+    BLIND_STRUCTURE: 'Blinds and antes',
+    ACTION_AVAILABLE: 'Available betting actions',
+    TURN_ORDER: 'Who acts when',
+    // Position (Module 4)
+    POSITION_ID: 'Identify table positions',
+    POSITION_ADVANTAGE: 'Position advantages',
+    POSITION_ORDER: 'Acting order by position',
+    POSITION_STRATEGY: 'Position-based strategy',
+    // Starting Hands (Module 5)
+    PLAY_FOLD: 'Play or fold decisions',
+    PREFLOP: 'Preflop hand selection',
+    HAND_CATEGORY: 'Categorize starting hands',
+    // Betting Basics (Module 6)
+    BET_INTENT: 'Why we bet (value, bluff, protection)',
+    BET_RESPONSE: 'Responding to bets',
+    BET_SIZE: 'Bet sizing',
+    // Flop Play (Module 7)
+    HAND_STRENGTH: 'Evaluate hand strength',
+    BOARD_TEXTURE: 'Read board textures',
+    FLOP_ACTION: 'Flop action decisions',
+    // Pot Odds (Module 8)
+    ODDS_CALC: 'Calculate pot odds',
+    OUTS_COUNT: 'Count your outs',
+    ODDS_CONVERT: 'Convert odds to percentages',
+    DECISION: 'Odds-based decisions',
+    RULE_OF: 'Rule of 2 and 4',
+    // Bluffing (Module 9)
+    STORY_CONSISTENT: 'Tell a consistent story',
+    BLUFF_SPOT: 'Identify bluff spots',
+    VALUE_OR_BLUFF: 'Value bet or bluff?',
+    BLUFF_FREQUENCY: 'Bluffing frequency',
+    // Mental Game (Module 10)
+    SPOT_MISTAKE: 'Spot common mistakes',
+    TILT_RESPONSE: 'Handle tilt',
+    RESULTS_VS_DECISION: 'Results vs. decisions',
+    BANKROLL: 'Bankroll management',
+    SESSION_MANAGEMENT: 'Session management',
+    // Fallback
+    SCENARIO: 'Game scenarios',
   };
-  return types[type] || type;
+  return types[type] || type.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 }
 
 function ModuleDetailSkeleton() {
