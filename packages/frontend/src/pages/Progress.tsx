@@ -88,11 +88,13 @@ export default function Progress() {
             <button
               onClick={() => setShowPlacementDetails(!showPlacementDetails)}
               className="text-muted-foreground hover:text-white transition-colors"
+              aria-label={showPlacementDetails ? 'Hide placement test details' : 'Show placement test details'}
+              aria-expanded={showPlacementDetails}
             >
               {showPlacementDetails ? (
-                <ChevronUp className="w-5 h-5" />
+                <ChevronUp className="w-5 h-5" aria-hidden="true" />
               ) : (
-                <ChevronDown className="w-5 h-5" />
+                <ChevronDown className="w-5 h-5" aria-hidden="true" />
               )}
             </button>
           </div>

@@ -238,8 +238,9 @@ export default function PlacementTest() {
                 onClick={handleGoBack}
                 className="p-2 rounded-lg hover:bg-background-secondary transition-colors text-muted-foreground hover:text-white"
                 disabled={isSubmitting}
+                aria-label="Go to previous question"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-5 h-5" aria-hidden="true" />
               </button>
             )}
             <h1 className="text-lg font-semibold text-white">Placement Test</h1>
@@ -250,7 +251,7 @@ export default function PlacementTest() {
         </div>
 
         {/* Progress bar - clickable dots */}
-        <div className="flex gap-1 mb-6">
+        <div className="flex gap-1 mb-6" role="navigation" aria-label="Question progress">
           {questions.map((q, i) => {
             const wasSkipped = answersMap[q.id] === SKIPPED_MARKER;
             return (
@@ -258,6 +259,7 @@ export default function PlacementTest() {
                 key={q.id}
                 onClick={() => i < currentIndex && setCurrentIndex(i)}
                 disabled={i >= currentIndex || isSubmitting}
+                aria-label={`Question ${i + 1}${i < currentIndex ? (wasSkipped ? ' (skipped)' : ' (answered)') : i === currentIndex ? ' (current)' : ''}`}
                 className={cn(
                   'flex-1 h-2 rounded-full transition-all',
                   i < currentIndex

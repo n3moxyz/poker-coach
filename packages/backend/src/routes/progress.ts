@@ -32,13 +32,15 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       });
     }
 
-    const streak = await getStreak(prisma, userId);
-
-    // Get module progress
-    const moduleProgress = await prisma.userProgress.findMany({
-      where: { userId },
-      include: { module: true },
-    });
+    // Fetch streak, module progress, and module count in parallel
+    const [streak, moduleProgress, totalModules] = await Promise.all([
+      getStreak(prisma, userId),
+      prisma.userProgress.findMany({
+        where: { userId },
+        include: { module: true },
+      }),
+      prisma.module.count(),
+    ]);
 
     const masteredCount = moduleProgress.filter((p) => p.status === 'MASTERED').length;
 
@@ -61,7 +63,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         isActiveToday: streak.isActiveToday,
       },
       modules: {
-        total: await prisma.module.count(),
+        total: totalModules,
         mastered: masteredCount,
         inProgress: moduleProgress.filter((p) => p.status === 'IN_PROGRESS').length,
       },

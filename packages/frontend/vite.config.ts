@@ -9,6 +9,22 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Optimize icon library imports for smaller bundles
+  optimizeDeps: {
+    include: ['lucide-react'],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        // Manual chunk splitting for better caching
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom', 'react-router-dom'],
+          'vendor-ui': ['lucide-react', 'clsx', 'tailwind-merge'],
+          'vendor-query': ['@tanstack/react-query'],
+        },
+      },
+    },
+  },
   server: {
     port: 5173,
     proxy: {

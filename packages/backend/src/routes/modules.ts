@@ -34,26 +34,28 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.auth!.userId;
 
-    // Get user's total XP for unlock checking
-    const stats = await prisma.userStats.findUnique({
-      where: { userId },
-    });
-    const totalXp = stats?.totalXp || 0;
-
-    // Get all modules
-    const modules = await prisma.module.findMany({
-      orderBy: { orderIndex: 'asc' },
-      include: {
-        _count: {
-          select: { questions: true },
+    // Fetch all data in parallel for better performance
+    const [stats, modules, progress] = await Promise.all([
+      // Get user's total XP for unlock checking
+      prisma.userStats.findUnique({
+        where: { userId },
+      }),
+      // Get all modules
+      prisma.module.findMany({
+        orderBy: { orderIndex: 'asc' },
+        include: {
+          _count: {
+            select: { questions: true },
+          },
         },
-      },
-    });
+      }),
+      // Get user's progress for each module
+      prisma.userProgress.findMany({
+        where: { userId },
+      }),
+    ]);
 
-    // Get user's progress for each module
-    const progress = await prisma.userProgress.findMany({
-      where: { userId },
-    });
+    const totalXp = stats?.totalXp || 0;
     const progressMap = new Map(progress.map((p) => [p.moduleId, p]));
 
     // Combine module data with progress
@@ -100,24 +102,26 @@ router.get('/:slug', requireAuth, async (req: Request, res: Response) => {
     const { slug } = req.params;
     const userId = req.auth!.userId;
 
-    const module = await prisma.module.findUnique({
-      where: { slug },
-      include: {
-        _count: {
-          select: { questions: true },
+    // Fetch module and stats in parallel
+    const [module, stats] = await Promise.all([
+      prisma.module.findUnique({
+        where: { slug },
+        include: {
+          _count: {
+            select: { questions: true },
+          },
         },
-      },
-    });
+      }),
+      prisma.userStats.findUnique({
+        where: { userId },
+      }),
+    ]);
 
     if (!module) {
       res.status(404).json({ error: 'Module not found' });
       return;
     }
 
-    // Check if user can access this module
-    const stats = await prisma.userStats.findUnique({
-      where: { userId },
-    });
     const totalXp = stats?.totalXp || 0;
 
     if (totalXp < module.unlockRequirement) {
@@ -131,13 +135,22 @@ router.get('/:slug', requireAuth, async (req: Request, res: Response) => {
     // Ensure user exists before creating progress
     await ensureUserExists(userId);
 
-    // Get or create user progress
-    let progress = await prisma.userProgress.findUnique({
-      where: {
-        userId_moduleId: { userId, moduleId: module.id },
-      },
-    });
+    // Fetch progress and question types in parallel
+    const [existingProgress, questionTypes] = await Promise.all([
+      prisma.userProgress.findUnique({
+        where: {
+          userId_moduleId: { userId, moduleId: module.id },
+        },
+      }),
+      prisma.question.groupBy({
+        by: ['type'],
+        where: { moduleId: module.id },
+        _count: true,
+      }),
+    ]);
 
+    // Create progress if needed
+    let progress = existingProgress;
     if (!progress) {
       progress = await prisma.userProgress.create({
         data: {
@@ -147,13 +160,6 @@ router.get('/:slug', requireAuth, async (req: Request, res: Response) => {
         },
       });
     }
-
-    // Get question type distribution
-    const questionTypes = await prisma.question.groupBy({
-      by: ['type'],
-      where: { moduleId: module.id },
-      _count: true,
-    });
 
     // Use shared status calculation logic
     const calculatedStatus = calculateProgressStatus(
