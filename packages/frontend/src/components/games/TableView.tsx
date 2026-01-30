@@ -58,7 +58,7 @@ export default function TableView({
   return (
     <div className={cn('relative w-full max-w-2xl mx-auto', className)}>
       {/* Wrapper with padding to accommodate players positioned outside the table */}
-      <div className="pt-4 pb-20 sm:pb-24">
+      <div className="pt-4 pb-28 sm:pb-32">
         {/* Poker Table */}
         <div className="relative aspect-[16/10] bg-gradient-to-b from-felt-green to-felt-dark rounded-[50%] border-8 border-felt-border shadow-2xl">
           {/* Table Rim */}

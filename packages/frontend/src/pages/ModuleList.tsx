@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Lock, CheckCircle, PlayCircle, Circle, GraduationCap, ChevronUp, RotateCcw, Loader2, Eye, XCircle, MinusCircle } from 'lucide-react';
-import { useModules, usePlacementTestResults, useResetPlacementTest } from '@/hooks/useApi';
+import { useModules, usePlacementTestResults, useResetPlacementTest, usePlacementTestStatus } from '@/hooks/useApi';
 import {
   cn,
   formatXp,
@@ -14,9 +14,13 @@ import {
 export default function ModuleList() {
   const { data, isLoading, error } = useModules();
   const { data: placementResults } = usePlacementTestResults();
+  const { data: placementStatus } = usePlacementTestStatus();
   const resetPlacementTest = useResetPlacementTest();
   const [showPlacementDetails, setShowPlacementDetails] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+
+  // Check if user needs to take placement test
+  const needsPlacementTest = placementStatus?.needsPlacementTest ?? true;
 
   const handleRetakePlacementTest = async () => {
     if (!confirmReset) {
@@ -160,13 +164,13 @@ export default function ModuleList() {
       </div>
 
       {/* Placement Test Section */}
-      {placementResults && (
-        <div className="mt-8 p-4 rounded-xl bg-background-secondary border border-border">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-purple-400" />
-              <h3 className="text-sm font-medium text-white">Placement Test</h3>
-            </div>
+      <div className="mt-8 p-4 rounded-xl bg-background-secondary border border-border">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <GraduationCap className="w-5 h-5 text-purple-400" />
+            <h3 className="text-sm font-medium text-white">Placement Test</h3>
+          </div>
+          {placementResults && (
             <div className="flex items-center gap-2 text-sm">
               <span className="text-muted-foreground">
                 Score: <span className="text-green-400 font-medium">{placementResults.score}/{placementResults.totalQuestions}</span>
@@ -174,7 +178,28 @@ export default function ModuleList() {
               <span className="text-muted">•</span>
               <span className="text-purple-400 font-medium">{placementResults.level}</span>
             </div>
+          )}
+        </div>
+
+        {/* Show "Take Test" button if not completed */}
+        {needsPlacementTest && !placementResults && (
+          <div className="text-center py-2">
+            <p className="text-muted-foreground text-sm mb-3">
+              Take the placement test to unlock modules based on your skill level and earn starting XP!
+            </p>
+            <Link
+              to="/placement-test"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500 text-white hover:bg-purple-400 transition-colors text-sm font-medium"
+            >
+              <GraduationCap className="w-4 h-4" />
+              Take Placement Test
+            </Link>
           </div>
+        )}
+
+        {/* Show results if completed */}
+        {placementResults && (
+          <>
 
           {/* Answer summary bar */}
           <div className="flex gap-0.5 mb-3">
@@ -284,8 +309,9 @@ export default function ModuleList() {
               Cancel
             </button>
           )}
-        </div>
-      )}
+        </>
+        )}
+      </div>
 
       {/* Legend */}
       <div className="mt-8 p-4 rounded-xl bg-background-secondary border border-border">

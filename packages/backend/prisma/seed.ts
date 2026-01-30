@@ -420,6 +420,38 @@ async function main() {
       explanation: 'The board is Aces full of Kings (A-A-A-K-K). No player can use their hole cards to improve, so all three play the board and split.',
       xpValue: 20,
     },
+    {
+      type: 'MULTIWAY_SHOWDOWN',
+      difficulty: 1,
+      content: {
+        board: ['9c', '9d', '4h', '4s', 'Kh'],
+        players: [
+          { seat: 1, name: 'Player 1', cards: ['Kd', 'Qc'] },
+          { seat: 2, name: 'Player 2', cards: ['As', 'Ah'] },
+          { seat: 3, name: 'Player 3', cards: ['Jh', '10h'] },
+        ],
+        question: 'Who wins this showdown?',
+      },
+      correctAnswer: 'Player 2',
+      explanation: 'Player 2 has two pair: Aces and 9s (A-A-9-9-K). Player 1 has two pair: Kings and 9s (K-K-9-9-4). Aces up beats Kings up. Player 3 only has two pair 9s and 4s with King kicker.',
+      xpValue: 15,
+    },
+    {
+      type: 'MULTIWAY_SHOWDOWN',
+      difficulty: 2,
+      content: {
+        board: ['7h', '7d', '7c', '2s', '5h'],
+        players: [
+          { seat: 1, name: 'Player 1', cards: ['As', 'Kd'] },
+          { seat: 2, name: 'Player 2', cards: ['Ac', 'Qh'] },
+          { seat: 3, name: 'Player 3', cards: ['Ad', 'Jc'] },
+        ],
+        question: 'Who wins this showdown?',
+      },
+      correctAnswer: 'Player 1',
+      explanation: 'All players have trip 7s from the board. The kickers decide: Player 1 has A-K, Player 2 has A-Q, Player 3 has A-J. Ace-King kicker wins.',
+      xpValue: 15,
+    },
   ];
 
   await prisma.question.createMany({
@@ -525,6 +557,28 @@ async function main() {
       correctAnswer: 'Flop and Turn only',
       explanation: 'You can improve on the Turn (after flop) and River (after turn). Once all 5 community cards are out, no more cards come.',
       xpValue: 15,
+    },
+    {
+      type: 'BLIND_STRUCTURE',
+      difficulty: 1,
+      content: {
+        question: 'In a $1/$2 No Limit game, what does "$1/$2" refer to?',
+        options: ['Small blind is $1, big blind is $2', 'Minimum bet is $1, maximum is $2', 'Ante is $1, bring-in is $2'],
+      },
+      correctAnswer: 'Small blind is $1, big blind is $2',
+      explanation: 'The stakes notation shows the blind sizes. In $1/$2, the small blind posts $1 and the big blind posts $2. The minimum raise is typically the big blind amount.',
+      xpValue: 10,
+    },
+    {
+      type: 'TURN_ORDER',
+      difficulty: 1,
+      content: {
+        question: 'Preflop, who acts first?',
+        options: ['Player left of big blind (UTG)', 'Small blind', 'The button'],
+      },
+      correctAnswer: 'Player left of big blind (UTG)',
+      explanation: 'Preflop action starts with the player to the left of the big blind, called Under The Gun (UTG). The blinds act last preflop since they already have forced bets in.',
+      xpValue: 10,
     },
   ];
 
@@ -1058,6 +1112,30 @@ async function main() {
       explanation: 'Standard value bets are 50-75% pot - large enough to extract value but not so large that only better hands call.',
       xpValue: 20,
     },
+    {
+      type: 'BET_INTENT',
+      difficulty: 1,
+      content: {
+        situation: 'You check, opponent bets, you check-raise.',
+        question: 'What is a check-raise typically used for?',
+        options: ['Build the pot or bluff', 'Slow down the action', 'Get free cards'],
+      },
+      correctAnswer: 'Build the pot or bluff',
+      explanation: 'A check-raise is a strong play used either for value (building the pot with a good hand) or as a bluff to represent strength.',
+      xpValue: 10,
+    },
+    {
+      type: 'BET_RESPONSE',
+      difficulty: 1,
+      content: {
+        situation: 'You have a weak hand with no draw potential.',
+        question: 'Opponent makes a large bet. What should you typically do?',
+        options: ['Fold', 'Call to see what happens', 'Raise as a bluff'],
+      },
+      correctAnswer: 'Fold',
+      explanation: 'With a weak hand and no chance to improve, folding to a large bet is correct. Calling without equity or fold equity is losing money long-term.',
+      xpValue: 10,
+    },
   ];
 
   await prisma.question.createMany({
@@ -1176,6 +1254,31 @@ async function main() {
       explanation: 'Top two pair is very strong. Bet for value to build the pot. Checking risks giving free cards that could hurt you.',
       xpValue: 20,
     },
+    {
+      type: 'BOARD_TEXTURE',
+      difficulty: 1,
+      content: {
+        board: ['Js', '6h', '2c'],
+        question: 'This flop texture is considered:',
+        options: ['Dry - few draws possible', 'Wet - many draws possible', 'Paired - someone likely has trips'],
+      },
+      correctAnswer: 'Dry - few draws possible',
+      explanation: 'A rainbow (three different suits) flop with disconnected cards (J-6-2) is very dry. No flush draws and very limited straight draws exist.',
+      xpValue: 10,
+    },
+    {
+      type: 'HAND_STRENGTH',
+      difficulty: 1,
+      content: {
+        hand: ['Ah', 'Kh'],
+        board: ['Qh', '9h', '3c'],
+        question: 'What do you have on this flop?',
+        options: ['Flush draw + overcards', 'Made flush', 'Nothing useful'],
+      },
+      correctAnswer: 'Flush draw + overcards',
+      explanation: 'You have the nut flush draw (4 hearts, need one more). Plus Ace-high and King-high are overcards that could also make top pair.',
+      xpValue: 10,
+    },
   ];
 
   await prisma.question.createMany({
@@ -1284,6 +1387,18 @@ async function main() {
       correctAnswer: 'Tight player who can fold',
       explanation: 'Bluffs only work when opponents fold. Tight players fold more. Never bluff calling stations - they call with anything.',
       xpValue: 20,
+    },
+    {
+      type: 'STORY_CONSISTENT',
+      difficulty: 2,
+      content: {
+        situation: 'You called preflop, checked the flop, then suddenly bet big on the turn when a flush completes.',
+        question: 'Is your betting story consistent with having the flush?',
+        options: ['No - you would have bet the flop with a draw', 'Yes - perfectly consistent', 'Depends on stack sizes'],
+      },
+      correctAnswer: 'No - you would have bet the flop with a draw',
+      explanation: 'Most players with flush draws bet or raise the flop. Checking flop then betting when the flush hits looks suspicious - your story doesnt make sense.',
+      xpValue: 15,
     },
   ];
 

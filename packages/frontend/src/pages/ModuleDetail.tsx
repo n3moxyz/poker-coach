@@ -193,13 +193,12 @@ export default function ModuleDetail() {
         {progress.totalAnswers > 0 ? 'Continue Practice' : 'Start Practice'}
       </button>
 
-      {/* Mastery bonus info */}
+      {/* Mastery bonus info - subtle hint, not a button */}
       {!isMastered && (
-        <div className="mt-4 p-4 rounded-xl bg-gold/10 border border-gold/20 text-center">
-          <span className="text-gold">
-            Master this module to earn {formatXp(module.masteryXpBonus)} bonus XP!
-          </span>
-        </div>
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          <span className="text-gold/70">💡</span> Master this module to earn{' '}
+          <span className="text-gold">{formatXp(module.masteryXpBonus)} bonus XP</span>
+        </p>
       )}
     </div>
   );

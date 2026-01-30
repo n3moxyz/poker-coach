@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, XCircle, Zap, Trophy, ArrowRight, Lightbulb, SkipForward, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { CheckCircle, XCircle, Zap, Trophy, ArrowRight, Lightbulb, SkipForward, ThumbsUp, ThumbsDown, LogOut } from 'lucide-react';
 import { useQuestions, useSubmitAnswer, useCompleteSession } from '@/hooks/useApi';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { cn, formatXp } from '@/lib/utils';
@@ -84,6 +84,8 @@ export default function PracticeSession() {
   const { data, isLoading, error } = useQuestions(slug || '', QUESTIONS_PER_SESSION);
   const submitAnswer = useSubmitAnswer();
 
+  const navigate = useNavigate();
+
   const [session, setSession] = useState<SessionState>({
     currentIndex: 0,
     answers: [],
@@ -94,6 +96,7 @@ export default function PracticeSession() {
   const [currentResult, setCurrentResult] = useState<AnswerResult | null>(null);
   const [startTime, setStartTime] = useState<number>(Date.now());
   const [showHint, setShowHint] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   // Reset start time and hint when moving to next question
   useEffect(() => {
@@ -281,17 +284,68 @@ export default function PracticeSession() {
     );
   }
 
+  // Calculate current session stats for exit confirmation
+  const answeredCount = session.answers.length;
+  const correctCount = session.answers.filter((a) => a.result?.isCorrect).length;
+  const totalXpEarned = session.answers.reduce((sum, a) => sum + (a.result?.xp?.earned || 0), 0);
+
   return (
     <div className="md:ml-64 pb-20 md:pb-6">
+      {/* Save & Exit Confirmation Modal */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="card max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-white mb-2">Save & Exit?</h3>
+            <p className="text-muted-foreground text-sm mb-4">
+              Your progress has been saved automatically.
+            </p>
+
+            {answeredCount > 0 && (
+              <div className="bg-background-tertiary rounded-lg p-3 mb-4">
+                <div className="grid grid-cols-3 gap-2 text-center text-sm">
+                  <div>
+                    <div className="text-white font-medium">{answeredCount}/{data.questions.length}</div>
+                    <div className="text-muted-foreground text-xs">Answered</div>
+                  </div>
+                  <div>
+                    <div className="text-green-400 font-medium">{correctCount}</div>
+                    <div className="text-muted-foreground text-xs">Correct</div>
+                  </div>
+                  <div>
+                    <div className="text-gold font-medium">+{totalXpEarned}</div>
+                    <div className="text-muted-foreground text-xs">XP</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowExitConfirm(false)}
+                className="flex-1 py-2 rounded-lg bg-background-tertiary text-muted-foreground hover:text-white transition-colors"
+              >
+                Continue
+              </button>
+              <button
+                onClick={() => navigate('/modules')}
+                className="flex-1 py-2 rounded-lg bg-gold text-black font-medium hover:bg-gold-light transition-colors"
+              >
+                Exit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <Link
-          to={`/modules/${slug}`}
+        <button
+          onClick={() => setShowExitConfirm(true)}
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-white transition-colors"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Exit Practice
-        </Link>
+          <LogOut className="w-4 h-4" />
+          Save & Exit
+        </button>
         <div className="text-sm text-muted-foreground">
           Question {session.currentIndex + 1} of {data.questions.length}
         </div>
@@ -901,10 +955,10 @@ function SessionSummary({ moduleName, slug, answers }: SessionSummaryProps) {
               Practice Again
             </button>
             <button
-              onClick={() => navigate(`/modules/${slug}`)}
+              onClick={() => navigate('/modules')}
               className="btn-secondary py-4"
             >
-              Back to Module
+              Back to Modules
             </button>
           </div>
         </>

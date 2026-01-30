@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, memo } from 'react';
+import { useState, useCallback, useRef, memo, useEffect } from 'react';
 import {
   BookOpen,
   Rocket,
@@ -43,7 +43,20 @@ export default function PlacementTest() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(false);
 
-  const questions = questionsData?.questions || [];
+  // IMPORTANT: Store questions in state to prevent them from disappearing when query is invalidated
+  // This fixes the race condition where mutation success invalidates queries before results are shown
+  const [storedQuestions, setStoredQuestions] = useState<PlacementQuestion[]>([]);
+
+  // Update stored questions when data loads (but never clear them once set)
+  useEffect(() => {
+    if (questionsData?.questions && questionsData.questions.length > 0 && storedQuestions.length === 0) {
+      setStoredQuestions(questionsData.questions);
+    }
+  }, [questionsData?.questions, storedQuestions.length]);
+
+  // Use stored questions if available, otherwise use fresh data
+  const questions = storedQuestions.length > 0 ? storedQuestions : (questionsData?.questions || []);
+
   const currentQuestion = questions[currentIndex];
   const currentAnswer = currentQuestion ? answersMap[currentQuestion.id] : null;
 
@@ -159,7 +172,8 @@ export default function PlacementTest() {
   }
 
   // If placement test already completed, redirect to dashboard
-  if (statusData && !statusData.needsPlacementTest) {
+  // BUT only if we're still on welcome screen - don't redirect mid-test or during results
+  if (statusData && !statusData.needsPlacementTest && phase === 'welcome') {
     window.location.href = '/';
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -172,7 +186,9 @@ export default function PlacementTest() {
   }
 
   // If API error (likely already completed), show message with redirect option
-  if (questionsError || questions.length === 0) {
+  // BUT only if we haven't started the test yet (phase === 'welcome')
+  // If we're in testing phase, we have stored questions and should continue
+  if ((questionsError || questions.length === 0) && phase === 'welcome') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="text-center max-w-md">
