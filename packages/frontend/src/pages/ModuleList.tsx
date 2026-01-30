@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Lock, CheckCircle, PlayCircle, Circle } from 'lucide-react';
-import { useModules } from '@/hooks/useApi';
+import { Lock, CheckCircle, PlayCircle, Circle, GraduationCap, ChevronUp, RotateCcw, Loader2, Eye, XCircle, MinusCircle } from 'lucide-react';
+import { useModules, usePlacementTestResults, useResetPlacementTest } from '@/hooks/useApi';
 import {
   cn,
   formatXp,
@@ -12,6 +13,24 @@ import {
 
 export default function ModuleList() {
   const { data, isLoading, error } = useModules();
+  const { data: placementResults } = usePlacementTestResults();
+  const resetPlacementTest = useResetPlacementTest();
+  const [showPlacementDetails, setShowPlacementDetails] = useState(false);
+  const [confirmReset, setConfirmReset] = useState(false);
+
+  const handleRetakePlacementTest = async () => {
+    if (!confirmReset) {
+      setConfirmReset(true);
+      return;
+    }
+    try {
+      await resetPlacementTest.mutateAsync();
+      window.location.href = '/placement-test';
+    } catch (error) {
+      console.error('Failed to reset placement test:', error);
+      setConfirmReset(false);
+    }
+  };
 
   if (isLoading) {
     return <ModuleListSkeleton />;
@@ -139,6 +158,134 @@ export default function ModuleList() {
           );
         })}
       </div>
+
+      {/* Placement Test Section */}
+      {placementResults && (
+        <div className="mt-8 p-4 rounded-xl bg-background-secondary border border-border">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <GraduationCap className="w-5 h-5 text-purple-400" />
+              <h3 className="text-sm font-medium text-white">Placement Test</h3>
+            </div>
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-muted-foreground">
+                Score: <span className="text-green-400 font-medium">{placementResults.score}/{placementResults.totalQuestions}</span>
+              </span>
+              <span className="text-muted">•</span>
+              <span className="text-purple-400 font-medium">{placementResults.level}</span>
+            </div>
+          </div>
+
+          {/* Answer summary bar */}
+          <div className="flex gap-0.5 mb-3">
+            {placementResults.answers.map((answer, i) => (
+              <div
+                key={i}
+                className={cn(
+                  'flex-1 h-2 rounded-full',
+                  answer.isCorrect
+                    ? 'bg-green-500'
+                    : answer.isSkipped
+                    ? 'bg-yellow-500'
+                    : 'bg-red-500'
+                )}
+                title={`Q${i + 1}: ${answer.isCorrect ? 'Correct' : answer.isSkipped ? 'Skipped' : 'Incorrect'}`}
+              />
+            ))}
+          </div>
+
+          {/* Expandable details */}
+          {showPlacementDetails && (
+            <div className="mb-4 p-3 rounded-lg bg-background-tertiary space-y-2 max-h-64 overflow-y-auto">
+              {placementResults.answers.map((answer, i) => (
+                <div
+                  key={answer.questionId}
+                  className={cn(
+                    'flex items-center gap-2 text-sm p-2 rounded',
+                    answer.isCorrect
+                      ? 'bg-green-500/10'
+                      : answer.isSkipped
+                      ? 'bg-yellow-500/10'
+                      : 'bg-red-500/10'
+                  )}
+                >
+                  <span className="w-6 text-muted-foreground">Q{i + 1}</span>
+                  {answer.isCorrect ? (
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                  ) : answer.isSkipped ? (
+                    <MinusCircle className="w-4 h-4 text-yellow-400" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-red-400" />
+                  )}
+                  <span className="flex-1 text-muted-foreground truncate">
+                    {answer.moduleName}
+                  </span>
+                  {!answer.isCorrect && (
+                    <span className="text-xs text-green-400">
+                      Ans: {answer.correctAnswer}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowPlacementDetails(!showPlacementDetails)}
+              className="flex-1 py-2 px-3 rounded-lg bg-background-tertiary text-muted-foreground hover:text-white hover:bg-background transition-colors text-sm flex items-center justify-center gap-2"
+            >
+              {showPlacementDetails ? (
+                <>
+                  <ChevronUp className="w-4 h-4" />
+                  Hide Details
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4" />
+                  View Results
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleRetakePlacementTest}
+              disabled={resetPlacementTest.isPending}
+              className={cn(
+                'flex-1 py-2 px-3 rounded-lg text-sm flex items-center justify-center gap-2 transition-colors',
+                confirmReset
+                  ? 'bg-red-500/20 text-red-400 border border-red-500'
+                  : 'bg-background-tertiary text-muted-foreground hover:text-white hover:bg-background'
+              )}
+            >
+              {resetPlacementTest.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Resetting...
+                </>
+              ) : confirmReset ? (
+                <>
+                  <RotateCcw className="w-4 h-4" />
+                  Click to Confirm
+                </>
+              ) : (
+                <>
+                  <RotateCcw className="w-4 h-4" />
+                  Retake Test
+                </>
+              )}
+            </button>
+          </div>
+          {confirmReset && !resetPlacementTest.isPending && (
+            <button
+              onClick={() => setConfirmReset(false)}
+              className="w-full mt-2 text-xs text-muted-foreground hover:text-white transition-colors"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Legend */}
       <div className="mt-8 p-4 rounded-xl bg-background-secondary border border-border">

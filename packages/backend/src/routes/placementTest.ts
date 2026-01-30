@@ -5,6 +5,8 @@ import {
   applyPlacementResults,
   skipPlacementTest,
   needsPlacementTest,
+  getPlacementTestResults,
+  resetPlacementTest,
 } from '../services/placementTestService.js';
 import { ensureUserExists } from '../services/userService.js';
 import prisma from '../lib/prisma.js';
@@ -181,6 +183,45 @@ router.get('/status', requireAuth, async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error checking placement test status:', error);
     res.status(500).json({ error: 'Failed to check placement test status' });
+  }
+});
+
+// Get past placement test results
+router.get('/results', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.auth!.userId;
+    const results = await getPlacementTestResults(prisma, userId);
+
+    if (!results) {
+      res.status(404).json({ error: 'No placement test results found' });
+      return;
+    }
+
+    res.json(results);
+  } catch (error) {
+    console.error('Error fetching placement test results:', error);
+    res.status(500).json({ error: 'Failed to fetch placement test results' });
+  }
+});
+
+// Reset placement test (allows retaking)
+router.post('/reset', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.auth!.userId;
+
+    // Check if user has completed the test
+    const needsTest = await needsPlacementTest(prisma, userId);
+    if (needsTest) {
+      res.status(400).json({ error: 'No placement test to reset' });
+      return;
+    }
+
+    await resetPlacementTest(prisma, userId);
+
+    res.json({ success: true, message: 'Placement test reset. You can now retake the test.' });
+  } catch (error) {
+    console.error('Error resetting placement test:', error);
+    res.status(500).json({ error: 'Failed to reset placement test' });
   }
 });
 

@@ -269,3 +269,36 @@ export function usePlacementTestStatus() {
     refetchOnMount: 'always', // Always fetch fresh status
   });
 }
+
+export function usePlacementTestResults() {
+  const getToken = useApiToken();
+
+  return useQuery({
+    queryKey: ['placementTestResults'],
+    queryFn: async () => {
+      const token = await getToken();
+      return api.getPlacementTestResults(token);
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+export function useResetPlacementTest() {
+  const getToken = useApiToken();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const token = await getToken();
+      return api.resetPlacementTest(token);
+    },
+    onSuccess: () => {
+      // Invalidate relevant queries after reset
+      queryClient.invalidateQueries({ queryKey: ['placementTestStatus'] });
+      queryClient.invalidateQueries({ queryKey: ['placementTestResults'] });
+      queryClient.setQueryData(['placementTestStatus'], {
+        needsPlacementTest: true,
+      });
+    },
+  });
+}

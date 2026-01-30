@@ -175,6 +175,23 @@ export interface PlacementAnswerFeedback {
   questionText?: string; // The question that was asked
 }
 
+export interface PlacementTestResults {
+  score: number;
+  totalQuestions: number;
+  level: string;
+  completedAt: string;
+  answers: Array<{
+    questionId: string;
+    userAnswer: string;
+    isCorrect: boolean;
+    isSkipped: boolean;
+    correctAnswer: string;
+    explanation: string | null;
+    questionText: string | null;
+    moduleName: string;
+  }>;
+}
+
 // API functions
 export const api = {
   // User sync
@@ -271,6 +288,15 @@ export const api = {
 
   getPlacementTestStatus: (token: string) =>
     fetchApi<{ needsPlacementTest: boolean }>('/placement-test/status', { token }),
+
+  getPlacementTestResults: (token: string) =>
+    fetchApi<PlacementTestResults>('/placement-test/results', { token }),
+
+  resetPlacementTest: (token: string) =>
+    fetchApi<{ success: boolean; message: string }>('/placement-test/reset', {
+      method: 'POST',
+      token,
+    }),
 };
 
 export { ApiError };

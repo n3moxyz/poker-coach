@@ -8,6 +8,8 @@ import {
   CheckCircle,
   XCircle,
   ChevronUp,
+  SkipForward,
+  MinusCircle,
 } from 'lucide-react';
 import {
   usePlacementQuestions,
@@ -20,6 +22,9 @@ import type { PlacementQuestion, PlacementResult, PlacementAnswerFeedback } from
 import PlayingCard from '@/components/games/PlayingCard';
 
 type TestPhase = 'welcome' | 'testing' | 'results';
+
+// Special marker for skipped questions - treated as wrong but shown differently in review
+const SKIPPED_MARKER = '__SKIPPED__';
 
 export default function PlacementTest() {
   const { data: statusData, isLoading: statusLoading } = usePlacementTestStatus();
@@ -107,6 +112,13 @@ export default function PlacementTest() {
       setCurrentIndex((prev) => prev - 1);
     }
   }, [currentIndex]);
+
+  // Skip current question (mark as skipped, which will be treated as wrong)
+  const handleSkipQuestion = useCallback(async () => {
+    if (!currentQuestion || isSubmitting) return;
+    // Use the same flow as selecting an answer, but with the skipped marker
+    await handleSelectAnswer(SKIPPED_MARKER);
+  }, [currentQuestion, isSubmitting, handleSelectAnswer]);
 
   const handleContinue = useCallback(() => {
     // Force a full page reload to refresh the app state
@@ -223,21 +235,26 @@ export default function PlacementTest() {
 
         {/* Progress bar - clickable dots */}
         <div className="flex gap-1 mb-6">
-          {questions.map((q, i) => (
-            <button
-              key={q.id}
-              onClick={() => i < currentIndex && setCurrentIndex(i)}
-              disabled={i >= currentIndex || isSubmitting}
-              className={cn(
-                'flex-1 h-2 rounded-full transition-all',
-                i < currentIndex
-                  ? 'bg-gold cursor-pointer hover:bg-gold-light'
-                  : i === currentIndex
-                  ? 'bg-gold/50'
-                  : 'bg-background-tertiary'
-              )}
-            />
-          ))}
+          {questions.map((q, i) => {
+            const wasSkipped = answersMap[q.id] === SKIPPED_MARKER;
+            return (
+              <button
+                key={q.id}
+                onClick={() => i < currentIndex && setCurrentIndex(i)}
+                disabled={i >= currentIndex || isSubmitting}
+                className={cn(
+                  'flex-1 h-2 rounded-full transition-all',
+                  i < currentIndex
+                    ? wasSkipped
+                      ? 'bg-yellow-500 cursor-pointer hover:bg-yellow-400'
+                      : 'bg-gold cursor-pointer hover:bg-gold-light'
+                    : i === currentIndex
+                    ? 'bg-gold/50'
+                    : 'bg-background-tertiary'
+                )}
+              />
+            );
+          })}
         </div>
 
         {/* Question card */}
@@ -282,12 +299,22 @@ export default function PlacementTest() {
           </div>
         )}
 
-        {/* Instruction hint */}
+        {/* Skip button and instruction hint */}
         {!isSubmitting && !submitError && (
-          <p className="text-center text-sm text-muted-foreground">
-            Click an answer to continue
-            {currentIndex > 0 && ' • Use the back arrow to change previous answers'}
-          </p>
+          <div className="space-y-3">
+            <button
+              onClick={handleSkipQuestion}
+              disabled={isSubmitting}
+              className="w-full py-3 rounded-xl border-2 border-dashed border-yellow-500/50 text-yellow-500 hover:bg-yellow-500/10 transition-all flex items-center justify-center gap-2"
+            >
+              <SkipForward className="w-4 h-4" />
+              Skip Question
+            </button>
+            <p className="text-center text-sm text-muted-foreground">
+              Click an answer to continue • Skipped questions count as wrong
+              {currentIndex > 0 && ' • Use the back arrow to change previous answers'}
+            </p>
+          </div>
         )}
       </div>
     </div>
@@ -388,7 +415,9 @@ interface ResultsScreenProps {
 
 function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScreenProps) {
   const wrongAnswers = feedback.filter((a) => !a.isCorrect);
-  // Auto-show review if there are wrong answers
+  const skippedAnswers = feedback.filter((a) => a.userAnswer === SKIPPED_MARKER);
+  const incorrectAnswers = wrongAnswers.filter((a) => a.userAnswer !== SKIPPED_MARKER);
+  // Auto-show review if there are wrong or skipped answers
   const [showReview, setShowReview] = useState(wrongAnswers.length > 0);
 
   const getLevelEmoji = (level: string) => {
@@ -468,7 +497,11 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                   key={i}
                   className={cn(
                     'flex-1 h-3 rounded-full flex items-center justify-center',
-                    answer.isCorrect ? 'bg-green-500' : 'bg-red-500'
+                    answer.isCorrect
+                      ? 'bg-green-500'
+                      : answer.userAnswer === SKIPPED_MARKER
+                      ? 'bg-yellow-500'
+                      : 'bg-red-500'
                   )}
                 >
                   <span className="text-[10px] font-bold text-white">
@@ -477,15 +510,23 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                 </div>
               ))}
             </div>
-            <div className="flex justify-between text-sm text-muted-foreground">
+            <div className="flex justify-between text-sm text-muted-foreground flex-wrap gap-2">
               <span className="flex items-center gap-1">
                 <CheckCircle className="w-4 h-4 text-green-400" />
                 {feedback.filter((a) => a.isCorrect).length} correct
               </span>
-              <span className="flex items-center gap-1">
-                <XCircle className="w-4 h-4 text-red-400" />
-                {wrongAnswers.length} incorrect
-              </span>
+              {skippedAnswers.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <MinusCircle className="w-4 h-4 text-yellow-400" />
+                  {skippedAnswers.length} skipped
+                </span>
+              )}
+              {incorrectAnswers.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <XCircle className="w-4 h-4 text-red-400" />
+                  {incorrectAnswers.length} incorrect
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -504,6 +545,9 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                 const setup = content?.setup as string | undefined;
                 const options = content?.options as string[] | undefined;
 
+                // Check if this question was skipped
+                const isSkipped = answer.userAnswer === SKIPPED_MARKER;
+
                 // For hand comparison questions, get the hand names
                 const isHandCompare = question?.type === 'HAND_COMPARE';
                 const hand1 = content?.hand1 as { cards: string[]; name: string } | undefined;
@@ -511,6 +555,7 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
 
                 // Get display text for user's answer
                 const getUserAnswerDisplay = () => {
+                  if (isSkipped) return null;
                   if (isHandCompare && hand1 && hand2) {
                     return answer.userAnswer === 'hand1' ? hand1.name : hand2.name;
                   }
@@ -534,10 +579,20 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                 return (
                   <div
                     key={answer.questionId}
-                    className="card border-l-4 border-l-red-500"
+                    className={cn(
+                      'card border-l-4',
+                      isSkipped ? 'border-l-yellow-500' : 'border-l-red-500'
+                    )}
                   >
-                    <div className="text-sm text-muted-foreground mb-2">
-                      Question {originalIndex + 1}
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">
+                        Question {originalIndex + 1}
+                      </span>
+                      {isSkipped && (
+                        <span className="text-xs px-2 py-1 rounded bg-yellow-500/20 text-yellow-400">
+                          Skipped
+                        </span>
+                      )}
                     </div>
 
                     {/* Situation/setup context */}
@@ -565,7 +620,7 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                               'p-3 rounded-lg border-2',
                               answer.correctAnswer === value
                                 ? 'border-green-500 bg-green-500/10'
-                                : answer.userAnswer === value
+                                : !isSkipped && answer.userAnswer === value
                                 ? 'border-red-500 bg-red-500/10'
                                 : 'border-border'
                             )}
@@ -583,7 +638,7 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                                 ✓ Correct
                               </div>
                             )}
-                            {answer.userAnswer === value && answer.correctAnswer !== value && (
+                            {!isSkipped && answer.userAnswer === value && answer.correctAnswer !== value && (
                               <div className="text-center mt-2 text-red-400 text-sm font-medium">
                                 ✗ Your pick
                               </div>
@@ -596,23 +651,30 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                     {/* For non-hand-compare questions, show text answers */}
                     {!isHandCompare && (
                       <div className="space-y-2 mb-4">
-                        <div className="flex items-center gap-2">
-                          <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
-                          <span className="text-red-400">
-                            You chose:{' '}
-                            {userAnswerDisplay ? (
-                              <span className="line-through">{userAnswerDisplay}</span>
-                            ) : (
-                              <span className="italic text-red-400/70">(no answer recorded)</span>
-                            )}
-                          </span>
-                        </div>
+                        {isSkipped ? (
+                          <div className="flex items-center gap-2">
+                            <MinusCircle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+                            <span className="text-yellow-400 italic">Question skipped</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                            <span className="text-red-400">
+                              You chose:{' '}
+                              {userAnswerDisplay ? (
+                                <span className="line-through">{userAnswerDisplay}</span>
+                              ) : (
+                                <span className="italic text-red-400/70">(no answer recorded)</span>
+                              )}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2">
                           <CheckCircle className="w-4 h-4 text-green-400 flex-shrink-0" />
                           <span className="text-green-400">Correct: {getCorrectAnswerDisplay()}</span>
                         </div>
                         {/* Show available options for context if user answer wasn't recorded */}
-                        {!userAnswerDisplay && options && options.length > 0 && (
+                        {!userAnswerDisplay && !isSkipped && options && options.length > 0 && (
                           <div className="text-xs text-muted-foreground mt-2">
                             Options were: {options.join(' / ')}
                           </div>
@@ -651,7 +713,7 @@ function ResultsScreen({ result, feedback, questions, onContinue }: ResultsScree
                 ) : (
                   <>
                     <BookOpen className="w-5 h-5 mr-2" />
-                    Review Wrong Answers ({wrongAnswers.length})
+                    Review Answers ({incorrectAnswers.length > 0 ? `${incorrectAnswers.length} wrong` : ''}{incorrectAnswers.length > 0 && skippedAnswers.length > 0 ? ', ' : ''}{skippedAnswers.length > 0 ? `${skippedAnswers.length} skipped` : ''})
                   </>
                 )}
               </button>

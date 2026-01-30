@@ -216,3 +216,112 @@ export async function needsPlacementTest(
 
   return user ? !user.placementTestCompleted : true;
 }
+
+// Special marker for skipped questions
+const SKIPPED_MARKER = '__SKIPPED__';
+
+export interface PlacementTestResultsData {
+  score: number;
+  totalQuestions: number;
+  level: string;
+  completedAt: Date;
+  answers: Array<{
+    questionId: string;
+    userAnswer: string;
+    isCorrect: boolean;
+    isSkipped: boolean;
+    correctAnswer: string;
+    explanation: string | null;
+    questionText: string | null;
+    moduleName: string;
+  }>;
+}
+
+export async function getPlacementTestResults(
+  prisma: PrismaClient,
+  userId: string
+): Promise<PlacementTestResultsData | null> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      placementTestCompleted: true,
+      placementTestScore: true,
+      updatedAt: true,
+    },
+  });
+
+  if (!user || !user.placementTestCompleted) {
+    return null;
+  }
+
+  // Get all placement test answers for this user
+  const answers = await prisma.userAnswer.findMany({
+    where: {
+      userId,
+      question: {
+        isPlacementTest: true,
+      },
+    },
+    include: {
+      question: {
+        include: {
+          module: {
+            select: { name: true },
+          },
+        },
+      },
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+  });
+
+  const score = user.placementTestScore || 0;
+  const placement = calculateStartingLevel(score);
+
+  return {
+    score,
+    totalQuestions: answers.length,
+    level: placement.level,
+    completedAt: user.updatedAt,
+    answers: answers.map((a) => {
+      const content = a.question.content as Record<string, unknown> | undefined;
+      return {
+        questionId: a.questionId,
+        userAnswer: a.answer,
+        isCorrect: a.isCorrect,
+        isSkipped: a.answer === SKIPPED_MARKER,
+        correctAnswer: a.question.correctAnswer,
+        explanation: a.question.explanation,
+        questionText: content?.question as string | null,
+        moduleName: a.question.module.name,
+      };
+    }),
+  };
+}
+
+export async function resetPlacementTest(
+  prisma: PrismaClient,
+  userId: string
+): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    // Delete all placement test answers for this user
+    await tx.userAnswer.deleteMany({
+      where: {
+        userId,
+        question: {
+          isPlacementTest: true,
+        },
+      },
+    });
+
+    // Reset user's placement test status
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        placementTestCompleted: false,
+        placementTestScore: null,
+      },
+    });
+  });
+}

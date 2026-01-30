@@ -57,75 +57,75 @@ export default function TableView({
 
   return (
     <div className={cn('relative w-full max-w-2xl mx-auto', className)}>
-      {/* Poker Table */}
-      <div className="relative aspect-[16/10] bg-gradient-to-b from-felt-green to-felt-dark rounded-[50%] border-8 border-felt-border shadow-2xl">
-        {/* Table Rim */}
-        <div className="absolute inset-0 rounded-[50%] border-4 border-felt-rim opacity-50" />
+      {/* Wrapper with padding to accommodate players positioned outside the table */}
+      <div className="pt-4 pb-20 sm:pb-24">
+        {/* Poker Table */}
+        <div className="relative aspect-[16/10] bg-gradient-to-b from-felt-green to-felt-dark rounded-[50%] border-8 border-felt-border shadow-2xl">
+          {/* Table Rim */}
+          <div className="absolute inset-0 rounded-[50%] border-4 border-felt-rim opacity-50" />
 
-        {/* Community Cards - Center */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-          <div className="flex gap-1 sm:gap-2">
-            {board.map((card, index) => (
-              <PlayingCard key={index} card={card} size="sm" />
-            ))}
+          {/* Community Cards - Center */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+            <div className="flex gap-1 sm:gap-2">
+              {board.map((card, index) => (
+                <PlayingCard key={index} card={card} size="sm" />
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Players */}
-        {players.map((player) => {
-          const position = playerPositions[player.seat] || {};
-          const state = getPlayerState(player.name);
-          const isClickable = !disabled && onSelectPlayer;
+          {/* Players */}
+          {players.map((player) => {
+            const position = playerPositions[player.seat] || {};
+            const state = getPlayerState(player.name);
+            const isClickable = !disabled && onSelectPlayer;
 
-          return (
-            <button
-              key={player.seat}
-              onClick={() => isClickable && onSelectPlayer?.(player.name)}
-              disabled={disabled}
-              className={cn(
-                'absolute transform',
-                position.bottom === '0' ? '-translate-x-1/2 translate-y-1/2' : '',
-                position.top === '10%' && position.left === '5%' ? '' : '',
-                position.top === '10%' && position.right === '5%' ? '' : '',
-                'transition-all duration-200',
-                isClickable && !disabled && 'hover:scale-105 cursor-pointer',
-                disabled && 'cursor-default'
-              )}
-              style={{
-                top: position.top,
-                bottom: position.bottom,
-                left: position.left,
-                right: position.right,
-                transform: position.bottom === '0'
-                  ? 'translateX(-50%) translateY(50%)'
-                  : undefined,
-              }}
-            >
-              <div
+            return (
+              <button
+                key={player.seat}
+                onClick={() => isClickable && onSelectPlayer?.(player.name)}
+                disabled={disabled}
                 className={cn(
-                  'flex flex-col items-center gap-1 p-2 sm:p-3 rounded-lg border-2 transition-colors',
-                  stateStyles[state]
+                  'absolute transform',
+                  'transition-all duration-200',
+                  isClickable && !disabled && 'hover:scale-105 cursor-pointer',
+                  disabled && 'cursor-default'
                 )}
+                style={{
+                  top: position.top,
+                  bottom: position.bottom,
+                  left: position.left,
+                  right: position.right,
+                  transform: position.bottom === '0'
+                    ? 'translateX(-50%) translateY(50%)'
+                    : undefined,
+                }}
               >
-                {/* Player Cards */}
-                <HandDisplay cards={player.cards} size="sm" />
+                <div
+                  className={cn(
+                    'flex flex-col items-center gap-1 p-2 sm:p-3 rounded-lg border-2 transition-colors',
+                    stateStyles[state]
+                  )}
+                >
+                  {/* Player Cards */}
+                  <HandDisplay cards={player.cards} size="sm" />
 
-                {/* Player Name */}
-                <span className={cn(
-                  'text-xs sm:text-sm font-medium px-2 py-0.5 rounded',
-                  state === 'correct' && 'text-green-400',
-                  state === 'incorrect' && 'text-red-400',
-                  state === 'selected' && 'text-gold',
-                  state === 'default' && 'text-gray-300'
-                )}>
-                  {player.name}
-                  {state === 'correct' && ' ✓'}
-                  {state === 'incorrect' && ' ✗'}
-                </span>
-              </div>
-            </button>
-          );
-        })}
+                  {/* Player Name */}
+                  <span className={cn(
+                    'text-xs sm:text-sm font-medium px-2 py-0.5 rounded',
+                    state === 'correct' && 'text-green-400',
+                    state === 'incorrect' && 'text-red-400',
+                    state === 'selected' && 'text-gold',
+                    state === 'default' && 'text-gray-300'
+                  )}>
+                    {player.name}
+                    {state === 'correct' && ' ✓'}
+                    {state === 'incorrect' && ' ✗'}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
