@@ -13,6 +13,29 @@ import prisma from '../lib/prisma.js';
 
 const router = Router();
 
+// Fisher-Yates shuffle algorithm
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Shuffle options in question content
+function shuffleQuestionOptions(content: unknown): unknown {
+  if (!content || typeof content !== 'object') return content;
+  const c = content as Record<string, unknown>;
+
+  // Shuffle options array if present
+  if (Array.isArray(c.options)) {
+    return { ...c, options: shuffleArray(c.options) };
+  }
+
+  return content;
+}
+
 // Get placement test questions
 router.get('/questions', requireAuth, async (req: Request, res: Response) => {
   try {
@@ -32,13 +55,14 @@ router.get('/questions', requireAuth, async (req: Request, res: Response) => {
       return;
     }
 
+    // Shuffle options to prevent pattern recognition
     res.json({
       totalQuestions: questions.length,
       questions: questions.map((q) => ({
         id: q.id,
         type: q.type,
         difficulty: q.difficulty,
-        content: q.content,
+        content: shuffleQuestionOptions(q.content),
         moduleName: q.module.name,
       })),
     });
