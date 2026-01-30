@@ -104,19 +104,27 @@ app.post('/api/users/sync', requireAuth, async (req, res) => {
       },
     });
 
-    // Ensure user stats exist
-    await prisma.userStats.upsert({
-      where: { userId },
-      create: { userId },
-      update: {},
-    });
+    // Ensure user stats exist (handle race condition with findFirst + create fallback)
+    const existingStats = await prisma.userStats.findUnique({ where: { userId } });
+    if (!existingStats) {
+      try {
+        await prisma.userStats.create({ data: { userId } });
+      } catch (e: unknown) {
+        // Ignore P2002 unique constraint error (record was created by concurrent request)
+        if (!(e && typeof e === 'object' && 'code' in e && e.code === 'P2002')) throw e;
+      }
+    }
 
-    // Ensure user streak exists
-    await prisma.userStreak.upsert({
-      where: { userId },
-      create: { userId },
-      update: {},
-    });
+    // Ensure user streak exists (handle race condition with findFirst + create fallback)
+    const existingStreak = await prisma.userStreak.findUnique({ where: { userId } });
+    if (!existingStreak) {
+      try {
+        await prisma.userStreak.create({ data: { userId } });
+      } catch (e: unknown) {
+        // Ignore P2002 unique constraint error (record was created by concurrent request)
+        if (!(e && typeof e === 'object' && 'code' in e && e.code === 'P2002')) throw e;
+      }
+    }
 
     // Check if user needs placement test
     const needsPlacementTest = !user.placementTestCompleted;

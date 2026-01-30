@@ -7,7 +7,7 @@ import {
   useAuth,
   useUser,
 } from '@clerk/clerk-react';
-import { useSyncUser } from '@/hooks/useApi';
+import { useSyncUser, usePlacementTestStatus } from '@/hooks/useApi';
 import AppShell from '@/components/AppShell';
 import Dashboard from '@/pages/Dashboard';
 import ModuleList from '@/pages/ModuleList';
@@ -23,6 +23,8 @@ function AuthenticatedApp() {
   const { user } = useUser();
   const location = useLocation();
   const syncUser = useSyncUser();
+  // Fallback query for placement test status (used if sync fails)
+  const placementStatus = usePlacementTestStatus();
   const [needsPlacementTest, setNeedsPlacementTest] = useState<boolean | null>(null);
   const [syncAttempted, setSyncAttempted] = useState(false);
 
@@ -37,16 +39,25 @@ function AuthenticatedApp() {
           setNeedsPlacementTest(result.needsPlacementTest);
         } catch (error) {
           console.error('Sync failed:', error);
-          // Default to needing placement test on error (safer for new users)
-          setNeedsPlacementTest(true);
+          // Don't set needsPlacementTest here - let the status query handle it
         }
       }
     };
     doSync();
   }, [isSignedIn, user?.id, syncAttempted, syncUser.isPending]);
 
-  // Show loading while syncing
-  if (!syncAttempted || syncUser.isPending || needsPlacementTest === null) {
+  // If sync failed but status query succeeded, use that
+  useEffect(() => {
+    if (syncAttempted && needsPlacementTest === null && placementStatus.data) {
+      setNeedsPlacementTest(placementStatus.data.needsPlacementTest);
+    }
+  }, [syncAttempted, needsPlacementTest, placementStatus.data]);
+
+  // Show loading while syncing or fetching status
+  const isLoading = !syncAttempted || syncUser.isPending ||
+    (needsPlacementTest === null && placementStatus.isLoading);
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="animate-pulse text-gold text-xl">Loading...</div>
@@ -54,8 +65,11 @@ function AuthenticatedApp() {
     );
   }
 
+  // If we still don't know after all queries, default to needing test (new user)
+  const shouldShowPlacementTest = needsPlacementTest ?? true;
+
   // Redirect to placement test if needed (unless already there)
-  if (needsPlacementTest && location.pathname !== '/placement-test') {
+  if (shouldShowPlacementTest && location.pathname !== '/placement-test') {
     return <Navigate to="/placement-test" replace />;
   }
 
