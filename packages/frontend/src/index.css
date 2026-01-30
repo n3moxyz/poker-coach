@@ -85,7 +85,7 @@
 
   .btn-primary {
     @apply btn bg-gradient-to-b from-gold to-gold-dark text-black;
-    @apply px-5 py-2.5;
+    @apply px-5 py-3; /* min 44px touch target */
     @apply shadow-md shadow-gold/20;
     @apply hover:from-gold-light hover:to-gold hover:shadow-lg hover:shadow-gold/30;
   }
@@ -93,13 +93,13 @@
   .btn-secondary {
     @apply btn bg-gradient-to-b from-felt to-felt-dark;
     @apply border border-border-light;
-    @apply px-5 py-2.5 text-white;
+    @apply px-5 py-3 text-white; /* min 44px touch target */
     @apply hover:from-felt-light hover:to-felt hover:border-felt-light;
   }
 
   .btn-ghost {
     @apply btn hover:bg-background-tertiary;
-    @apply px-4 py-2 text-muted-foreground hover:text-white;
+    @apply px-4 py-3 text-muted-foreground hover:text-white; /* min 44px touch target */
   }
 
   /* Felt table background with noise texture overlay */
@@ -448,5 +448,52 @@
   .card-interactive:hover,
   .playing-card:hover {
     transform: none !important;
+  }
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 640px) {
+  /* Larger touch targets on mobile */
+  .answer-option {
+    @apply p-5; /* Bigger tap area */
+    min-height: 56px;
+  }
+
+  /* Better spacing for mobile cards */
+  .card {
+    @apply p-4;
+  }
+
+  /* Ensure buttons are easy to tap */
+  button, a {
+    min-height: 44px;
+  }
+
+  /* Safe area for devices with notches */
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Prevent text from being too small */
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Better tap feedback on mobile */
+  button:active,
+  a:active,
+  .card-interactive:active {
+    transform: scale(0.98);
+    opacity: 0.9;
+  }
+
+  /* Disable hover effects on touch devices (use active instead) */
+  @media (hover: none) {
+    .card-interactive:hover {
+      transform: none;
+      box-shadow: none;
+    }
   }
 }

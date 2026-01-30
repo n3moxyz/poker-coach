@@ -240,7 +240,7 @@ export default function Progress() {
           {confirmReset && !resetPlacementTest.isPending && (
             <button
               onClick={() => setConfirmReset(false)}
-              className="w-full mt-2 py-2 text-sm text-muted-foreground hover:text-white transition-colors"
+              className="w-full mt-2 py-3 text-muted-foreground hover:text-white transition-colors active:scale-[0.98]"
             >
               Cancel
             </button>

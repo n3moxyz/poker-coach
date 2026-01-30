@@ -411,13 +411,13 @@ export default function PracticeSession() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowExitConfirm(false)}
-                className="flex-1 py-2 rounded-lg bg-background-tertiary text-muted-foreground hover:text-white transition-colors"
+                className="flex-1 py-3 rounded-lg bg-background-tertiary text-muted-foreground hover:text-white transition-colors active:scale-[0.98]"
               >
                 Continue
               </button>
               <button
                 onClick={() => navigate('/modules')}
-                className="flex-1 py-2 rounded-lg bg-gold text-black font-medium hover:bg-gold-light transition-colors"
+                className="flex-1 py-3 rounded-lg bg-gold text-black font-medium hover:bg-gold-light transition-colors active:scale-[0.98]"
               >
                 Exit
               </button>
