@@ -1,5 +1,5 @@
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Target, Award, Zap } from 'lucide-react';
+import { ArrowLeft, Play, Award, Zap } from 'lucide-react';
 import { useModule } from '@/hooks/useApi';
 import {
   cn,
@@ -84,14 +84,7 @@ export default function ModuleDetail() {
       </div>
 
       {/* Progress stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="card text-center">
-          <Target className="w-6 h-6 text-blue-400 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-white">
-            {Math.round(progress.masteryScore)}%
-          </div>
-          <div className="text-sm text-muted-foreground">Accuracy</div>
-        </div>
+      <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="card text-center">
           <Award className="w-6 h-6 text-green-400 mx-auto mb-2" />
           <div className="text-2xl font-bold text-white">
