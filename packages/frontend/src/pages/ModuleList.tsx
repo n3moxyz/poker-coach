@@ -71,33 +71,33 @@ export default function ModuleList() {
               key={module.id}
               to={isLocked ? '#' : `/modules/${module.slug}`}
               className={cn(
-                'module-card flex gap-4 p-4',
+                'module-card flex gap-3 p-3 sm:gap-4 sm:p-4 overflow-hidden',
                 isLocked && 'locked',
                 isMastered && 'mastered'
               )}
               onClick={(e) => isLocked && e.preventDefault()}
             >
               {/* Module number */}
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-background-tertiary flex items-center justify-center">
-                <span className="text-lg font-bold text-muted-foreground">
+              <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-background-tertiary flex items-center justify-center">
+                <span className="text-sm sm:text-lg font-bold text-muted-foreground">
                   {index + 1}
                 </span>
               </div>
 
               {/* Icon */}
-              <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-felt flex items-center justify-center text-3xl">
+              <div className="flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-felt flex items-center justify-center text-2xl sm:text-3xl">
                 {module.iconEmoji}
               </div>
 
               {/* Content */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h2 className="font-semibold text-white truncate">
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <h2 className="font-semibold text-white truncate text-sm sm:text-base">
                     {module.name}
                   </h2>
                   <span
                     className={cn(
-                      'px-2 py-0.5 rounded text-xs font-medium',
+                      'px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-xs font-medium flex-shrink-0',
                       getDifficultyColor(module.difficulty),
                       'bg-current/10'
                     )}
@@ -105,10 +105,10 @@ export default function ModuleList() {
                     {getDifficultyLabel(module.difficulty)}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2 mb-2">
                   {module.description}
                 </p>
-                <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm flex-wrap">
                   <div className="flex items-center gap-1">
                     <StatusIcon
                       className={cn('w-4 h-4', getStatusColor(module.status))}
@@ -117,15 +117,15 @@ export default function ModuleList() {
                       {getStatusLabel(module.status)}
                     </span>
                   </div>
-                  <span className="text-muted">·</span>
-                  <span className="text-muted-foreground">
+                  <span className="text-muted hidden sm:inline">·</span>
+                  <span className="text-muted-foreground hidden sm:inline">
                     {module.questionCount} questions
                   </span>
                   {isLocked && (
                     <>
-                      <span className="text-muted">·</span>
-                      <span className="text-muted-foreground">
-                        Unlock at {formatXp(module.unlockRequirement)} XP
+                      <span className="text-muted hidden sm:inline">·</span>
+                      <span className="text-muted-foreground whitespace-nowrap">
+                        {formatXp(module.unlockRequirement)} XP
                       </span>
                     </>
                   )}
@@ -133,26 +133,26 @@ export default function ModuleList() {
               </div>
 
               {/* Progress or lock */}
-              <div className="flex-shrink-0 flex items-center">
+              <div className="flex-shrink-0 flex items-center ml-auto">
                 {isLocked ? (
-                  <div className="w-12 h-12 rounded-full bg-background-tertiary flex items-center justify-center">
-                    <Lock className="w-5 h-5 text-muted" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-background-tertiary flex items-center justify-center">
+                    <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-muted" />
                   </div>
                 ) : module.progress ? (
-                  <div className="flex flex-col items-center justify-center min-w-[48px]">
+                  <div className="flex flex-col items-center justify-center min-w-[40px] sm:min-w-[48px]">
                     {isMastered ? (
-                      <div className="w-12 h-12 rounded-full bg-gold/20 flex items-center justify-center">
-                        <CheckCircle className="w-6 h-6 text-gold" />
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gold/20 flex items-center justify-center">
+                        <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-gold" />
                       </div>
                     ) : (
                       <>
                         <span className={cn(
-                          "text-lg font-bold",
+                          "text-base sm:text-lg font-bold",
                           module.status === 'COMPLETED' ? "text-green-400" : "text-white"
                         )}>
                           {module.progress.correctAnswers}/{module.progress.totalAnswers}
                         </span>
-                        <span className="text-xs text-muted-foreground">correct</span>
+                        <span className="text-[10px] sm:text-xs text-muted-foreground">correct</span>
                       </>
                     )}
                   </div>

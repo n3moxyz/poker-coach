@@ -71,11 +71,11 @@ export default function AppShell({ children }: AppShellProps) {
       </header>
 
       {/* Main content */}
-      <main className="container mx-auto px-4 py-6">{children}</main>
+      <main className="container mx-auto px-4 py-6 overflow-x-hidden">{children}</main>
 
       {/* Bottom navigation (mobile) */}
-      <nav className="fixed bottom-0 left-0 right-0 md:hidden border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center justify-around h-16">
+      <nav className="fixed bottom-0 left-0 right-0 md:hidden border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-safe">
+        <div className="flex items-center justify-evenly h-16 px-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -83,14 +83,14 @@ export default function AppShell({ children }: AppShellProps) {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  'flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors',
+                  'flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-2 transition-colors',
                   isActive
                     ? 'text-gold'
                     : 'text-muted-foreground hover:text-white'
                 )}
               >
-                <item.icon className="w-5 h-5" />
-                <span className="text-xs">{item.label}</span>
+                <item.icon className="w-5 h-5 flex-shrink-0" />
+                <span className="text-[10px] truncate max-w-full">{item.label}</span>
               </Link>
             );
           })}
