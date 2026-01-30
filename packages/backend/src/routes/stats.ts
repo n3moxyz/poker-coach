@@ -9,7 +9,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.auth!.userId;
 
-    const [stats, streak, moduleProgress, recentAnswers] = await Promise.all([
+    const [stats, streak, moduleProgress, recentAnswers, uniqueCorrectByModule, questionCountByModule] = await Promise.all([
       prisma.userStats.findUnique({ where: { userId } }),
       prisma.userStreak.findUnique({ where: { userId } }),
       prisma.userProgress.findMany({
@@ -22,6 +22,23 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         take: 50,
         include: { question: { include: { module: true } } },
       }),
+      // Get count of unique questions answered correctly per module
+      prisma.$queryRaw<Array<{ moduleId: string; uniqueCorrect: bigint }>>`
+        SELECT q."moduleId", COUNT(DISTINCT ua."questionId") as "uniqueCorrect"
+        FROM "UserAnswer" ua
+        JOIN "Question" q ON ua."questionId" = q.id
+        WHERE ua."userId" = ${userId}
+        AND ua."isCorrect" = true
+        AND q."isPlacementTest" = false
+        GROUP BY q."moduleId"
+      `,
+      // Get total question count per module (excluding placement test questions)
+      prisma.$queryRaw<Array<{ moduleId: string; questionCount: bigint }>>`
+        SELECT "moduleId", COUNT(*) as "questionCount"
+        FROM "Question"
+        WHERE "isPlacementTest" = false
+        GROUP BY "moduleId"
+      `,
     ]);
 
     // Calculate accuracy by difficulty
@@ -31,12 +48,20 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       _count: true,
     });
 
+    const uniqueCorrectMap = new Map(
+      uniqueCorrectByModule.map((r) => [r.moduleId, Number(r.uniqueCorrect)])
+    );
+    const questionCountMap = new Map(
+      questionCountByModule.map((r) => [r.moduleId, Number(r.questionCount)])
+    );
+
     // Calculate accuracy by module
     const moduleStats = moduleProgress.map((p) => ({
       moduleSlug: p.module.slug,
       moduleName: p.module.name,
       status: p.status,
-      correctAnswers: p.correctAnswers,
+      uniqueCorrect: uniqueCorrectMap.get(p.moduleId) || 0,
+      totalQuestions: questionCountMap.get(p.moduleId) || 0,
       totalAnswers: p.totalAnswers,
       accuracy: p.totalAnswers > 0 ? Math.round((p.correctAnswers / p.totalAnswers) * 100) : 0,
       masteryScore: Math.round(p.masteryScore),

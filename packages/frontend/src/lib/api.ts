@@ -54,8 +54,8 @@ export interface Module {
   status: 'LOCKED' | 'UNLOCKED' | 'IN_PROGRESS' | 'COMPLETED' | 'MASTERED';
   isUnlocked: boolean;
   progress: {
-    correctAnswers: number;
-    totalAnswers: number;
+    uniqueCorrect: number;
+    totalQuestions: number;
     masteryScore: number;
     currentStreak: number;
   } | null;
@@ -209,7 +209,7 @@ export const api = {
   getModule: (token: string, slug: string) =>
     fetchApi<{
       module: Module & { masteryXpBonus: number; questionTypes: Array<{ type: string; count: number }> };
-      progress: { status: string; correctAnswers: number; totalAnswers: number; masteryScore: number; currentStreak: number };
+      progress: { status: string; uniqueCorrect: number; totalQuestions: number; totalAnswers: number; masteryScore: number; currentStreak: number };
     }>(`/modules/${slug}`, { token }),
 
   getQuestions: (token: string, slug: string, count = 10) =>
@@ -243,7 +243,7 @@ export const api = {
     fetchApi<{
       overview: { totalXp: number; level: number; totalQuestions: number; totalCorrect: number; overallAccuracy: number };
       streak: { current: number; longest: number; freezes: number };
-      modules: Array<{ moduleSlug: string; moduleName: string; status: string; correctAnswers: number; totalAnswers: number; accuracy: number; masteryScore: number }>;
+      modules: Array<{ moduleSlug: string; moduleName: string; status: string; uniqueCorrect: number; totalQuestions: number; totalAnswers: number; accuracy: number; masteryScore: number }>;
       recentAnswers: Array<{ questionType: string; moduleName: string; isCorrect: boolean; xpEarned: number; createdAt: string }>;
     }>('/stats', { token }),
 

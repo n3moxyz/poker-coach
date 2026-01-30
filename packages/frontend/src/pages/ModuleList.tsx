@@ -148,9 +148,9 @@ export default function ModuleList() {
                       <>
                         <span className={cn(
                           "text-base sm:text-lg font-bold",
-                          module.status === 'COMPLETED' ? "text-green-400" : "text-white"
+                          module.progress.uniqueCorrect === module.questionCount ? "text-green-400" : "text-white"
                         )}>
-                          {module.progress.correctAnswers}/{module.progress.totalAnswers}
+                          {module.progress.uniqueCorrect}/{module.questionCount}
                         </span>
                         <span className="text-[10px] sm:text-xs text-muted-foreground">correct</span>
                       </>

@@ -87,8 +87,11 @@ export default function ModuleDetail() {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="card text-center">
           <Award className="w-6 h-6 text-green-400 mx-auto mb-2" />
-          <div className="text-2xl font-bold text-white">
-            {progress.correctAnswers}/{progress.totalAnswers}
+          <div className={cn(
+            "text-2xl font-bold",
+            progress.uniqueCorrect === progress.totalQuestions ? "text-green-400" : "text-white"
+          )}>
+            {progress.uniqueCorrect}/{progress.totalQuestions}
           </div>
           <div className="text-sm text-muted-foreground">Correct</div>
         </div>
@@ -108,7 +111,7 @@ export default function ModuleDetail() {
             {isMastered ? '✓' : progress.totalAnswers}
           </div>
           <div className="text-sm text-muted-foreground">
-            {isMastered ? 'Mastered!' : 'Answered'}
+            {isMastered ? 'Mastered!' : 'Practiced'}
           </div>
         </div>
       </div>

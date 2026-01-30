@@ -35,17 +35,21 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const userId = req.auth!.userId;
 
     // Fetch all data in parallel for better performance
-    const [stats, modules, progress] = await Promise.all([
+    const [stats, modules, progress, uniqueCorrectByModule] = await Promise.all([
       // Get user's total XP for unlock checking
       prisma.userStats.findUnique({
         where: { userId },
       }),
-      // Get all modules
+      // Get all modules with question counts (excluding placement test questions)
       prisma.module.findMany({
         orderBy: { orderIndex: 'asc' },
         include: {
           _count: {
-            select: { questions: true },
+            select: {
+              questions: {
+                where: { isPlacementTest: false },
+              },
+            },
           },
         },
       }),
@@ -53,15 +57,29 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       prisma.userProgress.findMany({
         where: { userId },
       }),
+      // Get count of unique questions answered correctly per module
+      prisma.$queryRaw<Array<{ moduleId: string; uniqueCorrect: bigint }>>`
+        SELECT q."moduleId", COUNT(DISTINCT ua."questionId") as "uniqueCorrect"
+        FROM "UserAnswer" ua
+        JOIN "Question" q ON ua."questionId" = q.id
+        WHERE ua."userId" = ${userId}
+        AND ua."isCorrect" = true
+        AND q."isPlacementTest" = false
+        GROUP BY q."moduleId"
+      `,
     ]);
 
     const totalXp = stats?.totalXp || 0;
     const progressMap = new Map(progress.map((p) => [p.moduleId, p]));
+    const uniqueCorrectMap = new Map(
+      uniqueCorrectByModule.map((r) => [r.moduleId, Number(r.uniqueCorrect)])
+    );
 
     // Combine module data with progress
     const modulesWithProgress = modules.map((module) => {
       const userProgress = progressMap.get(module.id);
       const isUnlocked = totalXp >= module.unlockRequirement;
+      const uniqueCorrect = uniqueCorrectMap.get(module.id) || 0;
 
       // Use shared status calculation logic
       const status = calculateModuleStatus({ userProgress, isUnlocked });
@@ -80,8 +98,8 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
         isUnlocked,
         progress: userProgress
           ? {
-              correctAnswers: userProgress.correctAnswers,
-              totalAnswers: userProgress.totalAnswers,
+              uniqueCorrect,
+              totalQuestions: module._count.questions,
               masteryScore: userProgress.masteryScore,
               currentStreak: userProgress.currentStreak,
             }
@@ -108,7 +126,11 @@ router.get('/:slug', requireAuth, async (req: Request, res: Response) => {
         where: { slug },
         include: {
           _count: {
-            select: { questions: true },
+            select: {
+              questions: {
+                where: { isPlacementTest: false },
+              },
+            },
           },
         },
       }),
@@ -135,8 +157,8 @@ router.get('/:slug', requireAuth, async (req: Request, res: Response) => {
     // Ensure user exists before creating progress
     await ensureUserExists(userId);
 
-    // Fetch progress and question types in parallel
-    const [existingProgress, questionTypes] = await Promise.all([
+    // Fetch progress, question types, and unique correct count in parallel
+    const [existingProgress, questionTypes, uniqueCorrectResult] = await Promise.all([
       prisma.userProgress.findUnique({
         where: {
           userId_moduleId: { userId, moduleId: module.id },
@@ -144,10 +166,23 @@ router.get('/:slug', requireAuth, async (req: Request, res: Response) => {
       }),
       prisma.question.groupBy({
         by: ['type'],
-        where: { moduleId: module.id },
+        where: { moduleId: module.id, isPlacementTest: false },
         _count: true,
       }),
+      prisma.$queryRaw<Array<{ uniqueCorrect: bigint }>>`
+        SELECT COUNT(DISTINCT ua."questionId") as "uniqueCorrect"
+        FROM "UserAnswer" ua
+        JOIN "Question" q ON ua."questionId" = q.id
+        WHERE ua."userId" = ${userId}
+        AND ua."isCorrect" = true
+        AND q."moduleId" = ${module.id}
+        AND q."isPlacementTest" = false
+      `,
     ]);
+
+    const uniqueCorrect = uniqueCorrectResult[0]?.uniqueCorrect
+      ? Number(uniqueCorrectResult[0].uniqueCorrect)
+      : 0;
 
     // Create progress if needed
     let progress = existingProgress;
@@ -185,8 +220,9 @@ router.get('/:slug', requireAuth, async (req: Request, res: Response) => {
       },
       progress: {
         status: calculatedStatus,
-        correctAnswers: progress.correctAnswers,
-        totalAnswers: progress.totalAnswers,
+        uniqueCorrect,
+        totalQuestions: module._count.questions,
+        totalAnswers: progress.totalAnswers, // Keep for mastery progress (needs 20+ answers)
         masteryScore: progress.masteryScore,
         currentStreak: progress.currentStreak,
       },
