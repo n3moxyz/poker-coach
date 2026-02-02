@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Lock, CheckCircle, PlayCircle, Circle, GraduationCap, ChevronUp, RotateCcw, Loader2, Eye, XCircle, MinusCircle } from 'lucide-react';
+import Lock from 'lucide-react/dist/esm/icons/lock';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import PlayCircle from 'lucide-react/dist/esm/icons/play-circle';
+import Circle from 'lucide-react/dist/esm/icons/circle';
+import GraduationCap from 'lucide-react/dist/esm/icons/graduation-cap';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import Eye from 'lucide-react/dist/esm/icons/eye';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import MinusCircle from 'lucide-react/dist/esm/icons/minus-circle';
 import { useModules, usePlacementTestResults, useResetPlacementTest, usePlacementTestStatus } from '@/hooks/useApi';
 import {
   cn,

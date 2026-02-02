@@ -67,7 +67,9 @@
 
   /* Interactive card with lift effect */
   .card-interactive {
-    @apply card cursor-pointer;
+    @apply bg-background-secondary border border-border rounded-2xl p-5 cursor-pointer;
+    @apply shadow-card shadow-inner-glow;
+    @apply transition-all duration-300 ease-out-expo;
   }
 
   .card-interactive:hover {
@@ -137,7 +139,9 @@
 
   /* Module card with enhanced states */
   .module-card {
-    @apply card-interactive;
+    @apply bg-background-secondary border border-border rounded-2xl p-5 cursor-pointer;
+    @apply shadow-card shadow-inner-glow;
+    @apply transition-all duration-300 ease-out-expo;
   }
 
   .module-card:not(.locked):hover {
@@ -233,7 +237,9 @@
 
   /* Stats card with subtle gradient */
   .stat-card {
-    @apply card relative overflow-hidden;
+    @apply bg-background-secondary border border-border rounded-2xl p-5 relative overflow-hidden;
+    @apply shadow-card shadow-inner-glow;
+    @apply transition-all duration-300 ease-out-expo;
   }
 
   .stat-card::after {

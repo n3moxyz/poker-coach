@@ -1,5 +1,6 @@
 import { memo } from 'react';
-import { Trophy, Lock } from 'lucide-react';
+import Trophy from 'lucide-react/dist/esm/icons/trophy';
+import Lock from 'lucide-react/dist/esm/icons/lock';
 import { useAchievements } from '@/hooks/useApi';
 import { cn, formatXp, getRarityColor, formatTimeAgo } from '@/lib/utils';
 

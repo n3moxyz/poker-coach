@@ -1,6 +1,15 @@
 import { useState, useEffect, useCallback, memo, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { CheckCircle, XCircle, Zap, Trophy, ArrowRight, Lightbulb, SkipForward, ThumbsUp, ThumbsDown, LogOut } from 'lucide-react';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import Zap from 'lucide-react/dist/esm/icons/zap';
+import Trophy from 'lucide-react/dist/esm/icons/trophy';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
+import Lightbulb from 'lucide-react/dist/esm/icons/lightbulb';
+import SkipForward from 'lucide-react/dist/esm/icons/skip-forward';
+import ThumbsUp from 'lucide-react/dist/esm/icons/thumbs-up';
+import ThumbsDown from 'lucide-react/dist/esm/icons/thumbs-down';
+import LogOut from 'lucide-react/dist/esm/icons/log-out';
 import { useQuestions, useSubmitAnswer, useCompleteSession } from '@/hooks/useApi';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { cn, formatXp } from '@/lib/utils';

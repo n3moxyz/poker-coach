@@ -1,5 +1,17 @@
 import { useState } from 'react';
-import { BarChart3, Target, Trophy, Flame, Clock, GraduationCap, RotateCcw, ChevronDown, ChevronUp, CheckCircle, XCircle, MinusCircle, Loader2 } from 'lucide-react';
+import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
+import Target from 'lucide-react/dist/esm/icons/target';
+import Trophy from 'lucide-react/dist/esm/icons/trophy';
+import Flame from 'lucide-react/dist/esm/icons/flame';
+import Clock from 'lucide-react/dist/esm/icons/clock';
+import GraduationCap from 'lucide-react/dist/esm/icons/graduation-cap';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import MinusCircle from 'lucide-react/dist/esm/icons/minus-circle';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 import { useStats, usePlacementTestResults, useResetPlacementTest } from '@/hooks/useApi';
 import { cn, formatXp, formatTimeAgo, getStatusColor, getStatusLabel } from '@/lib/utils';
 

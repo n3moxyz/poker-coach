@@ -1,5 +1,8 @@
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Play, Award, Zap } from 'lucide-react';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
+import Play from 'lucide-react/dist/esm/icons/play';
+import Award from 'lucide-react/dist/esm/icons/award';
+import Zap from 'lucide-react/dist/esm/icons/zap';
 import { useModule } from '@/hooks/useApi';
 import {
   cn,

@@ -1,14 +1,12 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserButton } from '@clerk/clerk-react';
-import {
-  Home,
-  BookOpen,
-  BarChart3,
-  Trophy,
-  Medal,
-  Flame,
-} from 'lucide-react';
+import Home from 'lucide-react/dist/esm/icons/home';
+import BookOpen from 'lucide-react/dist/esm/icons/book-open';
+import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
+import Trophy from 'lucide-react/dist/esm/icons/trophy';
+import Medal from 'lucide-react/dist/esm/icons/medal';
+import Flame from 'lucide-react/dist/esm/icons/flame';
 import { cn } from '@/lib/utils';
 import { useProgress } from '@/hooks/useApi';
 

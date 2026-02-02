@@ -1,5 +1,8 @@
 import { memo } from 'react';
-import { Medal, Crown, Trophy, TrendingUp } from 'lucide-react';
+import Medal from 'lucide-react/dist/esm/icons/medal';
+import Crown from 'lucide-react/dist/esm/icons/crown';
+import Trophy from 'lucide-react/dist/esm/icons/trophy';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
 import { useLeaderboard } from '@/hooks/useApi';
 import { cn, formatXp } from '@/lib/utils';
 

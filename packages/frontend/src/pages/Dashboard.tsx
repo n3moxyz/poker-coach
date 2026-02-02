@@ -1,6 +1,10 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Flame, Target, Trophy, TrendingUp } from 'lucide-react';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
+import Flame from 'lucide-react/dist/esm/icons/flame';
+import Target from 'lucide-react/dist/esm/icons/target';
+import Trophy from 'lucide-react/dist/esm/icons/trophy';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
 import { useProgress, useModules } from '@/hooks/useApi';
 import { cn, formatXp, getLevelProgress, getStatusColor, getStatusLabel } from '@/lib/utils';
 

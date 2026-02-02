@@ -1,16 +1,14 @@
 import { useState, useCallback, useRef, memo, useEffect } from 'react';
-import {
-  BookOpen,
-  Rocket,
-  ArrowRight,
-  ArrowLeft,
-  Loader2,
-  CheckCircle,
-  XCircle,
-  ChevronUp,
-  SkipForward,
-  MinusCircle,
-} from 'lucide-react';
+import BookOpen from 'lucide-react/dist/esm/icons/book-open';
+import Rocket from 'lucide-react/dist/esm/icons/rocket';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
+import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
+import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
+import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
+import XCircle from 'lucide-react/dist/esm/icons/x-circle';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
+import SkipForward from 'lucide-react/dist/esm/icons/skip-forward';
+import MinusCircle from 'lucide-react/dist/esm/icons/minus-circle';
 import {
   usePlacementQuestions,
   useSubmitPlacementTest,
