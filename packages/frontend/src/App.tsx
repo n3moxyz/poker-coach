@@ -19,19 +19,20 @@ import Leaderboard from '@/pages/Leaderboard';
 import PlacementTest from '@/pages/PlacementTest';
 
 function AuthenticatedApp() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
   const { user } = useUser();
   const location = useLocation();
   const syncUser = useSyncUser();
-  // Fallback query for placement test status (used if sync fails)
-  const placementStatus = usePlacementTestStatus();
   const [needsPlacementTest, setNeedsPlacementTest] = useState<boolean | null>(null);
   const [syncAttempted, setSyncAttempted] = useState(false);
+  // Fallback query for placement test status - only enabled after sync attempted and didn't set status
+  const placementStatus = usePlacementTestStatus(syncAttempted && needsPlacementTest === null);
 
   // Sync user on sign-in and check placement test status
   useEffect(() => {
     const doSync = async () => {
-      if (isSignedIn && user && !syncAttempted && !syncUser.isPending) {
+      // Wait for Clerk to be fully loaded before syncing
+      if (isLoaded && isSignedIn && user && !syncAttempted && !syncUser.isPending) {
         setSyncAttempted(true);
         try {
           const result = await syncUser.mutateAsync();
@@ -44,7 +45,7 @@ function AuthenticatedApp() {
       }
     };
     doSync();
-  }, [isSignedIn, user?.id, syncAttempted, syncUser.isPending]);
+  }, [isLoaded, isSignedIn, user?.id, syncAttempted, syncUser.isPending]);
 
   // If sync failed but status query succeeded, use that
   useEffect(() => {
@@ -53,8 +54,8 @@ function AuthenticatedApp() {
     }
   }, [syncAttempted, needsPlacementTest, placementStatus.data]);
 
-  // Show loading while syncing or fetching status
-  const isLoading = !syncAttempted || syncUser.isPending ||
+  // Show loading while Clerk loads, syncing, or fetching status
+  const isLoading = !isLoaded || !syncAttempted || syncUser.isPending ||
     (needsPlacementTest === null && placementStatus.isLoading);
 
   if (isLoading) {
