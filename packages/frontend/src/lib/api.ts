@@ -58,6 +58,7 @@ export interface Module {
     totalAnswers: number;
     masteryScore: number;
     currentStreak: number;
+    uniqueQuestionsCorrect?: number;
   } | null;
 }
 
@@ -67,6 +68,8 @@ export interface Question {
   difficulty: number;
   content: Record<string, unknown>;
   xpValue: number;
+  correctAnswer?: string;
+  explanation?: string;
 }
 
 export interface AnswerResult {
@@ -209,7 +212,7 @@ export const api = {
   getModule: (token: string, slug: string) =>
     fetchApi<{
       module: Module & { masteryXpBonus: number; questionTypes: Array<{ type: string; count: number }> };
-      progress: { status: string; correctAnswers: number; totalAnswers: number; masteryScore: number; currentStreak: number };
+      progress: { status: string; correctAnswers: number; totalAnswers: number; masteryScore: number; currentStreak: number; uniqueQuestionsCorrect?: number };
     }>(`/modules/${slug}`, { token }),
 
   getQuestions: (token: string, slug: string, count = 10) =>

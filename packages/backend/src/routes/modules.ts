@@ -35,7 +35,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
     const userId = req.auth!.userId;
 
     // Fetch all data in parallel for better performance
-    const [stats, modules, progress] = await Promise.all([
+    const [stats, modules, progress, uniqueCorrectByModule] = await Promise.all([
       // Get user's total XP for unlock checking
       prisma.userStats.findUnique({
         where: { userId },
@@ -53,7 +53,20 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
       prisma.userProgress.findMany({
         where: { userId },
       }),
+      // Get count of unique questions answered correctly per module
+      prisma.$queryRaw<Array<{ moduleId: string; uniqueCorrect: bigint }>>`
+        SELECT q."moduleId", COUNT(DISTINCT ua."questionId") as "uniqueCorrect"
+        FROM "UserAnswer" ua
+        JOIN "Question" q ON ua."questionId" = q.id
+        WHERE ua."userId" = ${userId} AND ua."isCorrect" = true
+        GROUP BY q."moduleId"
+      `,
     ]);
+
+    // Create a map of moduleId -> uniqueCorrect count
+    const uniqueCorrectMap = new Map(
+      uniqueCorrectByModule.map((r) => [r.moduleId, Number(r.uniqueCorrect)])
+    );
 
     const totalXp = stats?.totalXp || 0;
     const progressMap = new Map(progress.map((p) => [p.moduleId, p]));
@@ -84,6 +97,7 @@ router.get('/', requireAuth, async (req: Request, res: Response) => {
               totalAnswers: userProgress.totalAnswers,
               masteryScore: userProgress.masteryScore,
               currentStreak: userProgress.currentStreak,
+              uniqueQuestionsCorrect: uniqueCorrectMap.get(module.id) || 0,
             }
           : null,
       };
@@ -135,8 +149,8 @@ router.get('/:slug', requireAuth, async (req: Request, res: Response) => {
     // Ensure user exists before creating progress
     await ensureUserExists(userId);
 
-    // Fetch progress and question types in parallel
-    const [existingProgress, questionTypes] = await Promise.all([
+    // Fetch progress, question types, and unique correct count in parallel
+    const [existingProgress, questionTypes, uniqueCorrectResult] = await Promise.all([
       prisma.userProgress.findUnique({
         where: {
           userId_moduleId: { userId, moduleId: module.id },
@@ -147,7 +161,15 @@ router.get('/:slug', requireAuth, async (req: Request, res: Response) => {
         where: { moduleId: module.id },
         _count: true,
       }),
+      prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(DISTINCT ua."questionId") as count
+        FROM "UserAnswer" ua
+        JOIN "Question" q ON ua."questionId" = q.id
+        WHERE ua."userId" = ${userId} AND ua."isCorrect" = true AND q."moduleId" = ${module.id}
+      `,
     ]);
+
+    const uniqueQuestionsCorrect = Number(uniqueCorrectResult[0]?.count || 0);
 
     // Create progress if needed
     let progress = existingProgress;
@@ -189,6 +211,7 @@ router.get('/:slug', requireAuth, async (req: Request, res: Response) => {
         totalAnswers: progress.totalAnswers,
         masteryScore: progress.masteryScore,
         currentStreak: progress.currentStreak,
+        uniqueQuestionsCorrect,
       },
     });
   } catch (error) {
@@ -233,9 +256,11 @@ router.get('/:slug/questions', requireAuth, async (req: Request, res: Response) 
         difficulty: number;
         content: unknown;
         xpValue: number;
+        correctAnswer: string;
+        explanation: string;
       }>
     >`
-      SELECT id, type, difficulty, content, "xpValue"
+      SELECT id, type, difficulty, content, "xpValue", "correctAnswer", explanation
       FROM "Question"
       WHERE "moduleId" = ${module.id}
       AND "isPlacementTest" = false
@@ -243,7 +268,8 @@ router.get('/:slug/questions', requireAuth, async (req: Request, res: Response) 
       LIMIT ${count}
     `;
 
-    // Don't include correct answers in response
+    // Include correct answers for instant client-side validation
+    // (This is a learning app, not a test - instant feedback is more important)
     // Shuffle options to prevent pattern recognition
     res.json({
       moduleId: module.id,
@@ -254,6 +280,8 @@ router.get('/:slug/questions', requireAuth, async (req: Request, res: Response) 
         difficulty: q.difficulty,
         content: shuffleQuestionOptions(q.content),
         xpValue: q.xpValue,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation,
       })),
     });
   } catch (error) {

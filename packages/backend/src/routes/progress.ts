@@ -9,7 +9,6 @@ import prisma from '../lib/prisma.js';
 const router = Router();
 
 const MASTERY_THRESHOLD = 80; // 80% accuracy required
-const MASTERY_MIN_QUESTIONS = 20;
 const RECENT_WEIGHT = 0.6; // 60% weight on last 10 answers
 const OVERALL_WEIGHT = 0.4; // 40% weight on overall accuracy
 
@@ -206,9 +205,8 @@ router.post('/answer', requireAuth, async (req: Request, res: Response) => {
         : 0;
       const masteryScore = (overallAccuracy * OVERALL_WEIGHT) + (recentAccuracy * RECENT_WEIGHT);
 
-      // Check for mastery
+      // Check for mastery (80%+ weighted accuracy)
       const achievedMastery =
-        progress.totalAnswers >= MASTERY_MIN_QUESTIONS &&
         masteryScore >= MASTERY_THRESHOLD &&
         progress.status !== 'MASTERED';
 
@@ -284,7 +282,7 @@ router.post('/answer', requireAuth, async (req: Request, res: Response) => {
         masteryScore: result.masteryScore,
         achievedMastery: result.achievedMastery,
         questionsAnswered: result.progress.totalAnswers + 1,
-        questionsToMastery: Math.max(0, MASTERY_MIN_QUESTIONS - (result.progress.totalAnswers + 1)),
+        questionsToMastery: 0, // No minimum questions required anymore
       },
       levelUp: leveledUp ? { newLevel } : null,
       achievements: [], // Achievements processed in background
