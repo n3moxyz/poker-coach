@@ -5,7 +5,19 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding database...');
 
-  // Clear existing data
+  // Check if this is a fresh database or has existing users
+  const existingUsers = await prisma.user.count();
+  const existingModules = await prisma.module.count();
+
+  if (existingUsers > 0 && existingModules > 0) {
+    console.log(`⏭️  Skipping seed - database already has ${existingUsers} users and ${existingModules} modules`);
+    console.log('   To force reseed, run: npx prisma migrate reset');
+    return;
+  }
+
+  console.log('📦 Fresh database detected, running full seed...');
+
+  // Clear existing data (only runs on fresh database)
   await prisma.userAnswer.deleteMany();
   await prisma.userAchievement.deleteMany();
   await prisma.userProgress.deleteMany();
