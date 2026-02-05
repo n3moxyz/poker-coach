@@ -173,3 +173,82 @@ Daily first: +25 XP
 - Frontend uses React Query for server state
 - Zustand for client-only state (UI preferences)
 - Casino dark theme: bg `#0f1419`, felt `#0d3320`, gold `#ffd700`
+
+## Production Infrastructure
+
+### Overview
+
+| Component | Service | URL/Access |
+|-----------|---------|------------|
+| Frontend | Vercel | `pokercoach.vercel.app` |
+| Backend | Coolify on DigitalOcean | `api.pokercoach.cc` |
+| Database | PostgreSQL (in Coolify) | Internal to Coolify |
+| Domain | Cloudflare | `pokercoach.cc` |
+| Auth | Clerk | dashboard.clerk.com |
+
+### DigitalOcean Droplet
+
+- **IP:** `178.128.88.81`
+- **Size:** $12/month (2GB RAM, 1 vCPU)
+- **Region:** Singapore (SGP1)
+- **OS:** Ubuntu 24.04
+
+### Coolify Dashboard
+
+- **URL:** `http://178.128.88.81:8000`
+- **What's running:**
+  - Backend app (auto-deploys from GitHub `main` branch)
+  - PostgreSQL database
+
+### Backend Environment Variables (in Coolify)
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | Coolify PostgreSQL connection string |
+| `CLERK_SECRET_KEY` | From Clerk dashboard |
+| `CLERK_PUBLISHABLE_KEY` | From Clerk dashboard |
+| `FRONTEND_URL` | `https://pokercoach.vercel.app` |
+| `PORT` | `3001` |
+| `NODE_ENV` | `production` (runtime only, not buildtime) |
+
+### Backend Start Command (in Coolify)
+
+```
+npx prisma migrate deploy && npx prisma db seed && npm start
+```
+
+### Cloudflare DNS Records
+
+| Type | Name | Content |
+|------|------|---------|
+| A | `api` | `178.128.88.81` (DNS only, not proxied) |
+
+### Vercel Environment Variables
+
+| Variable | Value |
+|----------|-------|
+| `VITE_API_URL` | `https://api.pokercoach.cc/api` |
+| `VITE_CLERK_PUBLISHABLE_KEY` | From Clerk dashboard |
+
+### Deployment Flow
+
+```
+git push to main
+       ↓
+Coolify detects change (webhook)
+       ↓
+Builds with Nixpacks
+       ↓
+Runs migrations + seeds
+       ↓
+Starts backend on port 3001
+       ↓
+Traefik routes api.pokercoach.cc → container
+```
+
+### Accessing Services (for new device setup)
+
+1. **Coolify:** Go to `http://178.128.88.81:8000` and log in
+2. **Vercel:** Go to `vercel.com` → poker-coach project
+3. **Cloudflare:** Go to `dash.cloudflare.com` → pokercoach.cc
+4. **Clerk:** Go to `dashboard.clerk.com`
