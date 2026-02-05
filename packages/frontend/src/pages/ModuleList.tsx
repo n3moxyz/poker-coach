@@ -154,17 +154,26 @@ export default function ModuleList() {
                       <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gold/20 flex items-center justify-center">
                         <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-gold" />
                       </div>
-                    ) : (
-                      <>
-                        <span className={cn(
-                          "text-base sm:text-lg font-bold",
-                          module.status === 'COMPLETED' ? "text-green-400" : "text-white"
-                        )}>
-                          {module.progress.correctAnswers}/{module.progress.totalAnswers}
-                        </span>
-                        <span className="text-[10px] sm:text-xs text-muted-foreground">correct</span>
-                      </>
-                    )}
+                    ) : (() => {
+                      const accuracy = module.progress!.totalAnswers > 0
+                        ? Math.round((module.progress!.correctAnswers / module.progress!.totalAnswers) * 100)
+                        : 0;
+                      const isCompleted = module.status === 'COMPLETED';
+                      const needsMoreForMastery = isCompleted && accuracy < 80;
+                      return (
+                        <>
+                          <span className={cn(
+                            "text-base sm:text-lg font-bold",
+                            isCompleted ? "text-green-400" : "text-white"
+                          )}>
+                            {accuracy}%
+                          </span>
+                          <span className="text-[10px] sm:text-xs text-muted-foreground">
+                            {needsMoreForMastery ? '80% to master' : 'accuracy'}
+                          </span>
+                        </>
+                      );
+                    })()}
                   </div>
                 ) : null}
               </div>

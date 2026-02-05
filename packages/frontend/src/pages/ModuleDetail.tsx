@@ -34,7 +34,11 @@ export default function ModuleDetail() {
   }
 
   const { module, progress } = data;
-  const isMastered = progress.status === 'MASTERED';
+  // Calculate raw accuracy for consistent display
+  const rawAccuracy = progress.totalAnswers > 0
+    ? (progress.correctAnswers / progress.totalAnswers) * 100
+    : 0;
+  const isMastered = rawAccuracy >= 80;
 
   return (
     <div className="md:ml-64 pb-20 md:pb-6">
@@ -91,9 +95,11 @@ export default function ModuleDetail() {
         <div className="card text-center">
           <Award className="w-6 h-6 text-green-400 mx-auto mb-2" />
           <div className="text-2xl font-bold text-white">
-            {progress.correctAnswers}/{progress.totalAnswers}
+            {progress.totalAnswers > 0
+              ? Math.round((progress.correctAnswers / progress.totalAnswers) * 100)
+              : 0}%
           </div>
-          <div className="text-sm text-muted-foreground">Correct</div>
+          <div className="text-sm text-muted-foreground">Accuracy</div>
         </div>
         <div className="card text-center">
           <Zap className="w-6 h-6 text-orange-400 mx-auto mb-2" />
@@ -123,7 +129,7 @@ export default function ModuleDetail() {
             {isMastered ? 'Module Mastered!' : 'Mastery Progress'}
           </span>
           <span className={cn('text-sm font-medium', isMastered ? 'text-gold' : 'text-white')}>
-            {Math.round(progress.masteryScore)}% accuracy
+            {Math.round(rawAccuracy)}% accuracy
           </span>
         </div>
         <div className="progress-bar h-3">
@@ -132,20 +138,18 @@ export default function ModuleDetail() {
               'h-full rounded-full transition-all duration-500',
               isMastered
                 ? 'bg-gradient-to-r from-gold to-gold-light'
-                : progress.masteryScore >= 80
+                : rawAccuracy >= 70
                   ? 'bg-gradient-to-r from-green-500 to-green-400'
                   : 'bg-gradient-to-r from-felt-light to-blue-500'
             )}
-            style={{ width: `${Math.min(100, progress.masteryScore)}%` }}
+            style={{ width: `${Math.min(100, rawAccuracy)}%` }}
           />
         </div>
         {!isMastered && (
           <p className="text-xs text-muted-foreground mt-2">
-            {progress.totalAnswers < 20
-              ? `Answer ${20 - progress.totalAnswers} more question${20 - progress.totalAnswers > 1 ? 's' : ''} (${progress.totalAnswers}/20) with 80%+ accuracy to master.`
-              : progress.masteryScore >= 80
-                ? 'Great job! You\'ve mastered this module!'
-                : `Keep practicing! Need 80% accuracy to master (currently ${Math.round(progress.masteryScore)}%).`
+            {rawAccuracy >= 70
+              ? `Almost there! Need 80% accuracy to master (currently ${Math.round(rawAccuracy)}%).`
+              : `Keep practicing! Need 80% accuracy to master (currently ${Math.round(rawAccuracy)}%).`
             }
           </p>
         )}

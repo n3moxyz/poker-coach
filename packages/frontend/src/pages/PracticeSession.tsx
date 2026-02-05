@@ -157,6 +157,7 @@ export default function PracticeSession() {
   const [showHint, setShowHint] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [hasRestoredSession, setHasRestoredSession] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
 
   // Check for saved session and restore if questions match
   useEffect(() => {
@@ -204,8 +205,8 @@ export default function PracticeSession() {
 
   const currentQuestion = data?.questions[session.currentIndex];
 
-  const handleSelectAnswer = useCallback(async (answer: string) => {
-    if (showResult || submitAnswer.isPending) return;
+  const handleSelectAnswer = useCallback((answer: string) => {
+    if (showResult || isChecking) return;
     setSelectedAnswer(answer);
 
     // Auto-submit when an answer is selected
@@ -213,27 +214,32 @@ export default function PracticeSession() {
 
     const timeSpent = Math.round((Date.now() - startTime) / 1000);
 
-    try {
-      const result = await submitAnswer.mutateAsync({
-        questionId: currentQuestion.id,
-        answer: answer,
-        timeSpent,
-      });
+    // Show checking state immediately
+    setIsChecking(true);
 
-      setCurrentResult(result);
-      setShowResult(true);
-
-      setSession((prev) => ({
-        ...prev,
-        answers: [
-          ...prev.answers,
-          { questionId: currentQuestion.id, answer: answer, result },
-        ],
-      }));
-    } catch (err) {
-      console.error('Failed to submit answer:', err);
-    }
-  }, [showResult, submitAnswer, currentQuestion, startTime]);
+    // Submit to backend - result appears as soon as backend responds
+    submitAnswer.mutate({
+      questionId: currentQuestion.id,
+      answer: answer,
+      timeSpent,
+    }, {
+      onSuccess: (result) => {
+        setCurrentResult(result);
+        setShowResult(true);
+        setIsChecking(false);
+        setSession((prev) => ({
+          ...prev,
+          answers: [
+            ...prev.answers,
+            { questionId: currentQuestion.id, answer: answer, result },
+          ],
+        }));
+      },
+      onError: () => {
+        setIsChecking(false);
+      },
+    });
+  }, [showResult, isChecking, currentQuestion, startTime, submitAnswer]);
 
   const handleNext = useCallback(() => {
     if (session.currentIndex >= (data?.questions.length || 0) - 1) {
@@ -243,11 +249,12 @@ export default function PracticeSession() {
       setSelectedAnswer(null);
       setShowResult(false);
       setCurrentResult(null);
+      setIsChecking(false);
     }
   }, [session.currentIndex, data?.questions.length]);
 
   const handleSkip = useCallback(() => {
-    if (showResult || submitAnswer.isPending) return;
+    if (showResult || isChecking) return;
     if (!currentQuestion) return;
 
     // Record as skipped (counts as incorrect)
@@ -268,13 +275,13 @@ export default function PracticeSession() {
       setShowResult(false);
       setCurrentResult(null);
     }
-  }, [showResult, submitAnswer.isPending, currentQuestion, session.currentIndex, data?.questions.length]);
+  }, [showResult, isChecking, currentQuestion, session.currentIndex, data?.questions.length]);
 
   const toggleHint = useCallback(() => {
-    if (!showResult && !submitAnswer.isPending) {
+    if (!showResult && !isChecking) {
       setShowHint((prev) => !prev);
     }
-  }, [showResult, submitAnswer.isPending]);
+  }, [showResult, isChecking]);
 
   // Get options for current question (for number key selection)
   const currentOptions = useMemo(() => {
@@ -317,32 +324,32 @@ export default function PracticeSession() {
         {
           key: '1',
           callback: () => currentOptions[0] && handleSelectAnswer(currentOptions[0]),
-          enabled: !showResult && !submitAnswer.isPending && currentOptions.length >= 1,
+          enabled: !showResult && !isChecking && currentOptions.length >= 1,
         },
         {
           key: '2',
           callback: () => currentOptions[1] && handleSelectAnswer(currentOptions[1]),
-          enabled: !showResult && !submitAnswer.isPending && currentOptions.length >= 2,
+          enabled: !showResult && !isChecking && currentOptions.length >= 2,
         },
         {
           key: '3',
           callback: () => currentOptions[2] && handleSelectAnswer(currentOptions[2]),
-          enabled: !showResult && !submitAnswer.isPending && currentOptions.length >= 3,
+          enabled: !showResult && !isChecking && currentOptions.length >= 3,
         },
         // Hint toggle
         {
           key: 'h',
           callback: toggleHint,
-          enabled: !showResult && !submitAnswer.isPending,
+          enabled: !showResult && !isChecking,
         },
         // Skip question
         {
           key: 's',
           callback: handleSkip,
-          enabled: !showResult && !submitAnswer.isPending,
+          enabled: !showResult && !isChecking,
         },
       ],
-      [showResult, submitAnswer.isPending, currentOptions, handleNext, handleSelectAnswer, toggleHint, handleSkip]
+      [showResult, isChecking, currentOptions, handleNext, handleSelectAnswer, toggleHint, handleSkip]
     )
   );
 
@@ -537,15 +544,15 @@ export default function PracticeSession() {
         </div>
       )}
 
-      {/* Action buttons */}
-      {submitAnswer.isPending && (
+      {/* Checking state */}
+      {isChecking && (
         <div className="text-center py-4 text-muted-foreground">
           Checking...
         </div>
       )}
 
       {/* Hint and Skip buttons - show when not answered yet */}
-      {!showResult && !submitAnswer.isPending && (
+      {!showResult && !isChecking && (
         <div className="flex gap-3 mb-4">
           <button
             onClick={toggleHint}
