@@ -1,5 +1,21 @@
 # Poker Coach - CLAUDE.md
 
+> **Self-Updating Rule**: This file is a living document. Claude should proactively update it when:
+> - New patterns, conventions, or architectural decisions are established
+> - New key files or directories are added
+> - Commands or workflows change
+> - Bugs/gotchas are discovered worth remembering
+> - Environment variables are added/removed
+
+> **FORET.md Maintenance**: After completing significant changes to this project, Claude MUST update `FORET.md` to reflect:
+> - New features or architectural changes (add to relevant sections)
+> - Bugs encountered and how they were fixed (add to "Bugs Encountered" section)
+> - New patterns or best practices discovered (add to "Lessons Learned" section)
+> - Technology changes or additions (update tech stack discussion)
+> - Lessons learned (add to "Potential Pitfalls" or relevant section)
+>
+> Keep the engaging, conversational tone. Use analogies where helpful. This is a learning document, not dry documentation.
+
 ## Overview
 A progressive poker learning app for Texas Hold'em beginners with gamified mini-games, progress tracking, and a casino-themed dark UI.
 
@@ -18,24 +34,59 @@ A progressive poker learning app for Texas Hold'em beginners with gamified mini-
 
 ```
 poker-coach/
-├── packages/
-│   ├── backend/          # Express API server
-│   │   ├── src/
-│   │   │   ├── index.ts
-│   │   │   ├── middleware/auth.ts
-│   │   │   ├── routes/
-│   │   │   └── services/
-│   │   └── prisma/schema.prisma
-│   │
-│   └── frontend/         # React app
-│       └── src/
-│           ├── pages/
-│           ├── components/
-│           ├── hooks/
-│           └── lib/
-├── CLAUDE.md
-├── FORET.md
-└── .env.example
+├── CLAUDE.md                      # Project instructions (this file)
+├── FORET.md                       # Living documentation
+├── .env.example                   # Environment template
+└── packages/
+    ├── backend/                   # Express API server
+    │   ├── src/
+    │   │   ├── index.ts           # Server entry + health check + user sync
+    │   │   ├── lib/
+    │   │   │   └── prisma.ts      # PrismaClient singleton
+    │   │   ├── middleware/
+    │   │   │   └── auth.ts        # Clerk JWT verification
+    │   │   ├── routes/
+    │   │   │   ├── modules.ts     # Module listing + questions
+    │   │   │   ├── progress.ts    # Answer submission + stats
+    │   │   │   ├── achievements.ts
+    │   │   │   ├── stats.ts       # Leaderboard
+    │   │   │   └── placementTest.ts
+    │   │   └── services/
+    │   │       ├── xpService.ts
+    │   │       ├── streakService.ts
+    │   │       ├── achievementService.ts
+    │   │       ├── userService.ts
+    │   │       ├── moduleStatusService.ts
+    │   │       └── placementTestService.ts
+    │   └── prisma/
+    │       ├── schema.prisma      # Database models
+    │       └── seed.ts            # Initial data (10 modules + questions)
+    │
+    └── frontend/                  # React SPA (Vite)
+        └── src/
+            ├── main.tsx
+            ├── App.tsx            # Routes + auth flows
+            ├── index.css          # Tailwind + casino theme
+            ├── components/
+            │   ├── AppShell.tsx   # Layout + navigation
+            │   └── games/
+            │       ├── PlayingCard.tsx
+            │       └── TableView.tsx
+            ├── hooks/
+            │   ├── useApi.ts      # React Query hooks
+            │   └── useHotkeys.ts  # Keyboard shortcuts
+            ├── lib/
+            │   ├── api.ts         # Typed API client
+            │   └── utils.ts
+            └── pages/
+                ├── Dashboard.tsx
+                ├── ModuleList.tsx
+                ├── ModuleDetail.tsx
+                ├── PracticeSession.tsx
+                ├── Progress.tsx
+                ├── Achievements.tsx
+                ├── Leaderboard.tsx
+                └── PlacementTest.tsx
 ```
 
 ## First Run Setup
@@ -97,17 +148,26 @@ cd packages/frontend && npm run dev
 ### Modules
 - `GET /api/modules` - List all modules with user progress (status calculated dynamically)
 - `GET /api/modules/:slug` - Single module detail
-- `GET /api/modules/:slug/questions` - Get practice questions
+- `GET /api/modules/:slug/questions` - Get practice questions (randomized, hints available)
 
 ### Progress
-- `GET /api/progress` - User's overall stats
-- `POST /api/progress/answer` - Submit answer (optimized with parallel DB queries)
+- `GET /api/progress` - User's overall stats (XP, level, streak, modules mastered)
+- `POST /api/progress/answer` - Submit answer (returns XP breakdown, streak updates)
 - `POST /api/progress/complete-session` - Mark session as completed
 
 ### Stats & Achievements
 - `GET /api/stats` - User statistics
-- `GET /api/stats/leaderboard` - Rankings
-- `GET /api/achievements` - Achievement list
+- `GET /api/stats/leaderboard` - Top 100 users by XP
+- `GET /api/achievements` - All achievements + unlock status
+- `GET /api/achievements/:slug` - Single achievement detail
+
+### Placement Test
+- `GET /api/placement-test/questions` - Diagnostic questions from each module
+- `POST /api/placement-test/submit` - Submit test, calculate starting module
+
+### User Management
+- `POST /api/users/sync` - Auto-create user from Clerk JWT on first login
+- `GET /api/health` - Health check (no auth required)
 
 ## Module Status System
 
@@ -164,7 +224,24 @@ Base: 10 XP per correct answer
 Difficulty: Easy (1x), Medium (1.5x), Hard (2x)
 Streak bonus: 3+ (1.2x), 5+ (1.5x), 10+ (2x), 25+ (2.5x)
 Daily first: +25 XP
+Level N requires: 100 * N^1.5 total XP
 ```
+
+## Achievement System
+
+Achievements are unlocked automatically when conditions are met:
+- **Rarity tiers**: COMMON, RARE, EPIC, LEGENDARY
+- **XP rewards**: Each achievement grants bonus XP on unlock
+- **Conditions**: Stored as JSON, checked asynchronously (fire-and-forget)
+
+Examples: First correct answer, 7-day streak, module mastery, etc.
+
+## Placement Test
+
+New users take an initial assessment before accessing modules:
+- Questions sampled from each module to gauge baseline knowledge
+- Sets starting XP and unlocks appropriate modules
+- Can be retaken from settings
 
 ## Key Patterns
 
