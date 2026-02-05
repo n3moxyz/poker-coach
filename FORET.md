@@ -97,6 +97,34 @@ Each practice session includes quality-of-life features:
 - **Skip**: Stuck on a question? Skip it. Skipped questions appear yellow in your results and don't count toward accuracy.
 - **Progress Display**: The module list shows "X/Y correct" (e.g., "14/14") instead of a confusing percentage circle.
 
+### Achievement System
+
+Achievements add an extra layer of motivation:
+
+```
+Rarity Tiers: COMMON → RARE → EPIC → LEGENDARY
+XP Rewards: Each achievement grants bonus XP on unlock
+Conditions: Stored as flexible JSON, checked asynchronously
+```
+
+The key insight here is that achievement checking happens in the background ("fire-and-forget"). When you submit an answer, the API returns immediately with your XP—the server checks for newly unlocked achievements separately without blocking your experience.
+
+Examples of achievements:
+- "First Blood" - Answer your first question correctly
+- "Week Warrior" - Maintain a 7-day streak
+- "Hand Master" - Master the Hand Rankings module
+
+### Placement Test
+
+New users don't start from zero—they take a placement test first:
+
+1. **Diagnostic questions** sampled from each module
+2. **Baseline assessment** determines starting XP
+3. **Smart unlocking** opens modules you already understand
+4. **Optional retake** available from settings
+
+This prevents experienced players from slogging through basics they already know, while ensuring beginners start at the right level.
+
 ## Technologies Used
 
 ### Why These Choices?
@@ -135,23 +163,27 @@ poker-coach/
     │   ├── tsconfig.json
     │   ├── .env.example
     │   ├── prisma/
-    │   │   ├── schema.prisma   # Database models
-    │   │   └── seed.ts         # Sample data
+    │   │   ├── schema.prisma   # Database models (10 models)
+    │   │   └── seed.ts         # Initial data (10 modules + questions)
     │   └── src/
-    │       ├── index.ts        # Express server entry
+    │       ├── index.ts        # Express server entry + health check
     │       ├── lib/
     │       │   └── prisma.ts   # PrismaClient singleton
     │       ├── middleware/
-    │       │   └── auth.ts     # Clerk JWT verification
+    │       │   └── auth.ts     # Clerk JWT verification (requireAuth, optionalAuth)
     │       ├── routes/
-    │       │   ├── modules.ts      # Module CRUD + questions
-    │       │   ├── progress.ts     # Answer submission
+    │       │   ├── modules.ts      # Module listing + questions
+    │       │   ├── progress.ts     # Answer submission + overall progress
     │       │   ├── achievements.ts # Achievement tracking
-    │       │   └── stats.ts        # User stats + leaderboard
+    │       │   ├── stats.ts        # User stats + leaderboard
+    │       │   └── placementTest.ts # Initial placement test
     │       └── services/
-    │           ├── xpService.ts        # XP calculation
-    │           ├── streakService.ts    # Daily streak logic
-    │           └── achievementService.ts
+    │           ├── xpService.ts           # XP calculation (base + multipliers)
+    │           ├── streakService.ts       # Daily streak + freezes
+    │           ├── achievementService.ts  # Achievement unlocking
+    │           ├── userService.ts         # User creation/sync
+    │           ├── moduleStatusService.ts # Dynamic status calculation
+    │           └── placementTestService.ts
     └── frontend/
         ├── package.json
         ├── vite.config.ts
@@ -160,26 +192,29 @@ poker-coach/
         ├── index.html
         └── src/
             ├── main.tsx            # React entry
-            ├── App.tsx             # Routes + auth
-            ├── index.css           # Tailwind + custom styles
+            ├── App.tsx             # Routes + auth flows
+            ├── index.css           # Tailwind + casino theme
             ├── vite-env.d.ts
             ├── components/
             │   ├── AppShell.tsx    # Layout + navigation
             │   └── games/
-            │       └── PlayingCard.tsx
+            │       ├── PlayingCard.tsx  # Card rendering
+            │       └── TableView.tsx    # Table visualization
             ├── hooks/
-            │   └── useApi.ts       # React Query hooks
+            │   ├── useApi.ts       # React Query hooks
+            │   └── useHotkeys.ts   # Keyboard shortcuts
             ├── lib/
-            │   ├── api.ts          # API client
+            │   ├── api.ts          # Typed API client
             │   └── utils.ts        # Helpers
             └── pages/
-                ├── Dashboard.tsx
-                ├── ModuleList.tsx
-                ├── ModuleDetail.tsx
-                ├── PracticeSession.tsx
-                ├── Progress.tsx
-                ├── Achievements.tsx
-                └── Leaderboard.tsx
+                ├── Dashboard.tsx       # Main hub
+                ├── ModuleList.tsx      # All modules with progress
+                ├── ModuleDetail.tsx    # Module info + questions
+                ├── PracticeSession.tsx # Active question answering
+                ├── Progress.tsx        # Overall stats view
+                ├── Achievements.tsx    # Achievement gallery
+                ├── Leaderboard.tsx     # Rankings
+                └── PlacementTest.tsx   # Initial assessment
 ```
 
 ## Bugs Encountered & Lessons Learned
@@ -230,4 +265,4 @@ poker-coach/
 
 ---
 
-*Last updated: 2026-01-27 - Added practice session features, dynamic status, performance fixes*
+*Last updated: 2026-02-05 - Added placement test, achievement system, updated project structure*
