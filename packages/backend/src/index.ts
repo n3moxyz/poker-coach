@@ -161,6 +161,103 @@ app.post('/api/users/sync', requireAuth, async (req, res) => {
   }
 });
 
+// Data migration endpoint - secured with secret key
+// Used to migrate user data from old database to new one
+app.post('/api/admin/migrate-user', async (req, res) => {
+  try {
+    const { secret, userData, statsData, streakData, moduleProgress, achievements } = req.body;
+
+    // Verify secret
+    const migrationSecret = process.env.MIGRATION_SECRET;
+    if (!migrationSecret || secret !== migrationSecret) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    console.log('Starting user migration for:', userData.email);
+
+    // 1. Upsert user
+    const user = await prisma.user.upsert({
+      where: { id: userData.id },
+      update: { email: userData.email, name: userData.name },
+      create: { id: userData.id, email: userData.email, name: userData.name },
+    });
+    console.log('✓ User upserted');
+
+    // 2. Upsert stats
+    await prisma.userStats.upsert({
+      where: { userId: userData.id },
+      update: statsData,
+      create: { userId: userData.id, ...statsData },
+    });
+    console.log('✓ Stats upserted');
+
+    // 3. Upsert streak
+    await prisma.userStreak.upsert({
+      where: { userId: userData.id },
+      update: streakData,
+      create: { userId: userData.id, ...streakData },
+    });
+    console.log('✓ Streak upserted');
+
+    // 4. Upsert module progress
+    const progressResults = [];
+    for (const mp of moduleProgress) {
+      const module = await prisma.module.findUnique({ where: { slug: mp.slug } });
+      if (!module) {
+        progressResults.push({ slug: mp.slug, status: 'not found' });
+        continue;
+      }
+      await prisma.userProgress.upsert({
+        where: { userId_moduleId: { userId: userData.id, moduleId: module.id } },
+        update: {
+          status: mp.status,
+          correctAnswers: mp.correctAnswers,
+          totalAnswers: mp.totalAnswers,
+          masteryScore: mp.masteryScore,
+        },
+        create: {
+          userId: userData.id,
+          moduleId: module.id,
+          status: mp.status,
+          correctAnswers: mp.correctAnswers,
+          totalAnswers: mp.totalAnswers,
+          masteryScore: mp.masteryScore,
+        },
+      });
+      progressResults.push({ slug: mp.slug, status: 'ok' });
+    }
+    console.log('✓ Module progress upserted');
+
+    // 5. Upsert achievements
+    const achievementResults = [];
+    for (const slug of achievements) {
+      const achievement = await prisma.achievement.findUnique({ where: { slug } });
+      if (!achievement) {
+        achievementResults.push({ slug, status: 'not found' });
+        continue;
+      }
+      await prisma.userAchievement.upsert({
+        where: { userId_achievementId: { userId: userData.id, achievementId: achievement.id } },
+        update: {},
+        create: { userId: userData.id, achievementId: achievement.id },
+      });
+      achievementResults.push({ slug, status: 'ok' });
+    }
+    console.log('✓ Achievements upserted');
+
+    res.json({
+      success: true,
+      user: { id: user.id, email: user.email },
+      progress: progressResults,
+      achievements: achievementResults,
+    });
+  } catch (error) {
+    console.error('Migration failed:', error);
+    res.status(500).json({ error: 'Migration failed', details: String(error) });
+  }
+});
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
