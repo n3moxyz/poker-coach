@@ -365,7 +365,7 @@ export default function Progress() {
                 </span>
               </div>
               <div className="text-xs text-muted mt-2">
-                {module.correctAnswers}/{module.totalAnswers} correct
+                {module.correctAnswers} correct
               </div>
             </div>
           ))}

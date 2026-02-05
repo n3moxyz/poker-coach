@@ -256,7 +256,7 @@ export function useSkipPlacementTest() {
   });
 }
 
-export function usePlacementTestStatus() {
+export function usePlacementTestStatus(enabled = true) {
   const getToken = useApiToken();
 
   return useQuery({
@@ -267,6 +267,7 @@ export function usePlacementTestStatus() {
     },
     staleTime: 0, // Always refetch on mount
     refetchOnMount: 'always', // Always fetch fresh status
+    enabled, // Only run when enabled
   });
 }
 
