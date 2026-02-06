@@ -14,12 +14,11 @@ import placementTestRouter from './routes/placementTest.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5001;
 
 // Allowed origins for CORS
 const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
+  'http://localhost:5000',
   'https://pokercoach.vercel.app',
 ];
 
