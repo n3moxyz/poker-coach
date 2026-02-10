@@ -118,10 +118,10 @@ npx prisma db seed
 
 ### 4. Run Development Servers
 ```bash
-# Terminal 1 - Backend (port 3001)
+# Terminal 1 - Backend (port 5001)
 cd packages/backend && npm run dev
 
-# Terminal 2 - Frontend (port 5173)
+# Terminal 2 - Frontend (port 5000)
 cd packages/frontend && npm run dev
 ```
 
