@@ -216,9 +216,11 @@ poker-coach/
             ├── lib/
             │   ├── api.ts          # Typed API client
             │   ├── utils.ts        # Helpers
-            │   ├── poker.ts        # Deck, hand evaluation
-            │   ├── aiOpponents.ts  # AI decision engine
-            │   └── coaching.ts     # Rule-based coaching
+            │   ├── poker.ts          # Deck, hand evaluation
+            │   ├── preflopRanges.ts # Tier-based preflop hand lookup by position
+            │   ├── handAnalysis.ts  # Draw detection, board texture, enhanced equity
+            │   ├── aiOpponents.ts   # AI decision engine
+            │   └── coaching.ts      # Rule-based coaching
             ├── stores/
             │   └── gameStore.ts    # Zustand game state machine
             └── pages/
@@ -312,13 +314,13 @@ Three difficulty tiers, each with personality profiles (tight/loose × passive/a
 
 - **Easy**: Plays top 40% of hands, never bluffs, calls too much. Perfect for beginners learning the ropes.
 - **Medium**: Position-aware, 60% continuation bet, occasional bluffs. Feels like a real low-stakes player.
-- **Hard**: GTO-approximate ranges, balanced value/bluff ratios, board-texture-aware sizing.
+- **Hard**: GTO-approximate ranges, balanced value/bluff ratios, board-texture-aware sizing. Semi-bluffs with flush draws and OESDs. Bets larger on wet boards (75% pot) and smaller on dry boards (55% pot). Bluffs more on dry boards where opponents fold more often.
 
 Players get simple names (Steve, Betty, Chris, Dave, Emma) with style labels shown in the hand review (e.g., "Steve (Aggressive)").
 
 ### Three-Tier Coaching
 
-1. **Rule-based (instant, free)**: Runs after every user action. Checks preflop charts, pot odds, bet sizing, position. Returns Good/Okay/Mistake grade + one-sentence note. Shows "You: raised $20" with the coaching verdict.
+1. **Rule-based (instant, free)**: Runs after every user action. Uses tier-based preflop ranges (Premium/Strong/Playable/Marginal/Trash) with position-aware opening ranges, draw detection (flush draws, OESDs, gutshots), board texture analysis (wet/dry/medium), and enhanced equity estimation. Returns Good/Okay/Mistake grade. Feedback is structured as: verdict (what you did, right/wrong) in white, then optimal play recommendation in grey below.
 
 2. **LLM Deep Analysis (opt-in)**: User clicks "Get Deep Analysis" on the hand summary. Backend sends hand context to Claude Haiku or Opus. Returns per-street grades, key lessons, and an encouraging coach's note.
 
@@ -342,14 +344,16 @@ Players get simple names (Steve, Betty, Chris, Dave, Emma) with style labels sho
 |------|---------|
 | `stores/gameStore.ts` | Zustand state machine (~800 lines) — the heart of the game |
 | `lib/poker.ts` | Deck, hand evaluation (all 10 rankings), card utilities |
+| `lib/preflopRanges.ts` | 169 canonical hands → 5 tiers, position-aware opening ranges |
+| `lib/handAnalysis.ts` | Draw detection, board texture, enhanced equity estimation |
 | `lib/aiOpponents.ts` | AI decision engine with difficulty profiles |
-| `lib/coaching.ts` | Rule-based instant coaching feedback |
+| `lib/coaching.ts` | Rule-based instant coaching (uses tiers, draws, texture) |
 | `pages/PlayVsAI.tsx` | Main game page — composes all game components |
 | `components/game/GameSetup.tsx` | Config screen (players, blinds, stacks, difficulty) |
 | `components/game/GameTable.tsx` | Visual table with player seats, cards, pot, dealer/SB/BB badges |
-| `components/game/ActionBar.tsx` | Fold/Check/Call/Raise with keyboard shortcuts (F/C/R/Enter) |
-| `components/game/CoachingPanel.tsx` | Per-street coaching feedback with street labels |
-| `components/game/HandSummary.tsx` | End-of-hand review with showdown, grades, deep analysis |
+| `components/game/ActionBar.tsx` | Fold/Check/Call/Raise with slider, +/- buttons, keyboard shortcuts |
+| `components/game/CoachingPanel.tsx` | Per-street coaching: verdict + optimal play |
+| `components/game/HandSummary.tsx` | End-of-hand review: grade first, commentary, result at bottom |
 
 ## Bugs Encountered & Lessons Learned
 
@@ -390,6 +394,12 @@ Players get simple names (Steve, Betty, Chris, Dave, Emma) with style labels sho
 
 11. **Game engines belong in the frontend** - Running poker logic on the server would add latency to every bet. Zustand keeps the game state local and instant. The backend only handles persistence (saving hands) and heavy lifting (LLM coaching).
 
+12. **Tier-based ranges beat numeric thresholds for preflop coaching** - The original `preflopStrength()` mapped `(highVal + lowVal) / 28` which gave nonsense numbers (e.g., 72o rated similarly to T9s). Using a lookup table of 169 canonical hands → 5 tiers (Premium/Strong/Playable/Marginal/Trash) with position-aware opening ranges produces coaching that actually matches standard poker strategy.
+
+13. **ESM circular imports work if you only use them at runtime** - `poker.ts` imports `handAnalysis.ts` which imports `poker.ts`. Vite handles this fine because all cross-module calls happen inside functions (at runtime), not at import-time. The exports are available by the time any function runs.
+
+14. **Coaching feedback should separate verdict from advice** - Users respond better when the coaching says "You folded with a flush draw — this is a mistake" (verdict, white) then "Optimal: Call. With 9 outs your equity exceeds the pot odds" (advice, grey). Mixing both into one paragraph made messages harder to parse quickly.
+
 ## Potential Pitfalls
 
 ### Authentication
@@ -420,4 +430,4 @@ Players get simple names (Steve, Betty, Chris, Dave, Emma) with style labels sho
 
 ---
 
-*Last updated: 2026-02-11 - Added Play vs AI mode with full game engine, AI opponents, rule-based coaching, optional LLM deep analysis, and 7 game achievements*
+*Last updated: 2026-02-12 - Improved coaching accuracy with tier-based preflop ranges, draw detection, board texture analysis, enhanced equity estimation. Redesigned raise slider UX with inline +/- buttons. Restructured hand review to prioritize learning over results.*

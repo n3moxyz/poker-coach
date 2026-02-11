@@ -86,11 +86,13 @@ poker-coach/
             │   ├── useGame.ts     # Game mode hooks (history, stats, analysis)
             │   └── useHotkeys.ts  # Keyboard shortcuts
             ├── lib/
-            │   ├── api.ts         # Typed API client
+            │   ├── api.ts            # Typed API client
             │   ├── utils.ts
-            │   ├── poker.ts       # Deck, hand evaluation, card utilities
-            │   ├── aiOpponents.ts # AI decision engine (Easy/Medium/Hard)
-            │   └── coaching.ts    # Rule-based instant feedback
+            │   ├── poker.ts          # Deck, hand evaluation, card utilities
+            │   ├── preflopRanges.ts  # Tier-based preflop hand lookup by position
+            │   ├── handAnalysis.ts   # Draw detection, board texture, enhanced equity
+            │   ├── aiOpponents.ts    # AI decision engine (Easy/Medium/Hard)
+            │   └── coaching.ts       # Rule-based coaching (tiers, draws, texture)
             ├── stores/
             │   └── gameStore.ts   # Zustand game state machine
             └── pages/
@@ -306,6 +308,11 @@ New users take an initial assessment before accessing modules:
 - React hooks MUST be called before any early returns (Rules of Hooks)
 - LLM coaching degrades gracefully — returns fallback when `ANTHROPIC_API_KEY` is missing
 - Claude Code OAuth tokens (`claude setup-token`) do NOT work with the Anthropic Messages API
+- Preflop coaching uses tier-based ranges (`preflopRanges.ts`), not numeric thresholds
+- Postflop coaching uses draw detection + board texture (`handAnalysis.ts`) for accurate feedback
+- `poker.ts` ↔ `handAnalysis.ts` have a circular ESM import — works because all calls are runtime
+- Coaching feedback format: `message` = verdict (what you did + right/wrong), `detail` = optimal play
+- Hand summary layout: grade → hand review → result (win/loss at bottom, not top)
 
 ## Production Infrastructure
 
