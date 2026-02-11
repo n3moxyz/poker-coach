@@ -1,6 +1,7 @@
 // AI opponent decision engine for Easy/Medium/Hard difficulties
 
 import { type Card, handStrength } from './poker';
+import { detectDraws, analyzeBoardTexture } from './handAnalysis';
 
 export type AIDifficulty = 'easy' | 'medium' | 'hard';
 export type AIStyle = 'tight-passive' | 'tight-aggressive' | 'loose-passive' | 'loose-aggressive';
@@ -177,13 +178,31 @@ function hardDecision(
   const adjusted = strength + positionBonus;
   const stackToPot = ctx.chips / Math.max(ctx.pot, 1);
 
-  // Bluff frequency: ~25% of betting actions on later streets
-  const shouldBluff = adjusted < 0.35 && Math.random() < 0.25 && ctx.phase !== 'preflop';
+  // Board texture and draw detection for smarter play
+  const texture = ctx.communityCards.length >= 3 ? analyzeBoardTexture(ctx.communityCards) : null;
+  const draws = ctx.communityCards.length >= 3 ? detectDraws(ctx.holeCards, ctx.communityCards) : null;
+  const hasSignificantDraw = draws && (draws.flushDraw || draws.oesd);
 
-  // Board texture sizing: bet bigger on wet boards (more community cards = wetter approximation)
-  const sizingFactor = ctx.communityCards.length >= 4 ? 0.75 : 0.65;
+  // Texture-based bet sizing: bigger on wet boards, smaller on dry
+  const sizingFactor = texture
+    ? (texture.wetness === 'wet' ? 0.75 : texture.wetness === 'dry' ? 0.55 : 0.65)
+    : 0.65;
+
+  // Bluff more on dry boards (opponents fold more), less on wet boards
+  const bluffRate = texture
+    ? (texture.wetness === 'dry' ? 0.30 : texture.wetness === 'wet' ? 0.15 : 0.25)
+    : 0.25;
+  const shouldBluff = adjusted < 0.35 && Math.random() < bluffRate && ctx.phase !== 'preflop';
+
+  // Semi-bluff: bet/raise with draws for fold equity + draw equity
+  const shouldSemiBluff = hasSignificantDraw && adjusted < 0.5 && ctx.phase !== 'preflop' && ctx.phase !== 'river';
 
   if (toCall === 0) {
+    // Semi-bluff with strong draws
+    if (shouldSemiBluff) {
+      const betSize = Math.floor(ctx.pot * sizingFactor);
+      return { action: 'raise', amount: ctx.currentBet + Math.min(betSize, ctx.chips), reasoning: 'Semi-bluff with a draw' };
+    }
     if (shouldBluff) {
       const bluffSize = Math.floor(ctx.pot * 0.55);
       return { action: 'raise', amount: ctx.currentBet + Math.min(bluffSize, ctx.chips), reasoning: 'Balanced bluff' };
@@ -200,7 +219,6 @@ function hardDecision(
   }
 
   // Facing a bet
-  const effectivePotOdds = potOdds;
 
   // All-in with monsters when short-stacked
   if (adjusted > 0.85 && stackToPot < 3) {
@@ -216,7 +234,18 @@ function hardDecision(
     return { action: 'call', amount: ctx.currentBet, reasoning: 'Slow-playing a strong hand' };
   }
 
-  if (adjusted > effectivePotOdds + 0.05) {
+  // Semi-bluff raise with draws when facing a bet
+  if (shouldSemiBluff && Math.random() < 0.4) {
+    const raiseSize = Math.floor(ctx.pot * sizingFactor);
+    return { action: 'raise', amount: ctx.currentBet + Math.min(raiseSize, ctx.chips), reasoning: 'Semi-bluff raise with a draw' };
+  }
+
+  // Call with draws when getting the right price
+  if (hasSignificantDraw && adjusted > potOdds) {
+    return { action: 'call', amount: ctx.currentBet, reasoning: 'Calling with draw equity' };
+  }
+
+  if (adjusted > potOdds + 0.05) {
     return { action: 'call', amount: ctx.currentBet, reasoning: 'Getting correct odds to call' };
   }
 

@@ -1,5 +1,7 @@
 // Core poker game engine: deck, hand evaluation, hand comparison
 
+import { enhancedHandStrength } from './handAnalysis';
+
 export type Suit = 'h' | 'd' | 'c' | 's';
 export type Rank = '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K' | 'A';
 
@@ -249,40 +251,9 @@ export function determineWinners(hands: HandResult[]): number[] {
   return bestIdx;
 }
 
-/** Calculate hand strength as a simple heuristic (0-1) for AI use */
+/** Calculate hand strength as a heuristic (0-1) for AI and coaching use */
 export function handStrength(holeCards: Card[], communityCards: Card[]): number {
-  if (communityCards.length === 0) {
-    return preflopStrength(holeCards);
-  }
-  const allCards = [...holeCards, ...communityCards];
-  const result = evaluateHand(allCards);
-  // Map hand rank to 0-1 range with kicker consideration
-  const baseStrength = result.rank / HandRank.ROYAL_FLUSH;
-  const kickerBonus = (result.kickers[0] || 0) / 14 * 0.05;
-  return Math.min(1, baseStrength + kickerBonus);
-}
-
-/** Simple preflop hand strength heuristic */
-function preflopStrength(holeCards: Card[]): number {
-  const [a, b] = holeCards;
-  const highVal = Math.max(rankValue(a.rank), rankValue(b.rank));
-  const lowVal = Math.min(rankValue(a.rank), rankValue(b.rank));
-  const isPair = a.rank === b.rank;
-  const isSuited = a.suit === b.suit;
-  const gap = highVal - lowVal;
-
-  let strength = 0;
-
-  if (isPair) {
-    strength = 0.5 + (highVal / 14) * 0.5; // Pairs: 0.57-1.0
-  } else {
-    strength = (highVal + lowVal) / 28; // Base from card values
-    if (isSuited) strength += 0.05;
-    if (gap <= 2) strength += 0.05; // Connectedness bonus
-    if (gap >= 5) strength -= 0.05; // Gap penalty
-  }
-
-  return Math.max(0, Math.min(1, strength));
+  return enhancedHandStrength(holeCards, communityCards).equity;
 }
 
 // Re-export for convenience

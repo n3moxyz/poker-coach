@@ -59,23 +59,6 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
-      {/* Result header */}
-      <div className={cn(
-        'card text-center',
-        won ? 'felt-bg border-gold/30' : 'border-red-500/20'
-      )}>
-        <Trophy className={cn('w-12 h-12 mx-auto mb-3', won ? 'text-gold' : 'text-gray-500')} />
-        <h2 className={cn('text-2xl font-bold mb-1', won ? 'text-gold' : 'text-red-400')}>
-          {won ? 'You Won!' : 'You Lost'}
-        </h2>
-        <div className={cn('text-lg font-semibold', chipDelta >= 0 ? 'text-green-400' : 'text-red-400')}>
-          {chipDelta >= 0 ? '+' : ''}{chipDelta} chips
-        </div>
-        <div className="text-sm text-muted-foreground mt-1">
-          Pot: ${record.pot}
-        </div>
-      </div>
-
       {/* Overall Grade */}
       <div className={cn(
         'card border-2 text-center',
@@ -151,40 +134,20 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
         )}
       </div>
 
-      {/* Player Hands + Styles */}
-      <div className="card space-y-3">
-        <h3 className="text-white font-semibold">Players</h3>
-        <div className="space-y-2">
-          {record.players.map((p) => (
-            <div key={p.id} className="flex items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className={cn(
-                    'text-sm font-medium truncate',
-                    p.id === 'human' ? 'text-white' : 'text-muted-foreground'
-                  )}>
-                    {p.name}
-                  </span>
-                  {p.aiStyle && (
-                    <span className="text-[10px] text-muted-foreground bg-background-tertiary px-1.5 py-0.5 rounded">
-                      {p.aiStyle}
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-1">
-                {p.cards.map((card, i) => (
-                  <PlayingCard key={i} card={card} size="sm" />
-                ))}
-              </div>
-              <span className={cn(
-                'text-xs font-medium w-12 text-right',
-                p.chipDelta > 0 ? 'text-green-400' : p.chipDelta < 0 ? 'text-red-400' : 'text-gray-400'
-              )}>
-                {p.chipDelta > 0 ? '+' : ''}{p.chipDelta}
-              </span>
-            </div>
-          ))}
+      {/* Result — moved below commentary to focus on learning */}
+      <div className={cn(
+        'card text-center',
+        won ? 'felt-bg border-gold/30' : 'border-red-500/20'
+      )}>
+        <Trophy className={cn('w-8 h-8 mx-auto mb-2', won ? 'text-gold' : 'text-gray-500')} />
+        <h2 className={cn('text-xl font-bold mb-1', won ? 'text-gold' : 'text-red-400')}>
+          {won ? 'You Won!' : 'You Lost'}
+        </h2>
+        <div className={cn('text-sm font-semibold', chipDelta >= 0 ? 'text-green-400' : 'text-red-400')}>
+          {chipDelta >= 0 ? '+' : ''}{chipDelta} chips
+        </div>
+        <div className="text-xs text-muted-foreground mt-1">
+          Pot: ${record.pot}
         </div>
       </div>
 
@@ -274,7 +237,7 @@ function StreetSection({ phase, actions, board, playerCards, potSize, streetAnal
           );
         })}
 
-        {/* Inline coaching — single merged note per street */}
+        {/* Inline coaching — verdict + optimal play */}
         {streetAnalysis && (
           <div className={cn(
             'mt-2 text-xs p-2 rounded border',
@@ -286,15 +249,16 @@ function StreetSection({ phase, actions, board, playerCards, potSize, streetAnal
               <span className={cn('font-bold shrink-0', ANALYSIS_GRADE_COLORS[streetAnalysis.grade] || 'text-purple-400')}>
                 {streetAnalysis.grade}
               </span>
-              <div>
-                {streetFeedbacks.length > 0 && streetFeedbacks[0].playerAction && (
-                  <span className="text-muted-foreground">
-                    You: <span className="text-white">{streetFeedbacks[0].playerAction}</span> —{' '}
-                  </span>
-                )}
-                <span>{streetAnalysis.analysis}</span>
+              <div className="space-y-1.5">
+                {/* What the player did + verdict */}
+                <p className="text-white leading-relaxed">
+                  {streetAnalysis.analysis}
+                </p>
+                {/* Optimal play recommendation */}
                 {streetFeedbacks.length > 0 && streetFeedbacks[0].detail && (
-                  <p className="text-muted-foreground mt-0.5">{streetFeedbacks[0].detail}</p>
+                  <p className="text-gray-500 leading-relaxed">
+                    {streetFeedbacks[0].detail}
+                  </p>
                 )}
               </div>
             </div>
