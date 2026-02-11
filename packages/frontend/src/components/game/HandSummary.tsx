@@ -86,15 +86,27 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
         <div className="text-sm font-semibold mt-1 uppercase">{record.grade.grade}</div>
       </div>
 
-      {/* Street-by-street timeline */}
+      {/* Hand Review — timeline + inline coaching */}
       <div className="card space-y-4">
-        <h3 className="text-white font-semibold">Hand Timeline</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-white font-semibold">Hand Review</h3>
+          <div className="flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            <span className={cn('text-sm font-bold', ANALYSIS_GRADE_COLORS[analysis.overallGrade] || 'text-purple-400')}>
+              {analysis.overallGrade}
+            </span>
+          </div>
+        </div>
+
         {phases.map((phase, pi) => {
-          // Calculate pot at end of this street (sum of all amounts up to and including this phase)
           const priorPhases = phases.slice(0, pi + 1);
           const potAtStreet = record.actions
             .filter((a) => priorPhases.includes(a.phase as string))
             .reduce((sum, a) => sum + a.amount, 0);
+
+          // Match analysis and feedbacks for this street
+          const streetAnalysis = analysis.streetAnalysis.find((sa) => sa.street === phase);
+          const streetFeedbacks = record.feedbacks.filter((fb) => fb.phase === phase);
 
           return (
             <StreetSection
@@ -104,6 +116,8 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
               boardCards={boardByStreet[phase] || []}
               playerCards={playerCardsMap}
               potSize={potAtStreet}
+              streetAnalysis={streetAnalysis}
+              streetFeedbacks={streetFeedbacks}
             />
           );
         })}
@@ -113,71 +127,6 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
           <span className="text-gold font-semibold">{record.winners.join(' & ')}</span>
           <span className="text-muted-foreground"> won ${record.pot} pot</span>
         </div>
-      </div>
-
-      {/* Coaching Review — merged coaching notes + hand analysis */}
-      <div className="card space-y-4 border-2 border-purple-500/30">
-        <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-purple-400" />
-          <h3 className="text-white font-semibold">Coaching Review</h3>
-        </div>
-
-        {/* Overall analysis grade */}
-        <div className="text-center py-1">
-          <div className={cn('text-2xl font-bold', ANALYSIS_GRADE_COLORS[analysis.overallGrade] || 'text-purple-400')}>
-            {analysis.overallGrade}
-          </div>
-          <div className="text-xs text-muted-foreground">Overall Grade</div>
-        </div>
-
-        {/* Per-street analysis with inline coaching notes */}
-        {analysis.streetAnalysis.map((sa) => {
-          // Find coaching feedbacks for this street
-          const streetFeedbacks = record.feedbacks.filter((fb) => fb.phase === sa.street);
-
-          return (
-            <div key={sa.street} className="space-y-2">
-              {/* Street header + grade */}
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gold uppercase">
-                  {PHASE_LABELS[sa.street] || sa.street}
-                </span>
-                <span className={cn('text-xs font-medium', ANALYSIS_GRADE_COLORS[sa.grade] || 'text-purple-400')}>
-                  {sa.grade}
-                </span>
-              </div>
-
-              {/* Retrospective analysis */}
-              <div className="p-3 rounded-lg border border-border bg-background-tertiary text-sm">
-                <p className="text-gray-300">{sa.analysis}</p>
-              </div>
-
-              {/* Per-action coaching notes for this street */}
-              {streetFeedbacks.map((fb, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    'p-3 rounded-lg border text-sm ml-3',
-                    GRADE_COLORS[fb.grade]
-                  )}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium">{fb.grade}</span>
-                  </div>
-                  {fb.playerAction && (
-                    <p className="text-xs text-muted-foreground mb-1">
-                      You: <span className="text-white">{fb.playerAction}</span>
-                    </p>
-                  )}
-                  <p>{fb.message}</p>
-                  {fb.detail && (
-                    <p className="text-xs text-muted-foreground mt-1">{fb.detail}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          );
-        })}
 
         {/* Key Lessons */}
         {analysis.keyLessons.length > 0 && (
@@ -260,20 +209,24 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
   );
 }
 
-function StreetSection({ phase, actions, boardCards, playerCards, potSize }: {
+interface StreetSectionProps {
   phase: string;
   actions: HandAction[];
   boardCards: string[];
   playerCards: Record<string, string[]>;
   potSize: number;
-}) {
+  streetAnalysis?: { grade: string; analysis: string };
+  streetFeedbacks: { grade: FeedbackGrade; message: string; detail?: string; playerAction?: string }[];
+}
+
+function StreetSection({ phase, actions, boardCards, playerCards, potSize, streetAnalysis, streetFeedbacks }: StreetSectionProps) {
   return (
     <div>
+      {/* Street header */}
       <div className="flex items-center gap-3 mb-2">
         <span className="text-xs font-semibold text-gold uppercase">
           {PHASE_LABELS[phase] || phase}
         </span>
-        {/* Board cards for this street */}
         {boardCards.length > 0 && (
           <div className="flex gap-0.5">
             {boardCards.map((card, i) => (
@@ -285,6 +238,8 @@ function StreetSection({ phase, actions, boardCards, playerCards, potSize }: {
           Pot: ${potSize}
         </span>
       </div>
+
+      {/* Actions */}
       <div className="space-y-1 pl-3 border-l-2 border-border">
         {actions.map((action, i) => {
           const cards = playerCards[action.playerId];
@@ -313,6 +268,45 @@ function StreetSection({ phase, actions, boardCards, playerCards, potSize }: {
             </div>
           );
         })}
+
+        {/* Inline coaching — analysis + per-action feedbacks */}
+        {streetAnalysis && (
+          <div className="mt-2 space-y-1.5">
+            {/* Retrospective analysis */}
+            <div className="flex gap-2 text-xs p-2 rounded border border-purple-500/20 bg-purple-500/5">
+              <span className={cn('font-bold shrink-0', ANALYSIS_GRADE_COLORS[streetAnalysis.grade] || 'text-purple-400')}>
+                {streetAnalysis.grade}
+              </span>
+              <p className="text-gray-400">{streetAnalysis.analysis}</p>
+            </div>
+
+            {/* Per-action coaching notes */}
+            {streetFeedbacks.map((fb, i) => (
+              <div
+                key={i}
+                className={cn(
+                  'text-xs p-2 rounded border',
+                  GRADE_COLORS[fb.grade]
+                )}
+              >
+                <div className="flex items-start gap-2">
+                  <span className="font-semibold shrink-0">{fb.grade}</span>
+                  <div>
+                    {fb.playerAction && (
+                      <span className="text-muted-foreground">
+                        You: <span className="text-white">{fb.playerAction}</span> —{' '}
+                      </span>
+                    )}
+                    <span>{fb.message}</span>
+                    {fb.detail && (
+                      <p className="text-muted-foreground mt-0.5">{fb.detail}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
