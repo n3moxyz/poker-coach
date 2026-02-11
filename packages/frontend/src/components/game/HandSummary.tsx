@@ -89,39 +89,29 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
       {/* Street-by-street timeline */}
       <div className="card space-y-4">
         <h3 className="text-white font-semibold">Hand Timeline</h3>
-        {phases.map((phase) => (
-          <StreetSection
-            key={phase}
-            phase={phase}
-            actions={actionsByPhase[phase]}
-            boardCards={boardByStreet[phase] || []}
-            playerCards={playerCardsMap}
-          />
-        ))}
+        {phases.map((phase, pi) => {
+          // Calculate pot at end of this street (sum of all amounts up to and including this phase)
+          const priorPhases = phases.slice(0, pi + 1);
+          const potAtStreet = record.actions
+            .filter((a) => priorPhases.includes(a.phase as string))
+            .reduce((sum, a) => sum + a.amount, 0);
 
-        {/* Showdown — reveal all hands in timeline */}
-        <div>
-          <div className="text-xs font-semibold text-gold uppercase mb-2">Showdown</div>
-          <div className="space-y-1.5 pl-3 border-l-2 border-border">
-            {record.players.map((p) => (
-              <div key={p.id} className="flex items-center gap-2">
-                <span className={cn(
-                  'text-sm font-medium w-14 truncate',
-                  p.id === 'human' ? 'text-white' : 'text-muted-foreground'
-                )}>
-                  {p.name}
-                </span>
-                <div className="flex gap-0.5">
-                  {p.cards.map((card, i) => (
-                    <PlayingCard key={i} card={card} size="sm" />
-                  ))}
-                </div>
-                {record.winners.includes(p.name) && (
-                  <span className="text-[10px] text-gold font-bold ml-auto">WINNER</span>
-                )}
-              </div>
-            ))}
-          </div>
+          return (
+            <StreetSection
+              key={phase}
+              phase={phase}
+              actions={actionsByPhase[phase]}
+              boardCards={boardByStreet[phase] || []}
+              playerCards={playerCardsMap}
+              potSize={potAtStreet}
+            />
+          );
+        })}
+
+        {/* Showdown — compact one-liner */}
+        <div className="text-sm pl-3 border-l-2 border-gold/40 py-1">
+          <span className="text-gold font-semibold">{record.winners.join(' & ')}</span>
+          <span className="text-muted-foreground"> won ${record.pot} pot</span>
         </div>
       </div>
 
@@ -270,11 +260,12 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
   );
 }
 
-function StreetSection({ phase, actions, boardCards, playerCards }: {
+function StreetSection({ phase, actions, boardCards, playerCards, potSize }: {
   phase: string;
   actions: HandAction[];
   boardCards: string[];
   playerCards: Record<string, string[]>;
+  potSize: number;
 }) {
   return (
     <div>
@@ -290,6 +281,9 @@ function StreetSection({ phase, actions, boardCards, playerCards }: {
             ))}
           </div>
         )}
+        <span className="text-[10px] text-muted-foreground ml-auto">
+          Pot: ${potSize}
+        </span>
       </div>
       <div className="space-y-1 pl-3 border-l-2 border-border">
         {actions.map((action, i) => {
@@ -307,7 +301,7 @@ function StreetSection({ phase, actions, boardCards, playerCards }: {
                 {action.playerName}
               </span>
               {cards && cards.length === 2 && action.action !== 'post-blind' && (
-                <div className="flex gap-0.5 opacity-70">
+                <div className="flex gap-0.5 opacity-40">
                   {cards.map((c, ci) => (
                     <PlayingCard key={ci} card={c} size="xs" />
                   ))}
