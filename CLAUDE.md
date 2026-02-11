@@ -257,7 +257,7 @@ New users take an initial assessment before accessing modules:
 
 | Component | Service | URL/Access |
 |-----------|---------|------------|
-| Frontend | Vercel | `pokercoach.vercel.app` |
+| Frontend | Vercel | `pokercoach.cc` (custom domain) |
 | Backend | Coolify on DigitalOcean | `api.pokercoach.cc` |
 | Database | PostgreSQL (in Coolify) | Internal to Coolify |
 | Domain | Cloudflare | `pokercoach.cc` |
@@ -284,7 +284,7 @@ New users take an initial assessment before accessing modules:
 | `DATABASE_URL` | Coolify PostgreSQL connection string |
 | `CLERK_SECRET_KEY` | From Clerk dashboard |
 | `CLERK_PUBLISHABLE_KEY` | From Clerk dashboard |
-| `FRONTEND_URL` | `https://pokercoach.vercel.app` |
+| `FRONTEND_URL` | `https://pokercoach.cc` |
 | `PORT` | `3001` |
 | `NODE_ENV` | `production` (runtime only, not buildtime) |
 
@@ -298,7 +298,9 @@ npx prisma migrate deploy && npx prisma db seed && npm start
 
 | Type | Name | Content |
 |------|------|---------|
+| A | `@` | `76.76.21.21` (DNS only, points to Vercel) |
 | A | `api` | `203.0.113.10` (DNS only, not proxied) |
+| CNAME | `www` | `cname.vercel-dns.com` (DNS only) |
 
 ### Vercel Environment Variables
 
