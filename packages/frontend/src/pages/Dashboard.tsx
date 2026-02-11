@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 import Flame from 'lucide-react/dist/esm/icons/flame';
 import Target from 'lucide-react/dist/esm/icons/target';
-import Trophy from 'lucide-react/dist/esm/icons/trophy';
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
 import Gamepad2 from 'lucide-react/dist/esm/icons/gamepad-2';
 import { useProgress, useModules } from '@/hooks/useApi';
@@ -51,25 +50,31 @@ export default function Dashboard() {
       </div>
 
       {/* Play vs AI CTA */}
-      <Link to="/play" className="card felt-bg group cursor-pointer block hover:border-gold/30 transition-all">
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-gold/10 border border-gold/20 group-hover:bg-gold/20 transition-colors">
-            <Gamepad2 className="w-6 h-6 text-gold" />
+      <Link
+        to="/play"
+        className="relative group block overflow-hidden rounded-xl border-2 border-gold/40 bg-gradient-to-r from-gold/15 via-yellow-500/10 to-gold/15 hover:border-gold/70 hover:shadow-lg hover:shadow-gold/20 transition-all duration-300"
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        <div className="relative flex items-center gap-4 p-5">
+          <div className="p-3.5 rounded-xl bg-gold/20 border border-gold/30 group-hover:bg-gold/30 group-hover:scale-110 transition-all duration-300">
+            <Gamepad2 className="w-7 h-7 text-gold" />
           </div>
           <div className="flex-1">
-            <h3 className="text-white font-semibold group-hover:text-gold transition-colors">
-              Play vs AI
+            <h3 className="text-lg font-bold text-gold">
+              Ready to Play?
             </h3>
-            <p className="text-sm text-muted-foreground">
-              Practice against AI opponents with instant coaching
+            <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">
+              Test your skills against AI opponents with real-time coaching
             </p>
           </div>
-          <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-gold transition-colors" />
+          <div className="px-4 py-2 rounded-lg bg-gold/20 border border-gold/30 text-gold font-semibold text-sm group-hover:bg-gold/30 transition-colors">
+            Play Now
+          </div>
         </div>
       </Link>
 
       {/* Stats grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <StatCard
           icon={<TrendingUp className="w-5 h-5" />}
           label="Level"
@@ -83,13 +88,6 @@ export default function Dashboard() {
           value={formatXp(progress?.stats.totalXp || 0)}
           subValue={`${progress?.stats.totalQuestions || 0} questions`}
           color="text-blue-400"
-        />
-        <StatCard
-          icon={<Trophy className="w-5 h-5" />}
-          label="Mastered"
-          value={`${progress?.modules.mastered || 0}/${progress?.modules.total || 5}`}
-          subValue="modules"
-          color="text-purple-400"
         />
         <StatCard
           icon={<Target className="w-5 h-5" />}
@@ -214,8 +212,8 @@ export default function Dashboard() {
         <Link to="/modules" className="btn-primary text-center py-4">
           Start Practice
         </Link>
-        <Link to="/progress" className="btn-secondary text-center py-4">
-          View Stats
+        <Link to="/achievements" className="btn-secondary text-center py-4">
+          Achievements
         </Link>
       </div>
     </div>
@@ -245,8 +243,8 @@ function DashboardSkeleton() {
   return (
     <div className="md:ml-64 space-y-6 pb-20 md:pb-6 animate-pulse">
       <div className="card felt-bg h-24" />
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid grid-cols-3 gap-4">
+        {[...Array(3)].map((_, i) => (
           <div key={i} className="card h-28" />
         ))}
       </div>

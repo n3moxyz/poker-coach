@@ -13,7 +13,6 @@ import Dashboard from '@/pages/Dashboard';
 import ModuleList from '@/pages/ModuleList';
 import ModuleDetail from '@/pages/ModuleDetail';
 import PracticeSession from '@/pages/PracticeSession';
-import Progress from '@/pages/Progress';
 import Achievements from '@/pages/Achievements';
 import Leaderboard from '@/pages/Leaderboard';
 import PlacementTest from '@/pages/PlacementTest';
@@ -92,7 +91,6 @@ function AuthenticatedApp() {
         <Route path="/modules" element={<ModuleList />} />
         <Route path="/modules/:slug" element={<ModuleDetail />} />
         <Route path="/practice/:slug" element={<PracticeSession />} />
-        <Route path="/progress" element={<Progress />} />
         <Route path="/achievements" element={<Achievements />} />
         <Route path="/play" element={<PlayVsAI />} />
         <Route path="/play/history" element={<GameHistory />} />
