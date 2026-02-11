@@ -1895,7 +1895,97 @@ async function main() {
 
   console.log(`✅ Created ${achievements.length} achievements`);
 
+  // Seed game achievements (always upsert so they can be added to existing DBs)
+  await seedGameAchievements();
+
   console.log('🎰 Seeding complete!');
+}
+
+async function seedGameAchievements() {
+  const gameAchievements = [
+    {
+      slug: 'first-hand',
+      name: 'First Hand',
+      description: 'Play your first hand vs AI',
+      category: 'GAME',
+      rarity: 'COMMON',
+      xpReward: 25,
+      iconEmoji: '🎲',
+      condition: { type: 'hands_played', value: 1 },
+    },
+    {
+      slug: 'card-shark',
+      name: 'Card Shark',
+      description: 'Play 50 hands vs AI',
+      category: 'GAME',
+      rarity: 'RARE',
+      xpReward: 100,
+      iconEmoji: '🦈',
+      condition: { type: 'hands_played', value: 50 },
+    },
+    {
+      slug: 'high-roller',
+      name: 'High Roller',
+      description: 'Play 200 hands vs AI',
+      category: 'GAME',
+      rarity: 'EPIC',
+      xpReward: 250,
+      iconEmoji: '🎰',
+      condition: { type: 'hands_played', value: 200 },
+    },
+    {
+      slug: 'a-plus-student',
+      name: 'A+ Student',
+      description: 'Get a grade A on a hand',
+      category: 'GAME',
+      rarity: 'RARE',
+      xpReward: 75,
+      iconEmoji: '📝',
+      condition: { type: 'best_grade', value: 'A' },
+    },
+    {
+      slug: 'straight-as',
+      name: "Straight A's",
+      description: 'Get 5 grade A hands in a row',
+      category: 'GAME',
+      rarity: 'EPIC',
+      xpReward: 200,
+      iconEmoji: '🌟',
+      condition: { type: 'consecutive_a_grades', value: 5 },
+    },
+    {
+      slug: 'shark-slayer',
+      name: 'Shark Slayer',
+      description: 'Win a hand on Hard difficulty',
+      category: 'GAME',
+      rarity: 'RARE',
+      xpReward: 100,
+      iconEmoji: '⚔️',
+      condition: { type: 'hard_win', value: 1 },
+    },
+    {
+      slug: 'table-captain',
+      name: 'Table Captain',
+      description: 'Win 10 hands in a row',
+      category: 'GAME',
+      rarity: 'LEGENDARY',
+      xpReward: 500,
+      iconEmoji: '👑',
+      condition: { type: 'consecutive_wins', value: 10 },
+    },
+  ];
+
+  let created = 0;
+  for (const achievement of gameAchievements) {
+    const existing = await prisma.achievement.findUnique({
+      where: { slug: achievement.slug },
+    });
+    if (!existing) {
+      await prisma.achievement.create({ data: achievement });
+      created++;
+    }
+  }
+  console.log(`✅ Game achievements: ${created} created, ${gameAchievements.length - created} already existed`);
 }
 
 main()

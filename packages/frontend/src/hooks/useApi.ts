@@ -284,6 +284,19 @@ export function usePlacementTestResults() {
   });
 }
 
+// Game mode hooks
+export function useGameHistory(limit = 20, offset = 0) {
+  const getToken = useApiToken();
+
+  return useQuery({
+    queryKey: ['gameHistory', limit, offset],
+    queryFn: async () => {
+      const token = await getToken();
+      return api.getGameHistory(token, limit, offset);
+    },
+  });
+}
+
 export function useResetPlacementTest() {
   const getToken = useApiToken();
   const queryClient = useQueryClient();

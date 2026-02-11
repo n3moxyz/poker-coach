@@ -10,7 +10,7 @@ const DIFFICULTY_MULTIPLIERS: Record<number, number> = {
 };
 
 // Streak multipliers
-function getStreakMultiplier(streak: number): number {
+export function getStreakMultiplier(streak: number): number {
   if (streak >= 25) return 2.5;
   if (streak >= 10) return 2.0;
   if (streak >= 5) return 1.5;

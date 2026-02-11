@@ -5,6 +5,7 @@ import Flame from 'lucide-react/dist/esm/icons/flame';
 import Target from 'lucide-react/dist/esm/icons/target';
 import Trophy from 'lucide-react/dist/esm/icons/trophy';
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
+import Gamepad2 from 'lucide-react/dist/esm/icons/gamepad-2';
 import { useProgress, useModules } from '@/hooks/useApi';
 import { cn, formatXp, getLevelProgress, getStatusColor, getStatusLabel } from '@/lib/utils';
 
@@ -48,6 +49,24 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Play vs AI CTA */}
+      <Link to="/play" className="card felt-bg group cursor-pointer block hover:border-gold/30 transition-all">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-gold/10 border border-gold/20 group-hover:bg-gold/20 transition-colors">
+            <Gamepad2 className="w-6 h-6 text-gold" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-white font-semibold group-hover:text-gold transition-colors">
+              Play vs AI
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Practice against AI opponents with instant coaching
+            </p>
+          </div>
+          <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-gold transition-colors" />
+        </div>
+      </Link>
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

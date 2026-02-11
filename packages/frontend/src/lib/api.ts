@@ -195,6 +195,71 @@ export interface PlacementTestResults {
   }>;
 }
 
+// Game mode types
+export interface GameHandResult {
+  handId: string;
+  xpEarned: number;
+  breakdown: {
+    base: number;
+    difficulty: number;
+    grade: number;
+    streak: number;
+    daily: number;
+  };
+  streak: {
+    current: number;
+    freezeUsed: boolean;
+    newFreezeEarned: boolean;
+  };
+  levelUp: { newLevel: number } | null;
+  achievements: Array<{
+    name: string;
+    description: string;
+    rarity: string;
+    xpReward: number;
+    iconEmoji: string;
+  }>;
+}
+
+export interface GameHistoryEntry {
+  id: string;
+  playerCount: number;
+  difficulty: string;
+  result: string;
+  chipsDelta: number;
+  xpEarned: number;
+  overallGrade: string | null;
+  duration: number | null;
+  createdAt: string;
+}
+
+export interface GameStats {
+  handsPlayed: number;
+  handsWon: number;
+  winRate: number;
+  avgGrade: string;
+  totalXpFromHands: number;
+  bestGrade: string;
+}
+
+export interface GameCoaching {
+  grade: string;
+  analysis: string;
+  optimalPlay: string;
+  concepts: string[];
+}
+
+export interface HandSummary {
+  overallGrade: string;
+  streetAnalysis: Array<{
+    street: string;
+    grade: string;
+    analysis: string;
+  }>;
+  keyLessons: string[];
+  coachNote: string;
+}
+
 // API functions
 export const api = {
   // User sync
@@ -299,6 +364,53 @@ export const api = {
     fetchApi<{ success: boolean; message: string }>('/placement-test/reset', {
       method: 'POST',
       token,
+    }),
+
+  // Game mode
+  completeHand: (
+    token: string,
+    data: {
+      playerCount: number;
+      difficulty: string;
+      smallBlind: number;
+      bigBlind: number;
+      handHistory: unknown;
+      result: string;
+      chipsDelta: number;
+      overallGrade?: string;
+      duration?: number;
+    }
+  ) =>
+    fetchApi<GameHandResult>('/game/complete-hand', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(data),
+    }),
+
+  getGameHistory: (token: string, limit = 20, offset = 0) =>
+    fetchApi<{ hands: GameHistoryEntry[]; total: number; limit: number; offset: number }>(
+      `/game/history?limit=${limit}&offset=${offset}`,
+      { token }
+    ),
+
+  getGameStats: (token: string) =>
+    fetchApi<GameStats>('/game/stats', { token }),
+
+  getCoaching: (
+    token: string,
+    data: { handHistory: unknown; street: string; playerAction: string }
+  ) =>
+    fetchApi<GameCoaching>('/game/coach', {
+      method: 'POST',
+      token,
+      body: JSON.stringify(data),
+    }),
+
+  getHandSummary: (token: string, handHistory: unknown, quality: 'standard' | 'sharp' = 'sharp') =>
+    fetchApi<HandSummary>('/game/hand-summary', {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ handHistory, quality }),
     }),
 };
 

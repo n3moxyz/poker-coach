@@ -29,6 +29,7 @@ model User {
   stats        UserStats?
   streak       UserStreak?
   achievements UserAchievement[]
+  pokerHands   PokerHand[]
 }
 
 model UserStats {
@@ -164,4 +165,26 @@ model UserAchievement {
   unlockedAt    DateTime    @default(now())
 
   @@unique([userId, achievementId])
+}
+
+// ============================================
+// Game Mode Models
+// ============================================
+
+model PokerHand {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  playerCount     Int
+  difficulty      String   // EASY, MEDIUM, HARD
+  smallBlind      Int
+  bigBlind        Int
+  handHistory     Json     // Full action timeline (streets, actions, cards)
+  result          String   // WON, LOST, SPLIT, FOLDED
+  chipsDelta      Int
+  xpEarned        Int      @default(0)
+  overallGrade    String?  // A, B, C, D, F
+  coachingSummary String?
+  duration        Int?     // seconds
+  createdAt       DateTime @default(now())
 }
