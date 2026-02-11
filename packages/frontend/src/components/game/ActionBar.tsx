@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
+import Minus from 'lucide-react/dist/esm/icons/minus';
+import Plus from 'lucide-react/dist/esm/icons/plus';
 
 interface ActionBarProps {
   canCheck: boolean;
@@ -37,15 +39,27 @@ export default function ActionBar({
   const isBet = currentBet === 0;
   const raiseLabel = isBet ? 'Bet' : 'Raise';
   const [raiseAmount, setRaiseAmount] = useState(minRaise);
-  const [inputValue, setInputValue] = useState(String(minRaise));
   const [showRaiseSlider, setShowRaiseSlider] = useState(false);
+  const [isEditingAmount, setIsEditingAmount] = useState(false);
+  const [editValue, setEditValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const step = 1;
 
   // Reset raise amount when minRaise changes
   useEffect(() => {
     setRaiseAmount(minRaise);
-    setInputValue(String(minRaise));
     setShowRaiseSlider(false);
+    setIsEditingAmount(false);
   }, [minRaise]);
+
+  // Focus input when editing starts
+  useEffect(() => {
+    if (isEditingAmount && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [isEditingAmount]);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback(
@@ -92,9 +106,24 @@ export default function ActionBar({
     setShowRaiseSlider(false);
   };
 
+  const adjustAmount = (delta: number) => {
+    const newVal = Math.min(maxRaise, Math.max(minRaise, raiseAmount + delta));
+    setRaiseAmount(newVal);
+  };
+
+  const startEditing = () => {
+    setEditValue(String(raiseAmount));
+    setIsEditingAmount(true);
+  };
+
+  const commitEdit = () => {
+    const val = Number(editValue);
+    const clamped = Math.min(maxRaise, Math.max(minRaise, val || minRaise));
+    setRaiseAmount(clamped);
+    setIsEditingAmount(false);
+  };
+
   // Preset raise amounts (pot-relative sizing)
-  // "Raise to" = currentBet + raise_increment
-  // Pot-sized raise increment = pot + callAmount (the pot after calling)
   const potAfterCall = pot + callAmount;
   const potSizeRaises = [
     { label: 'Min', amount: minRaise },
@@ -108,44 +137,60 @@ export default function ActionBar({
       {/* Raise slider */}
       {showRaiseSlider && canRaise && (
         <div className="card bg-background-secondary space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">{raiseLabel} to:</span>
-            <span className="text-lg font-bold text-gold">${raiseAmount}</span>
-          </div>
-
+          {/* Slider row: "Raise to:" [slider] [-] $X [+] */}
           <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">{raiseLabel} to:</span>
             <input
               type="range"
               min={minRaise}
               max={maxRaise}
               value={raiseAmount}
-              onChange={(e) => {
-                const val = Number(e.target.value);
-                setRaiseAmount(val);
-                setInputValue(String(val));
-              }}
+              onChange={(e) => setRaiseAmount(Number(e.target.value))}
               className="flex-1 accent-gold"
             />
-            <input
-              type="text"
-              inputMode="numeric"
-              value={inputValue}
-              onChange={(e) => {
-                const raw = e.target.value.replace(/[^0-9]/g, '');
-                setInputValue(raw);
-                const val = Number(raw);
-                if (val >= minRaise && val <= maxRaise) {
-                  setRaiseAmount(val);
-                }
-              }}
-              onBlur={() => {
-                const val = Number(inputValue);
-                const clamped = Math.min(maxRaise, Math.max(minRaise, val || minRaise));
-                setRaiseAmount(clamped);
-                setInputValue(String(clamped));
-              }}
-              className="w-20 bg-background-tertiary border border-border rounded px-2 py-1 text-white text-sm text-center"
-            />
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => adjustAmount(-step)}
+                className="w-7 h-7 flex items-center justify-center rounded bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
+
+              {isEditingAmount ? (
+                <input
+                  ref={inputRef}
+                  type="text"
+                  inputMode="numeric"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value.replace(/[^0-9]/g, ''))}
+                  onBlur={commitEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      commitEdit();
+                    }
+                    if (e.key === 'Escape') {
+                      setIsEditingAmount(false);
+                    }
+                  }}
+                  className="w-14 bg-background-tertiary border border-gold/50 rounded px-1 py-0.5 text-gold text-sm text-center font-bold"
+                />
+              ) : (
+                <button
+                  onClick={startEditing}
+                  className="text-lg font-bold text-gold min-w-[3rem] text-center cursor-text hover:underline"
+                >
+                  ${raiseAmount}
+                </button>
+              )}
+
+              <button
+                onClick={() => adjustAmount(step)}
+                className="w-7 h-7 flex items-center justify-center rounded bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* Preset buttons */}
@@ -153,7 +198,7 @@ export default function ActionBar({
             {potSizeRaises.map((preset) => (
               <button
                 key={preset.label}
-                onClick={() => { setRaiseAmount(preset.amount); setInputValue(String(preset.amount)); }}
+                onClick={() => setRaiseAmount(preset.amount)}
                 className={cn(
                   'flex-1 py-1.5 text-xs rounded border transition-colors',
                   raiseAmount === preset.amount

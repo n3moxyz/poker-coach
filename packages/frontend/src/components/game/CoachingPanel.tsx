@@ -50,18 +50,14 @@ export default function CoachingPanel({ feedbacks, className }: CoachingPanelPro
               </span>
             </div>
 
-            {fb.playerAction && (
-              <p className="text-xs text-muted-foreground mb-1">
-                You: <span className="text-white font-medium">{fb.playerAction}</span>
-              </p>
-            )}
-
+            {/* What the player did + verdict */}
             <p className={cn('text-sm leading-relaxed', isLatest ? 'text-white' : 'text-gray-400')}>
               {fb.message}
             </p>
 
+            {/* Optimal play recommendation */}
             {fb.detail && isLatest && (
-              <p className="text-muted-foreground text-xs mt-1.5 leading-relaxed">
+              <p className="text-gray-500 text-xs mt-1.5 leading-relaxed">
                 {fb.detail}
               </p>
             )}
