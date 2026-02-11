@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useGameStore } from '@/stores/gameStore';
 import GameSetup from '@/components/game/GameSetup';
 import GameTable from '@/components/game/GameTable';
@@ -6,7 +6,9 @@ import ActionBar from '@/components/game/ActionBar';
 import CoachingPanel from '@/components/game/CoachingPanel';
 import HandSummary from '@/components/game/HandSummary';
 import { evaluateHand } from '@/lib/poker';
-import { useHandSummary } from '@/hooks/useGame';
+import { isSoundEnabled, toggleSound } from '@/lib/sounds';
+import Volume2 from 'lucide-react/dist/esm/icons/volume-2';
+import VolumeX from 'lucide-react/dist/esm/icons/volume-x';
 
 export default function PlayVsAI() {
   const {
@@ -33,13 +35,7 @@ export default function PlayVsAI() {
     resetGame,
   } = useGameStore();
 
-  const { analyze } = useHandSummary();
-
-  const handleRequestAnalysis = useCallback(async () => {
-    const lastHand = handHistory[handHistory.length - 1];
-    if (!lastHand) return null;
-    return analyze(lastHand);
-  }, [handHistory, analyze]);
+  const [soundOn, setSoundOn] = useState(isSoundEnabled);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -75,7 +71,6 @@ export default function PlayVsAI() {
               newHand();
             }}
             onBackToMenu={resetGame}
-            onRequestAnalysis={handleRequestAnalysis}
           />
         </div>
       );
@@ -110,6 +105,16 @@ export default function PlayVsAI() {
           {isProcessingAI && (
             <span className="animate-pulse text-yellow-400">AI thinking...</span>
           )}
+          <button
+            onClick={() => setSoundOn(toggleSound())}
+            className="p-1 rounded hover:bg-white/10 transition-colors"
+            title={soundOn ? 'Mute sounds' : 'Enable sounds'}
+          >
+            {soundOn
+              ? <Volume2 className="w-4 h-4 text-gray-400" />
+              : <VolumeX className="w-4 h-4 text-gray-600" />
+            }
+          </button>
         </div>
       </div>
 

@@ -50,17 +50,20 @@ poker-coach/
     │   │   │   ├── progress.ts    # Answer submission + stats
     │   │   │   ├── achievements.ts
     │   │   │   ├── stats.ts       # Leaderboard
-    │   │   │   └── placementTest.ts
+    │   │   │   ├── placementTest.ts
+    │   │   │   └── game.ts        # Play vs AI endpoints
     │   │   └── services/
     │   │       ├── xpService.ts
     │   │       ├── streakService.ts
     │   │       ├── achievementService.ts
     │   │       ├── userService.ts
     │   │       ├── moduleStatusService.ts
-    │   │       └── placementTestService.ts
+    │   │       ├── placementTestService.ts
+    │   │       ├── gameService.ts      # Hand XP calculation
+    │   │       └── coachingService.ts  # Claude API for deep analysis
     │   └── prisma/
-    │       ├── schema.prisma      # Database models
-    │       └── seed.ts            # Initial data (10 modules + questions)
+    │       ├── schema.prisma      # Database models (incl. PokerHand)
+    │       └── seed.ts            # Initial data (10 modules + questions + game achievements)
     │
     └── frontend/                  # React SPA (Vite)
         └── src/
@@ -69,15 +72,27 @@ poker-coach/
             ├── index.css          # Tailwind + casino theme
             ├── components/
             │   ├── AppShell.tsx   # Layout + navigation
-            │   └── games/
-            │       ├── PlayingCard.tsx
-            │       └── TableView.tsx
+            │   ├── games/
+            │   │   ├── PlayingCard.tsx
+            │   │   └── TableView.tsx
+            │   └── game/          # Play vs AI components
+            │       ├── GameSetup.tsx      # Config (players, blinds, stacks, difficulty)
+            │       ├── GameTable.tsx      # Poker table with players, cards, pot
+            │       ├── ActionBar.tsx      # Fold/Check/Call/Raise + keyboard shortcuts
+            │       ├── CoachingPanel.tsx  # Per-street coaching feedback
+            │       └── HandSummary.tsx    # End-of-hand review + deep analysis
             ├── hooks/
             │   ├── useApi.ts      # React Query hooks
+            │   ├── useGame.ts     # Game mode hooks (history, stats, analysis)
             │   └── useHotkeys.ts  # Keyboard shortcuts
             ├── lib/
             │   ├── api.ts         # Typed API client
-            │   └── utils.ts
+            │   ├── utils.ts
+            │   ├── poker.ts       # Deck, hand evaluation, card utilities
+            │   ├── aiOpponents.ts # AI decision engine (Easy/Medium/Hard)
+            │   └── coaching.ts    # Rule-based instant feedback
+            ├── stores/
+            │   └── gameStore.ts   # Zustand game state machine
             └── pages/
                 ├── Dashboard.tsx
                 ├── ModuleList.tsx
@@ -86,7 +101,9 @@ poker-coach/
                 ├── Progress.tsx
                 ├── Achievements.tsx
                 ├── Leaderboard.tsx
-                └── PlacementTest.tsx
+                ├── PlacementTest.tsx
+                ├── PlayVsAI.tsx       # Main game page
+                └── GameHistory.tsx     # Hand history list
 ```
 
 ## First Run Setup
@@ -108,6 +125,7 @@ Required variables:
 - `DATABASE_URL` - PostgreSQL connection string
 - `CLERK_SECRET_KEY` - Clerk backend key
 - `CLERK_PUBLISHABLE_KEY` - Clerk frontend key
+- `ANTHROPIC_API_KEY` - (Optional) For AI deep analysis coaching via Claude API
 
 ### 3. Database Setup
 ```bash
@@ -164,6 +182,13 @@ cd packages/frontend && npm run dev
 ### Placement Test
 - `GET /api/placement-test/questions` - Diagnostic questions from each module
 - `POST /api/placement-test/submit` - Submit test, calculate starting module
+
+### Game Mode (Play vs AI)
+- `POST /api/game/complete-hand` - Save hand, award XP (reuses streak/achievement services)
+- `POST /api/game/coach` - Per-street LLM coaching analysis (requires `ANTHROPIC_API_KEY`)
+- `POST /api/game/hand-summary` - End-of-hand LLM summary (requires `ANTHROPIC_API_KEY`)
+- `GET /api/game/history?limit=20&offset=0` - User's hand history
+- `GET /api/game/stats` - Game stats (hands played, win rate, avg grade)
 
 ### User Management
 - `POST /api/users/sync` - Auto-create user from Clerk JWT on first login
@@ -227,6 +252,32 @@ Daily first: +25 XP
 Level N requires: 100 * N^1.5 total XP
 ```
 
+### Game Mode XP
+
+```
+Base: 15 XP per hand
+Difficulty: Easy (1x), Medium (1.5x), Hard (2x)
+Grade bonus: A (2x), B (1.5x), C (1x), D (0.75x)
+Reuses streak multipliers and daily bonus from quiz XP
+```
+
+## Play vs AI Architecture
+
+- **Frontend game engine** (Zustand): Dealing, betting rounds, pot management, AI decisions — all instant, no network latency
+- **Rule-based coaching** (instant): Preflop chart lookup, pot odds, bet sizing, position awareness → grade (Good/Okay/Mistake) + message
+- **LLM deep analysis** (opt-in): User clicks "Get Deep Analysis" → backend calls Claude Haiku/Opus → detailed coaching
+- **Backend persistence**: Saves hands for XP/stats/achievements after each hand
+
+### AI Opponents
+- **Easy**: Top 40% hands, never bluffs, calls too much
+- **Medium**: Top 25% hands, position-aware, 60% c-bet, occasional bluffs
+- **Hard**: GTO-approximate, balanced value/bluff ratio, board-texture-aware
+
+### Game State Machine
+`setup → preflop → flop → turn → river → showdown`
+
+Managed by Zustand store (`gameStore.ts`). AI turns process automatically with delays for realism.
+
 ## Achievement System
 
 Achievements are unlocked automatically when conditions are met:
@@ -248,8 +299,13 @@ New users take an initial assessment before accessing modules:
 - Auth middleware uses Clerk's `verifyToken`
 - All routes require authentication except health check
 - Frontend uses React Query for server state
-- Zustand for client-only state (UI preferences)
+- Zustand for client-only state (UI preferences, game state)
 - Casino dark theme: bg `#0f1419`, felt `#0d3320`, gold `#ffd700`
+- Lucide icons imported as: `from 'lucide-react/dist/esm/icons/icon-name'`
+- Game engine runs entirely in frontend (Zustand); backend is persistence + LLM only
+- React hooks MUST be called before any early returns (Rules of Hooks)
+- LLM coaching degrades gracefully — returns fallback when `ANTHROPIC_API_KEY` is missing
+- Claude Code OAuth tokens (`claude setup-token`) do NOT work with the Anthropic Messages API
 
 ## Production Infrastructure
 
@@ -287,6 +343,7 @@ New users take an initial assessment before accessing modules:
 | `FRONTEND_URL` | `https://pokercoach.cc` |
 | `PORT` | `3001` |
 | `NODE_ENV` | `production` (runtime only, not buildtime) |
+| `ANTHROPIC_API_KEY` | (Optional) From console.anthropic.com, for AI coaching |
 
 ### Backend Start Command (in Coolify)
 

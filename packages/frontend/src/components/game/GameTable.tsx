@@ -58,17 +58,8 @@ export default function GameTable({
         <div className="relative aspect-[16/10] bg-gradient-to-b from-felt-green to-felt-dark rounded-[50%] border-8 border-felt-border shadow-2xl">
           <div className="absolute inset-0 rounded-[50%] border-4 border-felt-rim opacity-50" />
 
-          {/* Pot Display */}
-          {pot > 0 && (
-            <div className="absolute top-[25%] left-1/2 -translate-x-1/2 z-10">
-              <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-1.5 border border-gold/30">
-                <span className="text-gold font-bold text-sm">Pot: ${pot}</span>
-              </div>
-            </div>
-          )}
-
-          {/* Community Cards */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+          {/* Community Cards + Pot (pot directly below cards) */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-1.5">
             <div className="flex gap-1.5">
               {communityCards.map((card, i) => (
                 <PlayingCard key={i} card={cardToString(card)} size="sm" />
@@ -81,6 +72,11 @@ export default function GameTable({
                 />
               ))}
             </div>
+            {pot > 0 && (
+              <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-1 border border-gold/30">
+                <span className="text-gold font-bold text-sm">Pot: ${pot}</span>
+              </div>
+            )}
           </div>
 
           {/* Players */}
@@ -97,12 +93,11 @@ export default function GameTable({
                 className="absolute -translate-x-1/2 -translate-y-1/2 z-20"
                 style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
               >
+                {/* Position badge — outside the player card */}
+                <PositionBadge isDealer={isDealer} isSB={isSB} isBB={isBB} />
                 <PlayerSeat
                   player={player}
                   isActive={isActive}
-                  isDealer={isDealer}
-                  isSB={isSB}
-                  isBB={isBB}
                   showCards={player.isHuman || showdown}
                   lastAction={lastActions[player.id]}
                 />
@@ -115,17 +110,38 @@ export default function GameTable({
   );
 }
 
+/** Position badge (D / SB / BB) rendered outside the player card */
+function PositionBadge({ isDealer, isSB, isBB }: { isDealer: boolean; isSB: boolean; isBB: boolean }) {
+  const badge = isDealer
+    ? { label: 'D', cls: 'bg-gold text-black' }
+    : isSB
+      ? { label: 'SB', cls: 'bg-orange-500 text-white' }
+      : isBB
+        ? { label: 'BB', cls: 'bg-purple-500 text-white' }
+        : null;
+
+  if (!badge) return null;
+
+  return (
+    <div className="flex justify-center mb-1">
+      <span className={cn(
+        'text-[9px] font-bold rounded-full px-1.5 h-4 flex items-center justify-center leading-none',
+        badge.cls
+      )}>
+        {badge.label}
+      </span>
+    </div>
+  );
+}
+
 interface PlayerSeatProps {
   player: PlayerState;
   isActive: boolean;
-  isDealer: boolean;
-  isSB: boolean;
-  isBB: boolean;
   showCards: boolean;
   lastAction?: string;
 }
 
-function PlayerSeat({ player, isActive, isDealer, isSB, isBB, showCards, lastAction }: PlayerSeatProps) {
+function PlayerSeat({ player, isActive, showCards, lastAction }: PlayerSeatProps) {
   const { hasFolded, isAllIn } = player;
 
   return (
@@ -155,61 +171,49 @@ function PlayerSeat({ player, isActive, isDealer, isSB, isBB, showCards, lastAct
         ) : null}
       </div>
 
-      {/* Name + Chips */}
+      {/* Name + Stack */}
       <div className="text-center">
-        <div className="flex items-center gap-1">
-          {isDealer && (
-            <span className="bg-gold text-black text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-              D
-            </span>
+        <span
+          className={cn(
+            'text-xs font-medium truncate max-w-[70px] block',
+            isActive ? 'text-gold' : 'text-gray-300',
+            hasFolded && 'line-through text-gray-500'
           )}
-          {isSB && !isDealer && (
-            <span className="bg-blue-500/80 text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-              SB
-            </span>
-          )}
-          {isBB && (
-            <span className="bg-purple-500/80 text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
-              BB
-            </span>
-          )}
-          <span
-            className={cn(
-              'text-xs font-medium truncate max-w-[70px]',
-              isActive ? 'text-gold' : 'text-gray-300',
-              hasFolded && 'line-through text-gray-500'
-            )}
-          >
-            {player.isHuman ? 'You' : player.name}
-          </span>
-        </div>
+        >
+          {player.isHuman ? 'You' : player.name}
+        </span>
         <div className="text-[10px] text-muted-foreground">
-          ${player.chips}
+          Stack: ${player.chips}
         </div>
       </div>
 
-      {/* Current bet indicator */}
-      {player.currentBet > 0 && !hasFolded && (
-        <div className="text-[10px] text-gold font-medium bg-gold/10 px-1.5 py-0.5 rounded">
-          ${player.currentBet}
+      {/* Bet + Action area — visually separated from the card above */}
+      {(player.currentBet > 0 || lastAction || isAllIn || hasFolded) && (
+        <div className="flex flex-col items-center gap-0.5 border-t border-white/10 pt-1 w-full">
+          {/* Current bet chip */}
+          {player.currentBet > 0 && !hasFolded && (
+            <div className="text-[10px] text-gold font-semibold bg-gold/15 px-2 py-0.5 rounded-full border border-gold/30">
+              ${player.currentBet}
+            </div>
+          )}
+
+          {/* Last action label */}
+          {lastAction && !hasFolded && !isAllIn && (
+            <div className="text-[9px] text-cyan-400 font-medium italic animate-in fade-in duration-300">
+              {lastAction}
+            </div>
+          )}
+
+          {/* All-in badge */}
+          {isAllIn && !hasFolded && (
+            <div className="text-[9px] text-red-400 font-bold uppercase">All-In</div>
+          )}
+
+          {/* Folded badge */}
+          {hasFolded && (
+            <div className="text-[9px] text-gray-500 font-bold uppercase">Fold</div>
+          )}
         </div>
-      )}
-
-      {/* Last action indicator */}
-      {lastAction && !hasFolded && !isAllIn && (
-        <div className="text-[9px] text-blue-400 font-medium animate-in fade-in duration-300">
-          {lastAction}
-        </div>
-      )}
-
-      {/* All-in badge */}
-      {isAllIn && !hasFolded && (
-        <div className="text-[9px] text-red-400 font-bold uppercase">All-In</div>
-      )}
-
-      {/* Folded badge */}
-      {hasFolded && (
-        <div className="text-[9px] text-gray-500 font-bold uppercase">Fold</div>
       )}
     </div>
   );

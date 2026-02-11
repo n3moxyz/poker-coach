@@ -163,8 +163,8 @@ poker-coach/
     │   ├── tsconfig.json
     │   ├── .env.example
     │   ├── prisma/
-    │   │   ├── schema.prisma   # Database models (10 models)
-    │   │   └── seed.ts         # Initial data (10 modules + questions)
+    │   │   ├── schema.prisma   # Database models (11 models incl. PokerHand)
+    │   │   └── seed.ts         # Initial data (10 modules + questions + game achievements)
     │   └── src/
     │       ├── index.ts        # Express server entry + health check
     │       ├── lib/
@@ -176,14 +176,17 @@ poker-coach/
     │       │   ├── progress.ts     # Answer submission + overall progress
     │       │   ├── achievements.ts # Achievement tracking
     │       │   ├── stats.ts        # User stats + leaderboard
-    │       │   └── placementTest.ts # Initial placement test
+    │       │   ├── placementTest.ts # Initial placement test
+    │       │   └── game.ts         # Play vs AI endpoints
     │       └── services/
     │           ├── xpService.ts           # XP calculation (base + multipliers)
     │           ├── streakService.ts       # Daily streak + freezes
-    │           ├── achievementService.ts  # Achievement unlocking
+    │           ├── achievementService.ts  # Achievement unlocking (incl. game achievements)
     │           ├── userService.ts         # User creation/sync
     │           ├── moduleStatusService.ts # Dynamic status calculation
-    │           └── placementTestService.ts
+    │           ├── placementTestService.ts
+    │           ├── gameService.ts         # Hand XP calculation
+    │           └── coachingService.ts     # Claude API integration for deep analysis
     └── frontend/
         ├── package.json
         ├── vite.config.ts
@@ -197,15 +200,27 @@ poker-coach/
             ├── vite-env.d.ts
             ├── components/
             │   ├── AppShell.tsx    # Layout + navigation
-            │   └── games/
-            │       ├── PlayingCard.tsx  # Card rendering
-            │       └── TableView.tsx    # Table visualization
+            │   ├── games/
+            │   │   ├── PlayingCard.tsx  # Card rendering
+            │   │   └── TableView.tsx    # Table visualization
+            │   └── game/               # Play vs AI components
+            │       ├── GameSetup.tsx      # Config screen
+            │       ├── GameTable.tsx      # Poker table visualization
+            │       ├── ActionBar.tsx      # Betting controls + shortcuts
+            │       ├── CoachingPanel.tsx  # Per-street coaching
+            │       └── HandSummary.tsx    # End-of-hand review
             ├── hooks/
             │   ├── useApi.ts       # React Query hooks
+            │   ├── useGame.ts      # Game mode hooks
             │   └── useHotkeys.ts   # Keyboard shortcuts
             ├── lib/
             │   ├── api.ts          # Typed API client
-            │   └── utils.ts        # Helpers
+            │   ├── utils.ts        # Helpers
+            │   ├── poker.ts        # Deck, hand evaluation
+            │   ├── aiOpponents.ts  # AI decision engine
+            │   └── coaching.ts     # Rule-based coaching
+            ├── stores/
+            │   └── gameStore.ts    # Zustand game state machine
             └── pages/
                 ├── Dashboard.tsx       # Main hub
                 ├── ModuleList.tsx      # All modules with progress
@@ -214,7 +229,9 @@ poker-coach/
                 ├── Progress.tsx        # Overall stats view
                 ├── Achievements.tsx    # Achievement gallery
                 ├── Leaderboard.tsx     # Rankings
-                └── PlacementTest.tsx   # Initial assessment
+                ├── PlacementTest.tsx   # Initial assessment
+                ├── PlayVsAI.tsx        # Play vs AI game page
+                └── GameHistory.tsx     # Hand history list
 ```
 
 ## Bugs Encountered & Lessons Learned
@@ -259,13 +276,148 @@ poker-coach/
 - JSON content must be validated before saving
 - Keep explanations beginner-friendly (no jargon)
 
+## Play vs AI Mode
+
+### The Big Picture
+
+The biggest addition to the app — a full Texas Hold'em game engine. Instead of just answering quiz questions, users can now play actual poker hands against AI opponents and get coaching feedback on every decision.
+
+Think of it like having a patient poker coach sitting next to you at a low-stakes table, whispering "hey, you should probably raise here" after each action.
+
+### Architecture: Hybrid Frontend Engine + Backend Brains
+
+The game engine runs **entirely in the browser** using Zustand. This was a deliberate choice — poker actions need to feel instant. If every bet required a network round-trip, the game would feel sluggish.
+
+```
+User clicks "Raise" → Zustand updates state (instant)
+                     → AI opponents react (instant, with delay for realism)
+                     → Rule-based coaching grades the decision (instant)
+                     → Optional: "Deep Analysis" button → API → Claude → rich coaching
+Hand ends → POST /api/game/complete-hand → saves hand, awards XP, checks achievements
+```
+
+### The Game State Machine
+
+The game flows through phases managed by the Zustand store:
+
+```
+setup → preflop → flop → turn → river → showdown
+```
+
+Each phase transition deals community cards, resets betting, and triggers AI decisions automatically. The store handles pot calculation, side pots, blind posting, and dealer rotation.
+
+### AI Opponents
+
+Three difficulty tiers, each with personality profiles (tight/loose × passive/aggressive):
+
+- **Easy**: Plays top 40% of hands, never bluffs, calls too much. Perfect for beginners learning the ropes.
+- **Medium**: Position-aware, 60% continuation bet, occasional bluffs. Feels like a real low-stakes player.
+- **Hard**: GTO-approximate ranges, balanced value/bluff ratios, board-texture-aware sizing.
+
+Players get simple names (Steve, Betty, Chris, Dave, Emma) with style labels shown in the hand review (e.g., "Steve (Aggressive)").
+
+### Three-Tier Coaching
+
+1. **Rule-based (instant, free)**: Runs after every user action. Checks preflop charts, pot odds, bet sizing, position. Returns Good/Okay/Mistake grade + one-sentence note. Shows "You: raised $20" with the coaching verdict.
+
+2. **LLM Deep Analysis (opt-in)**: User clicks "Get Deep Analysis" on the hand summary. Backend sends hand context to Claude Haiku or Opus. Returns per-street grades, key lessons, and an encouraging coach's note.
+
+3. **Graceful degradation**: Without an `ANTHROPIC_API_KEY`, the Deep Analysis button shows a fallback message. Rule-based coaching always works.
+
+### Game Achievements (7 new)
+
+| Achievement | Condition | Rarity |
+|------------|-----------|--------|
+| First Hand | Play 1 hand | COMMON |
+| Card Shark | Play 50 hands | RARE |
+| High Roller | Play 200 hands | EPIC |
+| A+ Student | Get grade A | RARE |
+| Straight A's | 5 grade A's in a row | EPIC |
+| Shark Slayer | Win on Hard | RARE |
+| Table Captain | Win 10 in a row | LEGENDARY |
+
+### Key Frontend Files
+
+| File | Purpose |
+|------|---------|
+| `stores/gameStore.ts` | Zustand state machine (~800 lines) — the heart of the game |
+| `lib/poker.ts` | Deck, hand evaluation (all 10 rankings), card utilities |
+| `lib/aiOpponents.ts` | AI decision engine with difficulty profiles |
+| `lib/coaching.ts` | Rule-based instant coaching feedback |
+| `pages/PlayVsAI.tsx` | Main game page — composes all game components |
+| `components/game/GameSetup.tsx` | Config screen (players, blinds, stacks, difficulty) |
+| `components/game/GameTable.tsx` | Visual table with player seats, cards, pot, dealer/SB/BB badges |
+| `components/game/ActionBar.tsx` | Fold/Check/Call/Raise with keyboard shortcuts (F/C/R/Enter) |
+| `components/game/CoachingPanel.tsx` | Per-street coaching feedback with street labels |
+| `components/game/HandSummary.tsx` | End-of-hand review with showdown, grades, deep analysis |
+
+## Bugs Encountered & Lessons Learned
+
+### Bug Log
+
+| Date | Bug | Solution |
+|------|-----|----------|
+| 2026-01-27 | Answer submission took 5-10 seconds | Parallelized DB queries with `Promise.all()` and moved achievement checking to background |
+| 2026-01-27 | Module showed "In Progress" even after completing with 100% | Changed from stored status to dynamic calculation based on accuracy |
+| 2026-01-27 | **SECURITY**: User sync endpoint had no authentication | Added `requireAuth` middleware; userId now comes from verified JWT token, not request body |
+| 2026-01-27 | Multiple PrismaClient instances (7 total) causing connection pool issues | Created singleton in `src/lib/prisma.ts`, updated all files to import from there |
+| 2026-02-11 | CORS rejected requests from `pokercoach.cc` after custom domain migration | Added `pokercoach.cc` and `www.pokercoach.cc` to hardcoded `allowedOrigins` in `index.ts` instead of relying solely on `FRONTEND_URL` env var |
+| 2026-02-11 | Clicking "Deal Me In" showed blank page | `useCallback` hook placed AFTER early return in PlayVsAI.tsx violated React Rules of Hooks. Moved all hooks before conditional returns. |
+| 2026-02-11 | Number input for bet/raise wouldn't let you type freely | `type="number"` with strict validation rejected intermediate values (e.g., clearing the field). Changed to `type="text"` with `inputMode="numeric"`, free typing, and clamp-on-blur. |
+| 2026-02-11 | Claude Code OAuth token didn't work for API calls | `claude setup-token` generates tokens for CLI only. The Anthropic Messages API returns "OAuth authentication is currently not supported." Must use `ANTHROPIC_API_KEY` from console.anthropic.com. |
+
+### Lessons Learned
+
+1. **Parallelize independent database queries** - The original answer submission did 15+ sequential DB queries. By running independent queries in parallel with `Promise.all()`, response time dropped from 5-10s to under 1s. Don't await things that don't depend on each other!
+
+2. **Fire-and-forget for non-critical operations** - Achievement checking doesn't need to block the response. Running it in the background with `.catch()` error handling keeps the UX snappy while still recording data.
+
+3. **Dynamic status > stored status** - Originally, module status was stored in the database and only updated on specific events. This led to stale states. Calculating status dynamically from accuracy data ensures it's always correct.
+
+4. **Optimistic patterns aren't always necessary** - With fast enough backend responses, you don't need complex optimistic UI updates. Focus on making the server fast first.
+
+5. **Never trust request body for user identity** - Always get the userId from the verified JWT token (set by auth middleware), never from `req.body`. An attacker could impersonate any user by sending a fake userId in the body.
+
+6. **Use a PrismaClient singleton** - Creating `new PrismaClient()` in every file creates multiple connection pools, which exhausts database connections. Create one instance in `lib/prisma.ts` and import it everywhere.
+
+7. **Hardcode production origins in CORS, don't rely only on env vars** - When migrating to `pokercoach.cc`, the `FRONTEND_URL` env var in Coolify still pointed to the old Vercel URL. Hardcoding known production origins in the `allowedOrigins` array (alongside the env var) makes domain migrations smoother—just push code, no need to touch server config.
+
+8. **React hooks MUST come before early returns** - Hooks must be called in the same order on every render. If you have `if (condition) return <X />` and then `useCallback(...)` below it, React crashes when the condition changes because the hook call order shifts. Always put all hooks at the top of the component, before any conditional returns.
+
+9. **Use `type="text"` with `inputMode="numeric"` for number inputs** - HTML `type="number"` inputs reject intermediate states (empty field, partial typing). For a better UX, use `type="text"` with `inputMode="numeric"`, allow free typing, and clamp values on blur.
+
+10. **Claude Code OAuth tokens are CLI-only** - The `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` only works for the Claude Code CLI, not for direct API calls via `@anthropic-ai/sdk`. The Messages API requires an `ANTHROPIC_API_KEY` from console.anthropic.com.
+
+11. **Game engines belong in the frontend** - Running poker logic on the server would add latency to every bet. Zustand keeps the game state local and instant. The backend only handles persistence (saving hands) and heavy lifting (LLM coaching).
+
+## Potential Pitfalls
+
+### Authentication
+- Clerk tokens expire; handle 401 responses gracefully
+- The Clerk user ID is the primary key in our User table
+
+### XP Calculations
+- Always calculate XP on the server, never trust client
+- Use database transactions when updating XP + streak together
+
+### Question Content
+- JSON content must be validated before saving
+- Keep explanations beginner-friendly (no jargon)
+
+### Game Mode
+- `gameStore.ts` is ~800 lines — the largest file. If extending, consider splitting into sub-stores
+- AI opponent decisions use random elements — tests should seed randomness
+- The hand evaluator handles all 10 poker hand rankings but edge cases (split pots, kickers) need thorough testing
+- LLM coaching responses are JSON-parsed from Claude — wrap in try/catch for malformed responses
+
 ## Future Considerations
 
 - **Mobile app**: React Native could share component logic
 - **Social features**: Challenge friends, share achievements
-- **AI coaching**: Analyze play patterns, suggest focus areas
 - **Real hand history**: Import hands from PokerStars/etc.
+- **Tournament mode**: Multi-hand sessions with rising blinds
+- **Hand replayer**: Step through past hands action-by-action
 
 ---
 
-*Last updated: 2026-02-11 - Migrated frontend to custom domain pokercoach.cc (Vercel + Cloudflare DNS + Clerk origins + CORS update)*
+*Last updated: 2026-02-11 - Added Play vs AI mode with full game engine, AI opponents, rule-based coaching, optional LLM deep analysis, and 7 game achievements*

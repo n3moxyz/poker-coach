@@ -19,6 +19,7 @@ import {
   getStyleLabel,
 } from '@/lib/aiOpponents';
 import { type CoachingFeedback, evaluateAction, calculateHandGrade } from '@/lib/coaching';
+import { sounds } from '@/lib/sounds';
 
 export type GamePhase = 'setup' | 'preflop' | 'flop' | 'turn' | 'river' | 'showdown' | 'summary';
 
@@ -234,6 +235,11 @@ export const useGameStore = create<GameState>((set, get) => ({
       { playerId: bbPlayer.id, playerName: bbPlayer.name, action: 'post-blind', amount: bbAmount, phase: 'preflop', timestamp: Date.now() },
     ];
 
+    // Play deal sounds
+    sounds.deal();
+    setTimeout(() => sounds.deal(), 150);
+    setTimeout(() => sounds.blind(), 400);
+
     // First to act: UTG (after BB)
     const utgIdx = (bbIdx + 1) % activePlayers.length;
 
@@ -263,6 +269,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { players, activePlayerIndex, phase } = get();
     const player = players[activePlayerIndex];
     if (!player.isHuman) return;
+    sounds.fold();
 
     const updated = players.map((p, i) =>
       i === activePlayerIndex ? { ...p, hasFolded: true } : p
@@ -296,6 +303,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { players, activePlayerIndex, currentBet, phase } = get();
     const player = players[activePlayerIndex];
     if (!player.isHuman || player.currentBet !== currentBet) return;
+    sounds.check();
 
     const feedback = {
       ...evaluateAction(
@@ -325,6 +333,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { players, activePlayerIndex, currentBet, phase } = get();
     const player = players[activePlayerIndex];
     if (!player.isHuman) return;
+    sounds.call();
 
     const toCall = Math.min(currentBet - player.currentBet, player.chips);
     const updated = players.map((p, i) => {
@@ -364,6 +373,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { players, activePlayerIndex, phase } = get();
     const player = players[activePlayerIndex];
     if (!player.isHuman) return;
+    sounds.raise();
 
     const totalBet = amount; // "raise to" amount
     const additional = totalBet - player.currentBet;
@@ -407,6 +417,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     const { players, activePlayerIndex, currentBet, phase } = get();
     const player = players[activePlayerIndex];
     if (!player.isHuman) return;
+    sounds.allIn();
 
     const allInAmount = player.chips;
     const newBet = player.currentBet + allInAmount;
@@ -489,14 +500,17 @@ export const useGameStore = create<GameState>((set, get) => ({
     let actionRecord: HandAction;
 
     if (decision.action === 'fold') {
+      sounds.fold();
       updatedPlayers = players.map((p, i) =>
         i === activePlayerIndex ? { ...p, hasFolded: true } : p
       );
       actionRecord = { playerId: player.id, playerName: player.name, action: 'fold', amount: 0, phase, timestamp: Date.now() };
     } else if (decision.action === 'check') {
+      sounds.check();
       actionRecord = { playerId: player.id, playerName: player.name, action: 'check', amount: 0, phase, timestamp: Date.now() };
       newActed.add(player.id);
     } else if (decision.action === 'call') {
+      sounds.call();
       const callAmt = Math.min(toCall, player.chips);
       updatedPlayers = players.map((p, i) => {
         if (i !== activePlayerIndex) return p;
@@ -507,6 +521,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       actionRecord = { playerId: player.id, playerName: player.name, action: callAmt >= player.chips ? 'all-in' : 'call', amount: callAmt, phase, timestamp: Date.now() };
       newActed.add(player.id);
     } else if (decision.action === 'all-in') {
+      sounds.allIn();
       const allIn = player.chips;
       const nb = player.currentBet + allIn;
       updatedPlayers = players.map((p, i) => {
@@ -524,6 +539,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       actionRecord = { playerId: player.id, playerName: player.name, action: 'all-in', amount: allIn, phase, timestamp: Date.now() };
     } else {
       // raise
+      sounds.raise();
       const raiseTotal = Math.min(decision.amount, player.currentBet + player.chips);
       const additional = raiseTotal - player.currentBet;
       const nc = player.chips - additional;
@@ -619,14 +635,21 @@ export const useGameStore = create<GameState>((set, get) => ({
     let newDeck = deck;
     let newCommunity = [...communityCards];
 
+    sounds.newStreet();
+
     if (nextPhase === 'flop') {
       const { dealt, remaining } = dealCards(newDeck, 3);
       newCommunity = dealt;
       newDeck = remaining;
+      // Flop: 3 card deal sounds
+      setTimeout(() => sounds.deal(), 50);
+      setTimeout(() => sounds.deal(), 150);
+      setTimeout(() => sounds.deal(), 250);
     } else {
       const { dealt, remaining } = dealCards(newDeck, 1);
       newCommunity = [...newCommunity, ...dealt];
       newDeck = remaining;
+      setTimeout(() => sounds.deal(), 50);
     }
 
     // First to act after dealer
@@ -683,6 +706,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     // If only one player remains, they win
     if (nonFolded.length === 1) {
       const winner = nonFolded[0];
+      if (winner.isHuman) sounds.win(); else sounds.lose();
       const updatedPlayers = players.map((p) =>
         p.id === winner.id ? { ...p, chips: p.chips + pot } : p
       );
@@ -723,6 +747,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     const winnerIndices = determineWinners(hands.map((h) => h.result));
     const winnerIds = winnerIndices.map((i) => hands[i].player.id);
+    if (winnerIds.includes('human')) sounds.win(); else sounds.lose();
     const share = Math.floor(pot / winnerIds.length);
 
     const updatedPlayers = players.map((p) => ({
