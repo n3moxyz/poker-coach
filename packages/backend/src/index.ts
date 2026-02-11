@@ -20,6 +20,8 @@ const PORT = process.env.PORT || 5001;
 const allowedOrigins = [
   'http://localhost:5000',
   'https://pokercoach.vercel.app',
+  'https://pokercoach.cc',
+  'https://www.pokercoach.cc',
 ];
 
 // Add FRONTEND_URL from env if set
