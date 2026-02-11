@@ -3,6 +3,8 @@ import Users from 'lucide-react/dist/esm/icons/users';
 import Coins from 'lucide-react/dist/esm/icons/coins';
 import Brain from 'lucide-react/dist/esm/icons/brain';
 import Layers from 'lucide-react/dist/esm/icons/layers';
+import Minus from 'lucide-react/dist/esm/icons/minus';
+import Plus from 'lucide-react/dist/esm/icons/plus';
 import { cn } from '@/lib/utils';
 import { type AIDifficulty } from '@/lib/aiOpponents';
 import { type GameConfig } from '@/stores/gameStore';
@@ -76,18 +78,24 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
           <Users className="w-5 h-5 text-gold" />
           <h2 className="font-semibold">Players</h2>
         </div>
-        <div className="flex items-center gap-4">
-          <input
-            type="range"
-            min={2}
-            max={6}
-            value={config.playerCount}
-            onChange={(e) => onUpdateConfig({ playerCount: Number(e.target.value) })}
-            className="flex-1 accent-gold"
-          />
-          <span className="text-2xl font-bold text-gold w-8 text-center">
+        <div className="flex items-center justify-center gap-4">
+          <button
+            onClick={() => onUpdateConfig({ playerCount: Math.max(2, config.playerCount - 1) })}
+            disabled={config.playerCount <= 2}
+            className="w-10 h-10 flex items-center justify-center rounded-lg bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <Minus className="w-4 h-4" />
+          </button>
+          <span className="text-3xl font-bold text-gold w-12 text-center">
             {config.playerCount}
           </span>
+          <button
+            onClick={() => onUpdateConfig({ playerCount: Math.min(8, config.playerCount + 1) })}
+            disabled={config.playerCount >= 8}
+            className="w-10 h-10 flex items-center justify-center rounded-lg bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
         </div>
         <p className="text-sm text-muted-foreground">
           You + {config.playerCount - 1} AI opponent{config.playerCount > 2 ? 's' : ''}

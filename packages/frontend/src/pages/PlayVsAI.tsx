@@ -9,6 +9,7 @@ import { evaluateHand } from '@/lib/poker';
 import { isSoundEnabled, toggleSound } from '@/lib/sounds';
 import Volume2 from 'lucide-react/dist/esm/icons/volume-2';
 import VolumeX from 'lucide-react/dist/esm/icons/volume-x';
+import LogOut from 'lucide-react/dist/esm/icons/log-out';
 
 export default function PlayVsAI() {
   const {
@@ -114,6 +115,13 @@ export default function PlayVsAI() {
               ? <Volume2 className="w-4 h-4 text-gray-400" />
               : <VolumeX className="w-4 h-4 text-gray-600" />
             }
+          </button>
+          <button
+            onClick={resetGame}
+            className="p-1 rounded hover:bg-red-500/20 transition-colors"
+            title="Exit to setup"
+          >
+            <LogOut className="w-4 h-4 text-red-400" />
           </button>
         </div>
       </div>

@@ -3,7 +3,6 @@ import { Link, useLocation } from 'react-router-dom';
 import { UserButton } from '@clerk/clerk-react';
 import Home from 'lucide-react/dist/esm/icons/home';
 import BookOpen from 'lucide-react/dist/esm/icons/book-open';
-import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
 import Trophy from 'lucide-react/dist/esm/icons/trophy';
 import Medal from 'lucide-react/dist/esm/icons/medal';
 import Flame from 'lucide-react/dist/esm/icons/flame';
@@ -19,7 +18,6 @@ const navItems = [
   { path: '/', icon: Home, label: 'Dashboard' },
   { path: '/play', icon: Gamepad2, label: 'Play' },
   { path: '/modules', icon: BookOpen, label: 'Modules' },
-  { path: '/progress', icon: BarChart3, label: 'Progress' },
   { path: '/achievements', icon: Trophy, label: 'Achievements' },
   { path: '/leaderboard', icon: Medal, label: 'Leaderboard' },
 ];
@@ -78,6 +76,7 @@ export default function AppShell({ children }: AppShellProps) {
         <div className="flex items-center justify-evenly h-16 px-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
+            const isPlay = item.path === '/play';
             return (
               <Link
                 key={item.path}
@@ -86,11 +85,13 @@ export default function AppShell({ children }: AppShellProps) {
                   'flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-2 transition-colors',
                   isActive
                     ? 'text-gold'
+                    : isPlay
+                    ? 'text-gold/80 hover:text-gold'
                     : 'text-muted-foreground hover:text-white'
                 )}
               >
-                <item.icon className="w-5 h-5 flex-shrink-0" />
-                <span className="text-[10px] truncate max-w-full">{item.label}</span>
+                <item.icon className={cn('w-5 h-5 flex-shrink-0', isPlay && !isActive && 'drop-shadow-[0_0_4px_rgba(255,215,0,0.4)]')} />
+                <span className={cn('text-[10px] truncate max-w-full', isPlay && 'font-bold')}>{item.label}</span>
               </Link>
             );
           })}
@@ -102,6 +103,7 @@ export default function AppShell({ children }: AppShellProps) {
         <nav className="space-y-2">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
+            const isPlay = item.path === '/play';
             return (
               <Link
                 key={item.path}
@@ -109,12 +111,16 @@ export default function AppShell({ children }: AppShellProps) {
                 className={cn(
                   'flex items-center gap-3 px-4 py-3 rounded-lg transition-all',
                   isActive
-                    ? 'bg-felt text-white border border-border-light'
+                    ? isPlay
+                      ? 'bg-gold/20 text-gold border border-gold/40'
+                      : 'bg-felt text-white border border-border-light'
+                    : isPlay
+                    ? 'text-gold border border-gold/20 bg-gold/5 hover:bg-gold/15 hover:border-gold/40'
                     : 'text-muted-foreground hover:bg-background-secondary hover:text-white'
                 )}
               >
                 <item.icon className="w-5 h-5" />
-                <span>{item.label}</span>
+                <span className={cn(isPlay && 'font-semibold')}>{item.label}</span>
               </Link>
             );
           })}
