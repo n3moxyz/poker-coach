@@ -113,7 +113,7 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
               key={phase}
               phase={phase}
               actions={actionsByPhase[phase]}
-              boardCards={boardByStreet[phase] || []}
+              board={boardByStreet[phase]}
               playerCards={playerCardsMap}
               potSize={potAtStreet}
               streetAnalysis={streetAnalysis}
@@ -212,14 +212,14 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
 interface StreetSectionProps {
   phase: string;
   actions: HandAction[];
-  boardCards: string[];
+  board?: StreetBoard;
   playerCards: Record<string, string[]>;
   potSize: number;
   streetAnalysis?: { grade: string; analysis: string };
   streetFeedbacks: { grade: FeedbackGrade; message: string; detail?: string; playerAction?: string }[];
 }
 
-function StreetSection({ phase, actions, boardCards, playerCards, potSize, streetAnalysis, streetFeedbacks }: StreetSectionProps) {
+function StreetSection({ phase, actions, board, playerCards, potSize, streetAnalysis, streetFeedbacks }: StreetSectionProps) {
   return (
     <div>
       {/* Street header */}
@@ -227,10 +227,15 @@ function StreetSection({ phase, actions, boardCards, playerCards, potSize, stree
         <span className="text-xs font-semibold text-gold uppercase">
           {PHASE_LABELS[phase] || phase}
         </span>
-        {boardCards.length > 0 && (
+        {board && board.cards.length > 0 && (
           <div className="flex gap-0.5">
-            {boardCards.map((card, i) => (
-              <PlayingCard key={i} card={card} size="sm" />
+            {board.cards.map((card, i) => (
+              <PlayingCard
+                key={i}
+                card={card}
+                size="sm"
+                className={i < board.newCardIndex ? 'opacity-40' : 'ring-1 ring-gold/50'}
+              />
             ))}
           </div>
         )}
@@ -269,42 +274,30 @@ function StreetSection({ phase, actions, boardCards, playerCards, potSize, stree
           );
         })}
 
-        {/* Inline coaching — analysis + per-action feedbacks */}
+        {/* Inline coaching — single merged note per street */}
         {streetAnalysis && (
-          <div className="mt-2 space-y-1.5">
-            {/* Retrospective analysis */}
-            <div className="flex gap-2 text-xs p-2 rounded border border-purple-500/20 bg-purple-500/5">
+          <div className={cn(
+            'mt-2 text-xs p-2 rounded border',
+            streetFeedbacks.length > 0
+              ? GRADE_COLORS[streetFeedbacks[0].grade]
+              : 'border-purple-500/20 bg-purple-500/5 text-gray-400'
+          )}>
+            <div className="flex items-start gap-2">
               <span className={cn('font-bold shrink-0', ANALYSIS_GRADE_COLORS[streetAnalysis.grade] || 'text-purple-400')}>
                 {streetAnalysis.grade}
               </span>
-              <p className="text-gray-400">{streetAnalysis.analysis}</p>
-            </div>
-
-            {/* Per-action coaching notes */}
-            {streetFeedbacks.map((fb, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'text-xs p-2 rounded border',
-                  GRADE_COLORS[fb.grade]
+              <div>
+                {streetFeedbacks.length > 0 && streetFeedbacks[0].playerAction && (
+                  <span className="text-muted-foreground">
+                    You: <span className="text-white">{streetFeedbacks[0].playerAction}</span> —{' '}
+                  </span>
                 )}
-              >
-                <div className="flex items-start gap-2">
-                  <span className="font-semibold shrink-0">{fb.grade}</span>
-                  <div>
-                    {fb.playerAction && (
-                      <span className="text-muted-foreground">
-                        You: <span className="text-white">{fb.playerAction}</span> —{' '}
-                      </span>
-                    )}
-                    <span>{fb.message}</span>
-                    {fb.detail && (
-                      <p className="text-muted-foreground mt-0.5">{fb.detail}</p>
-                    )}
-                  </div>
-                </div>
+                <span>{streetAnalysis.analysis}</span>
+                {streetFeedbacks.length > 0 && streetFeedbacks[0].detail && (
+                  <p className="text-muted-foreground mt-0.5">{streetFeedbacks[0].detail}</p>
+                )}
               </div>
-            ))}
+            </div>
           </div>
         )}
       </div>
@@ -331,16 +324,21 @@ function getBetOrRaiseLabel(actions: HandAction[], index: number): string | null
   return `bets $${action.amount}`;
 }
 
-function getBoardByStreet(communityCards: string[]): Record<string, string[]> {
-  const board: Record<string, string[]> = {};
+interface StreetBoard {
+  cards: string[];
+  newCardIndex: number; // index where the new card(s) start — for highlighting
+}
+
+function getBoardByStreet(communityCards: string[]): Record<string, StreetBoard> {
+  const board: Record<string, StreetBoard> = {};
   if (communityCards.length >= 3) {
-    board.flop = communityCards.slice(0, 3);
+    board.flop = { cards: communityCards.slice(0, 3), newCardIndex: 0 };
   }
   if (communityCards.length >= 4) {
-    board.turn = [communityCards[3]];
+    board.turn = { cards: communityCards.slice(0, 4), newCardIndex: 3 };
   }
   if (communityCards.length >= 5) {
-    board.river = [communityCards[4]];
+    board.river = { cards: communityCards.slice(0, 5), newCardIndex: 4 };
   }
   return board;
 }
