@@ -228,8 +228,7 @@ poker-coach/
                 ├── ModuleList.tsx      # All modules with progress
                 ├── ModuleDetail.tsx    # Module info + questions
                 ├── PracticeSession.tsx # Active question answering
-                ├── Progress.tsx        # Overall stats view
-                ├── Achievements.tsx    # Achievement gallery
+                ├── Achievements.tsx    # Merged: stats + achievements + placement test
                 ├── Leaderboard.tsx     # Rankings
                 ├── PlacementTest.tsx   # Initial assessment
                 ├── PlayVsAI.tsx        # Play vs AI game page

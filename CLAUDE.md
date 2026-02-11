@@ -100,8 +100,7 @@ poker-coach/
                 ├── ModuleList.tsx
                 ├── ModuleDetail.tsx
                 ├── PracticeSession.tsx
-                ├── Progress.tsx
-                ├── Achievements.tsx
+                ├── Achievements.tsx    # Merged: stats + achievements + placement test
                 ├── Leaderboard.tsx
                 ├── PlacementTest.tsx
                 ├── PlayVsAI.tsx       # Main game page
