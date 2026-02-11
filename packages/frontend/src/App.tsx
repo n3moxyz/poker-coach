@@ -17,6 +17,8 @@ import Progress from '@/pages/Progress';
 import Achievements from '@/pages/Achievements';
 import Leaderboard from '@/pages/Leaderboard';
 import PlacementTest from '@/pages/PlacementTest';
+import PlayVsAI from '@/pages/PlayVsAI';
+import GameHistory from '@/pages/GameHistory';
 
 function AuthenticatedApp() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -92,6 +94,8 @@ function AuthenticatedApp() {
         <Route path="/practice/:slug" element={<PracticeSession />} />
         <Route path="/progress" element={<Progress />} />
         <Route path="/achievements" element={<Achievements />} />
+        <Route path="/play" element={<PlayVsAI />} />
+        <Route path="/play/history" element={<GameHistory />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -1,8 +1,8 @@
 import { PrismaClient, Achievement } from '@prisma/client';
 
 interface AchievementCondition {
-  type: 'streak' | 'xp' | 'questions' | 'correct' | 'mastery' | 'level';
-  value: number;
+  type: string;
+  value: number | string;
   moduleSlug?: string; // For module-specific achievements
 }
 
@@ -14,25 +14,44 @@ interface UserContext {
   totalQuestions: number;
   totalCorrect: number;
   masteredModules: string[];
+  // Game stats
+  handsPlayed: number;
+  handsWon: number;
+  bestGrade: string | null;
+  consecutiveAGrades: number;
+  consecutiveWins: number;
+  hasHardWin: boolean;
 }
 
 function checkCondition(condition: AchievementCondition, context: UserContext): boolean {
   switch (condition.type) {
     case 'streak':
-      return context.longestStreak >= condition.value;
+      return context.longestStreak >= (condition.value as number);
     case 'xp':
-      return context.totalXp >= condition.value;
+      return context.totalXp >= (condition.value as number);
     case 'questions':
-      return context.totalQuestions >= condition.value;
+      return context.totalQuestions >= (condition.value as number);
     case 'correct':
-      return context.totalCorrect >= condition.value;
+      return context.totalCorrect >= (condition.value as number);
     case 'level':
-      return context.level >= condition.value;
+      return context.level >= (condition.value as number);
     case 'mastery':
       if (condition.moduleSlug) {
         return context.masteredModules.includes(condition.moduleSlug);
       }
-      return context.masteredModules.length >= condition.value;
+      return context.masteredModules.length >= (condition.value as number);
+    case 'hands_played':
+      return context.handsPlayed >= (condition.value as number);
+    case 'hands_won':
+      return context.handsWon >= (condition.value as number);
+    case 'best_grade':
+      return context.bestGrade === condition.value;
+    case 'consecutive_a_grades':
+      return context.consecutiveAGrades >= (condition.value as number);
+    case 'consecutive_wins':
+      return context.consecutiveWins >= (condition.value as number);
+    case 'hard_win':
+      return context.hasHardWin;
     default:
       return false;
   }
@@ -43,7 +62,7 @@ export async function checkAndAwardAchievements(
   userId: string
 ): Promise<Achievement[]> {
   // Get user's current state
-  const [stats, streak, progress, existingAchievements] = await Promise.all([
+  const [stats, streak, progress, existingAchievements, recentHands] = await Promise.all([
     prisma.userStats.findUnique({ where: { userId } }),
     prisma.userStreak.findUnique({ where: { userId } }),
     prisma.userProgress.findMany({
@@ -54,7 +73,43 @@ export async function checkAndAwardAchievements(
       where: { userId },
       select: { achievementId: true },
     }),
+    prisma.pokerHand.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+      select: { result: true, overallGrade: true, difficulty: true },
+    }),
   ]);
+
+  // Calculate game stats from recent hands
+  const handsPlayed = recentHands.length;
+  const handsWon = recentHands.filter((h) => h.result === 'WON').length;
+  const hasHardWin = recentHands.some(
+    (h) => h.difficulty === 'HARD' && h.result === 'WON'
+  );
+  const bestGrade = recentHands.find((h) => h.overallGrade === 'A')
+    ? 'A'
+    : null;
+
+  // Count consecutive A grades from most recent
+  let consecutiveAGrades = 0;
+  for (const hand of recentHands) {
+    if (hand.overallGrade === 'A') {
+      consecutiveAGrades++;
+    } else if (hand.overallGrade) {
+      break;
+    }
+  }
+
+  // Count consecutive wins from most recent
+  let consecutiveWins = 0;
+  for (const hand of recentHands) {
+    if (hand.result === 'WON') {
+      consecutiveWins++;
+    } else {
+      break;
+    }
+  }
 
   const context: UserContext = {
     totalXp: stats?.totalXp || 0,
@@ -64,6 +119,12 @@ export async function checkAndAwardAchievements(
     totalQuestions: stats?.totalQuestions || 0,
     totalCorrect: stats?.totalCorrect || 0,
     masteredModules: progress.map((p) => p.module.slug),
+    handsPlayed,
+    handsWon,
+    bestGrade,
+    consecutiveAGrades,
+    consecutiveWins,
+    hasHardWin,
   };
 
   const existingIds = new Set(existingAchievements.map((a) => a.achievementId));

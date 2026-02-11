@@ -9,6 +9,7 @@ import progressRouter from './routes/progress.js';
 import achievementsRouter from './routes/achievements.js';
 import statsRouter from './routes/stats.js';
 import placementTestRouter from './routes/placementTest.js';
+import gameRouter from './routes/game.js';
 
 // Load environment variables
 dotenv.config();
@@ -63,6 +64,7 @@ app.use('/api/progress', progressRouter);
 app.use('/api/achievements', achievementsRouter);
 app.use('/api/stats', statsRouter);
 app.use('/api/placement-test', placementTestRouter);
+app.use('/api/game', gameRouter);
 
 // User sync endpoint - SECURED with Clerk token verification
 // userId comes from the verified JWT token, not the request body
