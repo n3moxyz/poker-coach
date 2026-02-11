@@ -16,8 +16,8 @@ We use a simple monorepo with two packages:
 
 ```
 packages/
-├── backend/   → Express API (port 3001)
-└── frontend/  → React SPA (port 5173)
+├── backend/   → Express API (port 5001 local, 3001 prod)
+└── frontend/  → React SPA (port 5000 local, pokercoach.cc prod)
 ```
 
 Why not a single full-stack framework like Next.js? A few reasons:
@@ -227,6 +227,7 @@ poker-coach/
 | 2026-01-27 | Module showed "In Progress" even after completing with 100% | Changed from stored status to dynamic calculation based on accuracy |
 | 2026-01-27 | **SECURITY**: User sync endpoint had no authentication | Added `requireAuth` middleware; userId now comes from verified JWT token, not request body |
 | 2026-01-27 | Multiple PrismaClient instances (7 total) causing connection pool issues | Created singleton in `src/lib/prisma.ts`, updated all files to import from there |
+| 2026-02-11 | CORS rejected requests from `pokercoach.cc` after custom domain migration | Added `pokercoach.cc` and `www.pokercoach.cc` to hardcoded `allowedOrigins` in `index.ts` instead of relying solely on `FRONTEND_URL` env var |
 
 ### Lessons Learned
 
@@ -241,6 +242,8 @@ poker-coach/
 5. **Never trust request body for user identity** - Always get the userId from the verified JWT token (set by auth middleware), never from `req.body`. An attacker could impersonate any user by sending a fake userId in the body.
 
 6. **Use a PrismaClient singleton** - Creating `new PrismaClient()` in every file creates multiple connection pools, which exhausts database connections. Create one instance in `lib/prisma.ts` and import it everywhere.
+
+7. **Hardcode production origins in CORS, don't rely only on env vars** - When migrating to `pokercoach.cc`, the `FRONTEND_URL` env var in Coolify still pointed to the old Vercel URL. Hardcoding known production origins in the `allowedOrigins` array (alongside the env var) makes domain migrations smoother—just push code, no need to touch server config.
 
 ## Potential Pitfalls
 
@@ -265,4 +268,4 @@ poker-coach/
 
 ---
 
-*Last updated: 2026-02-05 - Added placement test, achievement system, updated project structure*
+*Last updated: 2026-02-11 - Migrated frontend to custom domain pokercoach.cc (Vercel + Cloudflare DNS + Clerk origins + CORS update)*
