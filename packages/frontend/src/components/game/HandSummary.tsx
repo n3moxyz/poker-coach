@@ -1,26 +1,17 @@
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { type HandRecord, type HandAction } from '@/stores/gameStore';
-import { type FeedbackGrade } from '@/lib/coaching';
+import { type FeedbackGrade, generateHandAnalysis } from '@/lib/coaching';
 import PlayingCard from '@/components/games/PlayingCard';
 import Trophy from 'lucide-react/dist/esm/icons/trophy';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
 import Sparkles from 'lucide-react/dist/esm/icons/sparkles';
-import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
 
 interface HandSummaryProps {
   record: HandRecord;
   onPlayAgain: () => void;
   onBackToMenu: () => void;
-  onRequestAnalysis?: () => Promise<DeepAnalysis | null>;
-}
-
-export interface DeepAnalysis {
-  overallGrade: string;
-  streetAnalysis: Array<{ street: string; grade: string; analysis: string }>;
-  keyLessons: string[];
-  coachNote: string;
 }
 
 const PHASE_LABELS: Record<string, string> = {
@@ -37,28 +28,34 @@ const GRADE_COLORS: Record<FeedbackGrade, string> = {
   Mistake: 'text-red-400 bg-red-500/10 border-red-500/30',
 };
 
-export default function HandSummary({ record, onPlayAgain, onBackToMenu, onRequestAnalysis }: HandSummaryProps) {
+const ANALYSIS_GRADE_COLORS: Record<string, string> = {
+  A: 'text-green-400',
+  B: 'text-blue-400',
+  C: 'text-yellow-400',
+  D: 'text-orange-400',
+  F: 'text-red-400',
+};
+
+export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandSummaryProps) {
   const humanPlayer = record.players.find((p) => p.id === 'human');
   const won = record.winners.includes('You');
   const chipDelta = humanPlayer?.chipDelta || 0;
 
-  const [deepAnalysis, setDeepAnalysis] = useState<DeepAnalysis | null>(null);
-  const [analysisLoading, setAnalysisLoading] = useState(false);
-
-  const handleDeepAnalysis = async () => {
-    if (!onRequestAnalysis || analysisLoading || deepAnalysis) return;
-    setAnalysisLoading(true);
-    try {
-      const result = await onRequestAnalysis();
-      setDeepAnalysis(result);
-    } finally {
-      setAnalysisLoading(false);
-    }
-  };
+  // Auto-generate retrospective analysis (instant, no API)
+  const analysis = useMemo(() => generateHandAnalysis(record), [record]);
 
   // Group actions by phase
   const actionsByPhase = groupActionsByPhase(record.actions);
   const phases = Object.keys(actionsByPhase);
+
+  // Derive community cards per street
+  const boardByStreet = getBoardByStreet(record.communityCards);
+
+  // Build a map of player cards by ID for inline display
+  const playerCardsMap: Record<string, string[]> = {};
+  for (const p of record.players) {
+    playerCardsMap[p.id] = p.cards;
+  }
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
@@ -97,6 +94,8 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu, onReque
             key={phase}
             phase={phase}
             actions={actionsByPhase[phase]}
+            boardCards={boardByStreet[phase] || []}
+            playerCards={playerCardsMap}
           />
         ))}
 
@@ -126,36 +125,92 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu, onReque
         </div>
       </div>
 
-      {/* Coaching feedback summary */}
-      {record.feedbacks.length > 0 && (
-        <div className="card space-y-3">
-          <h3 className="text-white font-semibold">Coaching Notes</h3>
-          {record.feedbacks.map((fb, i) => (
-            <div
-              key={i}
-              className={cn(
-                'p-3 rounded-lg border text-sm',
-                GRADE_COLORS[fb.grade]
-              )}
-            >
-              <div className="flex items-center gap-2 mb-1">
-                {fb.phase && (
-                  <span className="text-[10px] uppercase text-muted-foreground font-semibold tracking-wider">
-                    {PHASE_LABELS[fb.phase] || fb.phase}
-                  </span>
-                )}
-                <span className="font-medium">{fb.grade}</span>
-              </div>
-              {fb.playerAction && (
-                <p className="text-xs text-muted-foreground mb-1">
-                  You: <span className="text-white">{fb.playerAction}</span>
-                </p>
-              )}
-              <p>{fb.message}</p>
-            </div>
-          ))}
+      {/* Coaching Review — merged coaching notes + hand analysis */}
+      <div className="card space-y-4 border-2 border-purple-500/30">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4 text-purple-400" />
+          <h3 className="text-white font-semibold">Coaching Review</h3>
         </div>
-      )}
+
+        {/* Overall analysis grade */}
+        <div className="text-center py-1">
+          <div className={cn('text-2xl font-bold', ANALYSIS_GRADE_COLORS[analysis.overallGrade] || 'text-purple-400')}>
+            {analysis.overallGrade}
+          </div>
+          <div className="text-xs text-muted-foreground">Overall Grade</div>
+        </div>
+
+        {/* Per-street analysis with inline coaching notes */}
+        {analysis.streetAnalysis.map((sa) => {
+          // Find coaching feedbacks for this street
+          const streetFeedbacks = record.feedbacks.filter((fb) => fb.phase === sa.street);
+
+          return (
+            <div key={sa.street} className="space-y-2">
+              {/* Street header + grade */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gold uppercase">
+                  {PHASE_LABELS[sa.street] || sa.street}
+                </span>
+                <span className={cn('text-xs font-medium', ANALYSIS_GRADE_COLORS[sa.grade] || 'text-purple-400')}>
+                  {sa.grade}
+                </span>
+              </div>
+
+              {/* Retrospective analysis */}
+              <div className="p-3 rounded-lg border border-border bg-background-tertiary text-sm">
+                <p className="text-gray-300">{sa.analysis}</p>
+              </div>
+
+              {/* Per-action coaching notes for this street */}
+              {streetFeedbacks.map((fb, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    'p-3 rounded-lg border text-sm ml-3',
+                    GRADE_COLORS[fb.grade]
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium">{fb.grade}</span>
+                  </div>
+                  {fb.playerAction && (
+                    <p className="text-xs text-muted-foreground mb-1">
+                      You: <span className="text-white">{fb.playerAction}</span>
+                    </p>
+                  )}
+                  <p>{fb.message}</p>
+                  {fb.detail && (
+                    <p className="text-xs text-muted-foreground mt-1">{fb.detail}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })}
+
+        {/* Key Lessons */}
+        {analysis.keyLessons.length > 0 && (
+          <div className="border-t border-border pt-3">
+            <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">Key Lessons</div>
+            <ul className="space-y-1.5">
+              {analysis.keyLessons.map((lesson, i) => (
+                <li key={i} className="text-sm text-gray-300 flex gap-2">
+                  <span className="text-purple-400 shrink-0">•</span>
+                  {lesson}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Coach's note */}
+        {analysis.coachNote && (
+          <p className="text-sm text-purple-300 italic border-t border-border pt-3">
+            {analysis.coachNote}
+          </p>
+        )}
+      </div>
 
       {/* Player Hands + Styles */}
       <div className="card space-y-3">
@@ -194,76 +249,6 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu, onReque
         </div>
       </div>
 
-      {/* AI Deep Analysis */}
-      {deepAnalysis ? (
-        <div className="card space-y-4 border-2 border-purple-500/30">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-purple-400" />
-            <h3 className="text-white font-semibold">Deep Analysis</h3>
-            <span className="text-[10px] text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded font-medium">
-              Claude Opus
-            </span>
-          </div>
-
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-400">{deepAnalysis.overallGrade}</div>
-            <div className="text-xs text-muted-foreground">Overall Grade</div>
-          </div>
-
-          {deepAnalysis.streetAnalysis.map((sa, i) => (
-            <div key={i} className="p-3 rounded-lg border border-border bg-background-tertiary text-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-[10px] uppercase text-muted-foreground font-semibold">
-                  {PHASE_LABELS[sa.street] || sa.street}
-                </span>
-                <span className="text-purple-400 font-medium">{sa.grade}</span>
-              </div>
-              <p className="text-gray-300">{sa.analysis}</p>
-            </div>
-          ))}
-
-          {deepAnalysis.keyLessons.length > 0 && (
-            <div>
-              <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">Key Lessons</div>
-              <ul className="space-y-1">
-                {deepAnalysis.keyLessons.map((lesson, i) => (
-                  <li key={i} className="text-sm text-gray-300 flex gap-2">
-                    <span className="text-purple-400">•</span>
-                    {lesson}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {deepAnalysis.coachNote && (
-            <p className="text-sm text-purple-300 italic border-t border-border pt-3">
-              {deepAnalysis.coachNote}
-            </p>
-          )}
-        </div>
-      ) : onRequestAnalysis ? (
-        <button
-          onClick={handleDeepAnalysis}
-          disabled={analysisLoading}
-          className={cn(
-            'card w-full flex items-center justify-center gap-2 py-4 border-2 transition-all cursor-pointer',
-            analysisLoading
-              ? 'border-purple-500/30 opacity-60'
-              : 'border-border hover:border-purple-500/30 hover:bg-purple-500/5'
-          )}
-        >
-          {analysisLoading ? (
-            <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
-          ) : (
-            <Sparkles className="w-4 h-4 text-purple-400" />
-          )}
-          <span className="text-sm text-purple-400 font-medium">
-            {analysisLoading ? 'Analyzing with Claude Opus...' : 'Get Deep Analysis'}
-          </span>
-        </button>
-      ) : null}
-
       {/* Action buttons */}
       <div className="flex gap-4">
         <button
@@ -285,32 +270,91 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu, onReque
   );
 }
 
-function StreetSection({ phase, actions }: {
+function StreetSection({ phase, actions, boardCards, playerCards }: {
   phase: string;
   actions: HandAction[];
+  boardCards: string[];
+  playerCards: Record<string, string[]>;
 }) {
   return (
     <div>
-      <div className="text-xs font-semibold text-gold uppercase mb-2">
-        {PHASE_LABELS[phase] || phase}
+      <div className="flex items-center gap-3 mb-2">
+        <span className="text-xs font-semibold text-gold uppercase">
+          {PHASE_LABELS[phase] || phase}
+        </span>
+        {/* Board cards for this street */}
+        {boardCards.length > 0 && (
+          <div className="flex gap-0.5">
+            {boardCards.map((card, i) => (
+              <PlayingCard key={i} card={card} size="sm" />
+            ))}
+          </div>
+        )}
       </div>
       <div className="space-y-1 pl-3 border-l-2 border-border">
-        {actions.map((action, i) => (
-          <div key={i} className="flex items-center gap-2 text-sm">
-            <span className={cn(
-              'font-medium',
-              action.playerId === 'human' ? 'text-white' : 'text-muted-foreground'
-            )}>
-              {action.playerName}
-            </span>
-            <span className={getActionColor(action.action)}>
-              {formatAction(action)}
-            </span>
-          </div>
-        ))}
+        {actions.map((action, i) => {
+          const cards = playerCards[action.playerId];
+          const betLabel = action.action === 'raise'
+            ? getBetOrRaiseLabel(actions, i)
+            : null;
+
+          return (
+            <div key={i} className="flex items-center gap-2 text-sm">
+              <span className={cn(
+                'font-medium',
+                action.playerId === 'human' ? 'text-white' : 'text-muted-foreground'
+              )}>
+                {action.playerName}
+              </span>
+              {cards && cards.length === 2 && action.action !== 'post-blind' && (
+                <div className="flex gap-0.5 opacity-70">
+                  {cards.map((c, ci) => (
+                    <PlayingCard key={ci} card={c} size="xs" />
+                  ))}
+                </div>
+              )}
+              <span className={getActionColor(action.action)}>
+                {betLabel || formatAction(action)}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
+}
+
+/** Determine whether a 'raise' action is actually a "bet" (first aggression) or a "raise" */
+function getBetOrRaiseLabel(actions: HandAction[], index: number): string | null {
+  const action = actions[index];
+  if (action.action !== 'raise') return null;
+
+  const hasPriorBet = actions.slice(0, index).some(
+    (a) => a.action === 'raise' || a.action === 'all-in'
+  );
+
+  if (action.phase === 'preflop') {
+    return `raises $${action.amount}`;
+  }
+
+  if (hasPriorBet) {
+    return `raises $${action.amount}`;
+  }
+  return `bets $${action.amount}`;
+}
+
+function getBoardByStreet(communityCards: string[]): Record<string, string[]> {
+  const board: Record<string, string[]> = {};
+  if (communityCards.length >= 3) {
+    board.flop = communityCards.slice(0, 3);
+  }
+  if (communityCards.length >= 4) {
+    board.turn = [communityCards[3]];
+  }
+  if (communityCards.length >= 5) {
+    board.river = [communityCards[4]];
+  }
+  return board;
 }
 
 function groupActionsByPhase(actions: HandAction[]): Record<string, HandAction[]> {

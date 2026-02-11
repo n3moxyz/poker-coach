@@ -2,7 +2,7 @@ import { cn, parseCard, isRedSuit, SUIT_SYMBOLS } from '@/lib/utils';
 
 interface PlayingCardProps {
   card: string; // e.g., "Ah", "Kd", "10c", "2s"
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
 }
 
@@ -10,6 +10,23 @@ export default function PlayingCard({ card, size = 'md', className }: PlayingCar
   const { rank, suit } = parseCard(card);
   const isRed = isRedSuit(suit);
   const suitSymbol = SUIT_SYMBOLS[suit] || suit;
+
+  // xs = tiny inline card for timelines/lists
+  if (size === 'xs') {
+    return (
+      <span
+        className={cn(
+          'inline-flex items-center justify-center bg-white rounded px-0.5 py-px',
+          'font-mono font-bold text-[9px] leading-none select-none flex-shrink-0',
+          'w-5 h-6',
+          isRed ? 'text-card-red' : 'text-card-black',
+          className
+        )}
+      >
+        {rank}{suitSymbol}
+      </span>
+    );
+  }
 
   const sizeClasses = {
     sm: 'w-10 h-14',
