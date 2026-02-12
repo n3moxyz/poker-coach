@@ -119,12 +119,14 @@ export default function GameTable({
                 className="absolute -translate-x-1/2 -translate-y-1/2 z-20"
                 style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
               >
-                <PositionBadge isDealer={isDealer} isSB={isSB} isBB={isBB} />
-                <PlayerSeat
-                  player={player}
-                  isActive={isActive}
-                  showCards={player.isHuman || showdown || !!isReplay}
-                />
+                <div className="relative">
+                  <PositionBadge isDealer={isDealer} isSB={isSB} isBB={isBB} />
+                  <PlayerSeat
+                    player={player}
+                    isActive={isActive}
+                    showCards={player.isHuman || showdown || !!isReplay}
+                  />
+                </div>
               </div>
             );
           })}
@@ -143,7 +145,7 @@ export default function GameTable({
             return (
               <div
                 key={`action-${player.id}`}
-                className="absolute -translate-x-1/2 -translate-y-1/2 z-15 pointer-events-none flex flex-col items-center"
+                className="absolute -translate-x-1/2 -translate-y-1/2 z-[15] pointer-events-none flex flex-col items-center"
                 style={{ left: `${actionX}%`, top: `${actionY}%` }}
               >
                 {player.currentBet > 0 && !player.hasFolded && (
@@ -171,7 +173,7 @@ export default function GameTable({
   );
 }
 
-/** Position badge (D / SB / BB) rendered outside the player card */
+/** Position badge (D / SB / BB) floating at top-left corner of player card */
 function PositionBadge({ isDealer, isSB, isBB }: { isDealer: boolean; isSB: boolean; isBB: boolean }) {
   const badge = isDealer
     ? { label: 'D', cls: 'bg-gold text-black' }
@@ -184,14 +186,12 @@ function PositionBadge({ isDealer, isSB, isBB }: { isDealer: boolean; isSB: bool
   if (!badge) return null;
 
   return (
-    <div className="flex justify-center mb-1">
-      <span className={cn(
-        'text-[9px] font-bold rounded-full px-1.5 h-4 flex items-center justify-center leading-none',
-        badge.cls
-      )}>
-        {badge.label}
-      </span>
-    </div>
+    <span className={cn(
+      'absolute -top-2 -left-2 z-30 text-[9px] font-bold rounded-full px-1.5 h-4 flex items-center justify-center leading-none shadow-md',
+      badge.cls
+    )}>
+      {badge.label}
+    </span>
   );
 }
 
