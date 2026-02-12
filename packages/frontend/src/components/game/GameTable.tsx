@@ -138,9 +138,13 @@ export default function GameTable({
             const hasAction = actionLabel || player.hasFolded || player.isAllIn || (player.currentBet > 0 && !player.hasFolded);
             if (!hasAction) return null;
 
-            // Position 40% of the way from player toward center (50,50)
-            const actionX = pos.x + (50 - pos.x) * 0.4;
-            const actionY = pos.y + (50 - pos.y) * 0.4;
+            // Position a fixed distance from player toward center (50,50)
+            const dx = 50 - pos.x;
+            const dy = 50 - pos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+            const fixedOffset = 14;
+            const actionX = pos.x + (dx / dist) * fixedOffset;
+            const actionY = pos.y + (dy / dist) * fixedOffset;
 
             return (
               <div

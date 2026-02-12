@@ -503,7 +503,7 @@ function analyzePostflopStreet(
   const texture = boardCards.length >= 3 ? analyzeBoardTexture(boardCards) : null;
   const hasDraws = draws && (draws.flushDraw || draws.oesd || draws.gutshot);
   const drawContext = draws && hasDraws
-    ? ` You had ${describeDrawsForAnalysis(draws)} (${draws.totalOuts.toFixed(0)} outs).`
+    ? ` You had ${describeDrawsForAnalysis(draws)}.`
     : '';
   const textureContext = texture
     ? ` On this ${texture.wetness} ${streetName.toLowerCase()} board,`
@@ -586,7 +586,7 @@ function analyzePostflopStreet(
     if (hasDraws && draws && strength < 0.5) {
       return {
         grade: 'B',
-        analysis: `Semi-bluff on the ${streetName} with ${drawContext.trim()}${handDesc}. This is aggressive but gives you two ways to win — fold equity plus draw equity.`,
+        analysis: `Semi-bluff on the ${streetName}${handDesc}.${drawContext} This is aggressive but gives you two ways to win — fold equity plus draw equity.`,
         lesson: null,
       };
     }
@@ -621,7 +621,12 @@ function describeDrawsForAnalysis(draws: DrawInfo): string {
   if (draws.gutshot) parts.push('a gutshot (4 outs)');
   if (draws.backdoorFlush) parts.push('a backdoor flush draw');
   if (parts.length === 0) return 'draws';
-  return parts.join(' and ');
+  const desc = parts.join(' and ');
+  // Show combined total only when multiple draws are present
+  if (parts.length > 1) {
+    return `${desc} (~${draws.totalOuts.toFixed(0)} outs combined)`;
+  }
+  return desc;
 }
 
 function generateCoachNote(grade: string, won: boolean, humanHand: string, winnerHand: string, lessons: string[]): string {
