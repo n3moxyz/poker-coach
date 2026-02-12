@@ -94,8 +94,8 @@ export default function PlayVsAI() {
   return (
     <div className="md:ml-64 pb-20 md:pb-6 space-y-4">
       {/* Phase indicator */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div className="flex items-center gap-3 flex-wrap">
           <PhaseIndicator phase={phase} />
           {humanHandName && (
             <span className="text-sm text-gold">{humanHandName}</span>

@@ -79,6 +79,7 @@ interface GameState {
   dealerIndex: number;
   lastRaiseIndex: number;
   actedThisRound: Set<string>;
+  handStartChips: Record<string, number>;
 
   // History
   handActions: HandAction[];
@@ -135,6 +136,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   dealerIndex: 0,
   lastRaiseIndex: -1,
   actedThisRound: new Set(),
+  handStartChips: {},
   handActions: [],
   handHistory: [],
   feedbacks: [],
@@ -205,6 +207,9 @@ export const useGameStore = create<GameState>((set, get) => ({
       return;
     }
 
+    // Snapshot chips before any bets for accurate chipDelta at showdown
+    const handStartChips = Object.fromEntries(activePlayers.map((p) => [p.id, p.chips]));
+
     // Deal cards
     let deck = shuffleDeck(createDeck());
     for (const player of activePlayers) {
@@ -252,6 +257,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       activePlayerIndex: utgIdx,
       lastRaiseIndex: bbIdx,
       actedThisRound: new Set(),
+      handStartChips,
       handActions: blindActions,
       feedbacks: [],
       latestFeedback: null,
@@ -712,6 +718,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       );
 
       const grade = calculateHandGrade(feedbacks);
+      const { handStartChips } = state;
       const record: HandRecord = {
         id: createHandId(),
         actions: handActions,
@@ -719,7 +726,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         players: updatedPlayers.map((p) => ({
           id: p.id, name: p.name,
           cards: p.cards.map(cardToString),
-          chipDelta: p.id === winner.id ? pot : -(state.players.find((sp) => sp.id === p.id)!.chips - p.chips + (p.id === winner.id ? pot : 0)),
+          chipDelta: updatedPlayers.find((up) => up.id === p.id)!.chips - (handStartChips[p.id] || 0),
           aiStyle: p.aiProfile ? getStyleLabel(p.aiProfile.style) : undefined,
         })),
         winners: [winner.name],
@@ -756,10 +763,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     }));
 
     const grade = calculateHandGrade(feedbacks);
-    const startChips = state.players.reduce<Record<string, number>>((acc, p) => {
-      acc[p.id] = p.chips;
-      return acc;
-    }, {});
+    const { handStartChips } = state;
 
     const record: HandRecord = {
       id: createHandId(),
@@ -768,7 +772,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       players: updatedPlayers.map((p) => ({
         id: p.id, name: p.name,
         cards: p.cards.map(cardToString),
-        chipDelta: p.chips - (startChips[p.id] || 0),
+        chipDelta: p.chips - (handStartChips[p.id] || 0),
         aiStyle: p.aiProfile ? getStyleLabel(p.aiProfile.style) : undefined,
       })),
       winners: winnerIds.map((id) => updatedPlayers.find((p) => p.id === id)!.name),
@@ -800,6 +804,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       dealerIndex: 0,
       lastRaiseIndex: -1,
       actedThisRound: new Set(),
+      handStartChips: {},
       handActions: [],
       handHistory: [],
       feedbacks: [],

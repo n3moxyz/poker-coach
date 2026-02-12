@@ -193,12 +193,20 @@ function StreetSection({ phase, actions, board, playerCards, potSize, streetAnal
         {board && board.cards.length > 0 && (
           <div className="flex gap-0.5">
             {board.cards.map((card, i) => (
-              <PlayingCard
-                key={i}
-                card={card}
-                size="sm"
-                className={i < board.newCardIndex ? 'opacity-40' : 'ring-1 ring-gold/50'}
-              />
+              <>
+                <PlayingCard
+                  key={i}
+                  card={card}
+                  size="xs"
+                  className={cn('sm:hidden', i < board.newCardIndex ? 'opacity-40' : 'ring-1 ring-gold/50')}
+                />
+                <PlayingCard
+                  key={`sm-${i}`}
+                  card={card}
+                  size="sm"
+                  className={cn('hidden sm:block', i < board.newCardIndex ? 'opacity-40' : 'ring-1 ring-gold/50')}
+                />
+              </>
             ))}
           </div>
         )}
@@ -240,7 +248,7 @@ function StreetSection({ phase, actions, board, playerCards, potSize, streetAnal
         {/* Inline coaching — verdict + optimal play */}
         {streetAnalysis && (
           <div className={cn(
-            'mt-2 text-xs p-2 rounded border',
+            'mt-2 text-xs sm:text-sm p-2 rounded border',
             streetFeedbacks.length > 0
               ? GRADE_COLORS[streetFeedbacks[0].grade]
               : 'border-purple-500/20 bg-purple-500/5 text-gray-400'

@@ -41,7 +41,7 @@ export default function CoachingPanel({ feedbacks, className }: CoachingPanelPro
             <div className="flex items-center gap-2 mb-1">
               <MessageCircle className={cn('w-3.5 h-3.5', style.text)} />
               {fb.phase && (
-                <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {PHASE_LABELS[fb.phase] || fb.phase}
                 </span>
               )}
