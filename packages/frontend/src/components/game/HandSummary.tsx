@@ -12,6 +12,9 @@ interface HandSummaryProps {
   record: HandRecord;
   onPlayAgain: () => void;
   onBackToMenu: () => void;
+  xpEarned?: number | null;
+  sessionContext?: string;
+  isSignedIn?: boolean;
 }
 
 const PHASE_LABELS: Record<string, string> = {
@@ -36,7 +39,7 @@ const ANALYSIS_GRADE_COLORS: Record<string, string> = {
   F: 'text-red-400',
 };
 
-export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandSummaryProps) {
+export default function HandSummary({ record, onPlayAgain, onBackToMenu, xpEarned, sessionContext, isSignedIn }: HandSummaryProps) {
   const humanPlayer = record.players.find((p) => p.id === 'human');
   const won = record.winners.includes('You');
   const chipDelta = humanPlayer?.chipDelta || 0;
@@ -59,6 +62,11 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
 
   return (
     <div className="max-w-lg mx-auto space-y-6">
+      {/* Session Context */}
+      {sessionContext && (
+        <div className="text-sm text-muted-foreground text-center">{sessionContext}</div>
+      )}
+
       {/* Overall Grade */}
       <div className={cn(
         'card border-2 text-center',
@@ -66,7 +74,22 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
       )}>
         <div className="text-sm text-muted-foreground mb-1">Overall Grade</div>
         <div className="text-3xl font-bold">{record.grade.score}/100</div>
-        <div className="text-sm font-semibold mt-1 uppercase">{record.grade.grade}</div>
+        <div className="text-sm font-semibold uppercase mt-1">{record.grade.grade}</div>
+        <div className="mt-2 pt-2 border-t border-white/10">
+          {xpEarned != null && xpEarned > 0 ? (
+            <span className="text-sm font-bold text-gold">
+              +{xpEarned} XP earned
+            </span>
+          ) : isSignedIn === false ? (
+            <span className="text-xs text-muted-foreground">
+              Sign in to earn XP!
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">
+              No XP earned this time, try again!
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Hand Review — timeline + inline coaching */}
@@ -111,25 +134,10 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
           <span className="text-muted-foreground"> won ${record.pot} pot</span>
         </div>
 
-        {/* Key Lessons */}
-        {analysis.keyLessons.length > 0 && (
-          <div className="border-t border-border pt-3">
-            <div className="text-xs font-semibold text-muted-foreground uppercase mb-2">Key Lessons</div>
-            <ul className="space-y-1.5">
-              {analysis.keyLessons.map((lesson, i) => (
-                <li key={i} className="text-sm text-gray-300 flex gap-2">
-                  <span className="text-purple-400 shrink-0">•</span>
-                  {lesson}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Coach's note */}
-        {analysis.coachNote && (
-          <p className="text-sm text-purple-300 italic border-t border-border pt-3">
-            {analysis.coachNote}
+        {/* Coach's takeaway — combined lessons + note */}
+        {(analysis.keyLessons.length > 0 || analysis.coachNote) && (
+          <p className="text-sm text-purple-300 italic border-t border-border pt-3 leading-relaxed">
+            {analysis.coachNote || analysis.keyLessons[0]}
           </p>
         )}
       </div>
@@ -158,7 +166,7 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu }: HandS
           className="flex-1 btn-primary py-3 flex items-center justify-center gap-2"
         >
           <RotateCcw className="w-4 h-4" />
-          Play Again
+          Next Hand
         </button>
         <button
           onClick={onBackToMenu}
