@@ -208,8 +208,10 @@ poker-coach/
             │       ├── GameTable.tsx      # Poker table visualization (supports isReplay)
             │       ├── ActionBar.tsx      # Betting controls + shortcuts
             │       ├── CoachingPanel.tsx  # Per-street coaching
-            │       ├── HandSummary.tsx    # End-of-hand review
-            │       └── HandReplayModal.tsx # Step-through hand replayer
+            │       ├── HandSummary.tsx    # End-of-hand review + XP + session context
+            │       ├── HandReplayModal.tsx # Step-through hand replayer
+            │       ├── RebuyModal.tsx     # Cash game rebuy prompt
+            │       └── TournamentResults.tsx # Tournament end summary
             ├── hooks/
             │   ├── useApi.ts       # React Query hooks
             │   ├── useGame.ts      # Game mode hooks
@@ -362,11 +364,33 @@ The replay engine (`replayEngine.ts`) is a set of pure functions. Given a `HandR
 - Coaching feedback shown inline for human actions
 - Reset button
 
+### Game Modes
+
+The game now supports three distinct play modes — think of them as "training wheels" (Practice), "open play" (Cash Game), and "competitive" (Tournament).
+
+**Practice (Hand-by-Hand)**: Every hand resets chips to the starting stack. No carry-over, no pressure. This is the default mode and recommended for beginners learning one decision at a time.
+
+**Cash Game**: Chips carry over between hands. If you bust, you get a rebuy prompt (configurable). Busted AI players are automatically replaced with fresh stacks — like new players sitting down at a real cash table. Session P/L is tracked.
+
+**Tournament**: Rising blinds (10-level schedule), permanent player elimination, antes at higher levels. When you bust, you see your final placement. Last player standing wins. Includes a heads-up rule: when 2 players remain, the dealer posts the small blind (standard tournament heads-up).
+
+The blind schedule is hardcoded as `BLIND_SCHEDULE` (10 levels from 1/2 to 75/150 with antes up to 15). Three speed presets control hands-per-level: Fast (5), Normal (8), Slow (12).
+
+### XP Integration
+
+XP was always calculated by the backend (`gameService.ts`) but wasn't wired up in the frontend. Now `PlayVsAI.tsx` calls `useCompleteHand().mutate()` at showdown, passing the hand data and a letter grade converted from the numeric score. The response includes `xpEarned` which gets displayed in the HandSummary grade box.
+
+Important: the frontend coaching system uses Good/Okay/Mistake grades, but the backend XP system uses A/B/C/D/F letter grades. The conversion happens in `PlayVsAI.tsx` based on the numeric score (85+ = A, 70+ = B, etc.).
+
+### Fold Skip Option
+
+After folding, players see two choices: "Watch hand play out" (AI continues normally) or "Skip to review" (jumps straight to showdown). The skip is implemented via `playerFoldAndSkip()` in the store, which folds the human then calls `_goToShowdown()` directly, bypassing remaining AI turns.
+
 ### Key Frontend Files
 
 | File | Purpose |
 |------|---------|
-| `stores/gameStore.ts` | Zustand state machine (~830 lines) — the heart of the game |
+| `stores/gameStore.ts` | Zustand state machine (~1050 lines) — the heart of the game |
 | `lib/poker.ts` | Deck, hand evaluation (all 10 rankings), card utilities |
 | `lib/preflopRanges.ts` | 169 canonical hands → 5 tiers, position-aware opening ranges |
 | `lib/handAnalysis.ts` | Draw detection, board texture, enhanced equity estimation |
@@ -377,8 +401,10 @@ The replay engine (`replayEngine.ts`) is a set of pure functions. Given a `HandR
 | `components/game/GameTable.tsx` | Visual table with player seats, cards, pot, dealer/SB/BB badges |
 | `components/game/ActionBar.tsx` | Fold/Check/Call/Raise with slider, +/- buttons, keyboard shortcuts |
 | `components/game/CoachingPanel.tsx` | Per-street coaching: verdict + optimal play |
-| `components/game/HandSummary.tsx` | End-of-hand review: grade first, commentary, result at bottom |
+| `components/game/HandSummary.tsx` | End-of-hand review: grade first, XP display, commentary, result at bottom |
 | `components/game/HandReplayModal.tsx` | Step-through hand replayer with auto-play, street tabs, coaching |
+| `components/game/RebuyModal.tsx` | Cash game rebuy prompt when human busts |
+| `components/game/TournamentResults.tsx` | End-of-tournament placement, stats, elimination order |
 | `lib/replayEngine.ts` | Pure-function replay state reconstruction from HandRecord + action index |
 
 ## Bugs Encountered & Lessons Learned
@@ -396,6 +422,9 @@ The replay engine (`replayEngine.ts`) is a set of pure functions. Given a `HandR
 | 2026-02-12 | chipDelta showed 0 for non-winners in HandSummary | `_goToShowdown()` computed delta from `state.players` (after bets deducted), so losers always showed 0. Fixed by snapshotting `handStartChips` in `newHand()` before blinds. |
 | 2026-02-11 | Number input for bet/raise wouldn't let you type freely | `type="number"` with strict validation rejected intermediate values (e.g., clearing the field). Changed to `type="text"` with `inputMode="numeric"`, free typing, and clamp-on-blur. |
 | 2026-02-11 | Claude Code OAuth token didn't work for API calls | `claude setup-token` generates tokens for CLI only. The Anthropic Messages API returns "OAuth authentication is currently not supported." Must use `ANTHROPIC_API_KEY` from console.anthropic.com. |
+| 2026-02-13 | XP showed "No XP earned" despite 100/100 grade | Frontend sent coaching grade ("Good"/"Okay"/"Mistake") to backend, but backend expects letter grades ("A"/"B"/"C"/"D"/"F"). Fixed by converting numeric score → letter grade in `PlayVsAI.tsx`. |
+| 2026-02-13 | XP still showed "No XP earned" after grade fix | User wasn't signed in via Clerk. `useApiToken()` throws "Not authenticated" and the mutation fails silently. Added `isSignedIn` prop to HandSummary to show "Sign in to earn XP!" when not authenticated. |
+| 2026-02-13 | Action labels rendered inside player card box | User wanted them on the felt between player and board. Moved action labels to separate absolutely-positioned elements at 40% interpolation between player position and table center (50,50). |
 
 ### Lessons Learned
 
@@ -431,6 +460,12 @@ The replay engine (`replayEngine.ts`) is a set of pure functions. Given a `HandR
 
 16. **Keep replay logic as pure functions** - The hand replayer uses `reconstructReplayState(record, actionIndex)` — a pure function that takes a `HandRecord` and an action index, returns the full table state. No store, no side effects. This makes it trivially testable and reusable (could power an auto-generated GIF, a different UI layout, etc.).
 
+17. **Backend and frontend grade systems can diverge** - The coaching system grades actions as Good/Okay/Mistake (for instant feedback), but the backend XP system uses A/B/C/D/F letter grades. When wiring them together, you need an explicit conversion layer. Don't assume grade formats match across system boundaries.
+
+18. **Auth failures in mutations fail silently** - React Query mutations that throw (e.g., `useApiToken()` when not signed in) don't show errors by default. If an action seems to work but has no visible effect (like XP not appearing), check whether the user is authenticated. Add auth-state-aware UI to explain why features aren't working.
+
+19. **Position elements on felt using interpolation** - To place UI elements (like action labels) between a player and the board center on an oval table, use linear interpolation: `actionX = playerX + (centerX - playerX) * 0.4`. This keeps labels at a consistent visual position regardless of which seat the player occupies.
+
 ## Potential Pitfalls
 
 ### Authentication
@@ -446,20 +481,24 @@ The replay engine (`replayEngine.ts`) is a set of pure functions. Given a `HandR
 - Keep explanations beginner-friendly (no jargon)
 
 ### Game Mode
-- `gameStore.ts` is ~830 lines — the largest file. If extending, consider splitting into sub-stores
+- `gameStore.ts` is ~1050 lines — the largest file. If extending, consider splitting into sub-stores (e.g., tournament logic, cash game logic)
 - AI opponent decisions use random elements — tests should seed randomness
 - The hand evaluator handles all 10 poker hand rankings but edge cases (split pots, kickers) need thorough testing
 - LLM coaching responses are JSON-parsed from Claude — wrap in try/catch for malformed responses
 - Hand replayer infers starting chips from bet totals (HandRecord doesn't store absolute start chips) — works fine for display, but exact chip counts may differ slightly from original game
 - `handStartChips` is captured before blinds in `newHand()` — if you refactor blind posting, ensure the snapshot stays before any chip deductions
+- Tournament blind schedule is capped at level 10 — if exceeded, stays at last level via `Math.min(currentBlindLevel, schedule.length - 1)`
+- `playerFoldAndSkip()` bypasses all remaining AI turns — the hand record won't show what AI would have done
+- XP requires Clerk authentication — `useCompleteHand` mutation fails silently when not signed in
 
 ## Future Considerations
 
 - **Mobile app**: React Native could share component logic
 - **Social features**: Challenge friends, share achievements
 - **Real hand history**: Import hands from PokerStars/etc.
-- **Tournament mode**: Multi-hand sessions with rising blinds
+- **Multi-table tournaments**: Run multiple tables concurrently
+- **Side pots**: Currently not implemented — all-in players share main pot equally
 
 ---
 
-*Last updated: 2026-02-12 - Fixed chipDelta bug, added mobile responsiveness (sm: breakpoints, xs cards, touch-friendly action bar), built hand replayer with step-through controls, auto-play, and coaching. Added GET /game/hand/:id endpoint.*
+*Last updated: 2026-02-13 - Added 3 game modes (Practice/Cash Game/Tournament), XP integration via useCompleteHand, auth-aware XP display, fold skip option, tournament blind schedule, rebuy modal, tournament results screen.*
