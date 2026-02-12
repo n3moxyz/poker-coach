@@ -425,6 +425,11 @@ After folding, players see two choices: "Watch hand play out" (AI continues norm
 | 2026-02-13 | XP showed "No XP earned" despite 100/100 grade | Frontend sent coaching grade ("Good"/"Okay"/"Mistake") to backend, but backend expects letter grades ("A"/"B"/"C"/"D"/"F"). Fixed by converting numeric score → letter grade in `PlayVsAI.tsx`. |
 | 2026-02-13 | XP still showed "No XP earned" after grade fix | User wasn't signed in via Clerk. `useApiToken()` throws "Not authenticated" and the mutation fails silently. Added `isSignedIn` prop to HandSummary to show "Sign in to earn XP!" when not authenticated. |
 | 2026-02-13 | Action labels rendered inside player card box | User wanted them on the felt between player and board. Moved action labels to separate absolutely-positioned elements at 40% interpolation between player position and table center (50,50). |
+| 2026-02-13 | Position badge (BB) overlapped bet chip on table | Badge was stacked above the player card with `mb-1`, taking vertical space that collided with action labels. Changed to absolute positioning at top-left corner of card (`-top-2 -left-2 z-30`). |
+| 2026-02-13 | `z-15` not a valid Tailwind class | Action labels used `z-15` which isn't a standard Tailwind value. Changed to `z-[15]` arbitrary value syntax. |
+| 2026-02-13 | Coaching analysis showed double outs: "(9 outs) (16 outs)" | `describeDrawsForAnalysis()` embedded per-draw outs, then caller appended `(totalOuts)` again. Fixed: removed duplicate total from caller; combined total now only shown when multiple draws present. |
+| 2026-02-13 | Coaching text: "Semi-bluff on the River with You had a flush draw" | `drawContext` starts with `" You had..."` which broke grammar when placed after "with". Restructured sentence to use `drawContext` as a standalone sentence after a period. |
+| 2026-02-13 | Unequal spacing between action labels and player boxes | 40% interpolation meant players farther from center (e.g., Steve on right) had larger gaps than closer players (Betty at bottom). Fixed by using a fixed 14-unit offset with normalized direction vector. |
 
 ### Lessons Learned
 
@@ -464,7 +469,11 @@ After folding, players see two choices: "Watch hand play out" (AI continues norm
 
 18. **Auth failures in mutations fail silently** - React Query mutations that throw (e.g., `useApiToken()` when not signed in) don't show errors by default. If an action seems to work but has no visible effect (like XP not appearing), check whether the user is authenticated. Add auth-state-aware UI to explain why features aren't working.
 
-19. **Position elements on felt using interpolation** - To place UI elements (like action labels) between a player and the board center on an oval table, use linear interpolation: `actionX = playerX + (centerX - playerX) * 0.4`. This keeps labels at a consistent visual position regardless of which seat the player occupies.
+19. **Use fixed offset instead of percentage interpolation for equal spacing** - Originally used `actionX = playerX + (centerX - playerX) * 0.4` which gave unequal gaps (40% of a longer distance > 40% of a shorter one). Fixed by normalizing the direction vector and applying a fixed 14-unit offset: `actionX = playerX + (dx / dist) * 14`. Now all action labels are equidistant from their player box.
+
+20. **String templates with context fragments need grammar-safe insertion points** - `drawContext` was `" You had a flush draw (9 outs)."` — a full sentence fragment. Interpolating it after a preposition (`"Semi-bluff with ${drawContext}"`) produces broken English. Always use context fragments as standalone sentences (after a period), never mid-sentence.
+
+21. **Avoid redundant data in helper output** - `describeDrawsForAnalysis()` embedded per-draw outs like `"a flush draw (9 outs)"`, but the caller also appended `(${totalOuts} outs)`. This caused double outs display. When a helper includes detail, don't re-add it at the call site. Show combined totals only when they add new information (i.e., multiple draws).
 
 ## Potential Pitfalls
 
@@ -501,4 +510,4 @@ After folding, players see two choices: "Watch hand play out" (AI continues norm
 
 ---
 
-*Last updated: 2026-02-13 - Added 3 game modes (Practice/Cash Game/Tournament), XP integration via useCompleteHand, auth-aware XP display, fold skip option, tournament blind schedule, rebuy modal, tournament results screen.*
+*Last updated: 2026-02-13 - Fixed coaching text grammar/double outs, BB badge overlap, action label spacing. Added 3 game modes (Practice/Cash Game/Tournament), XP integration via useCompleteHand, auth-aware XP display, fold skip option, tournament blind schedule, rebuy modal, tournament results screen.*

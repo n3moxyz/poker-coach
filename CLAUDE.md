@@ -337,7 +337,10 @@ New users take an initial assessment before accessing modules:
 - GameTable accepts `isReplay` prop to disable active highlighting and show all cards
 - XP submission converts coaching grade (Good/Okay/Mistake) → letter grade (A/B/C/D/F) via numeric score thresholds — backend expects letter grades
 - HandSummary accepts `isSignedIn` prop to show "Sign in to earn XP" when not authenticated
-- Action labels render as separate absolutely-positioned elements on the felt (40% interpolation between player and table center)
+- Action labels render as separate absolutely-positioned elements on the felt (fixed 14-unit offset toward table center, normalized direction vector)
+- Position badges (D/SB/BB) use absolute positioning at top-left corner of player card (`-top-2 -left-2 z-30`)
+- `describeDrawsForAnalysis()` includes per-draw outs inline; combined total only shown when multiple draws present
+- Analysis text uses `drawContext` as a sentence (`" You had a flush draw (9 outs)."`) — never interpolate it after prepositions like "with"
 - Tournament heads-up rule: when 2 players remain, dealer posts SB (standard heads-up)
 - `playerFoldAndSkip()` folds human then calls `_goToShowdown()` directly, skipping AI turns
 
