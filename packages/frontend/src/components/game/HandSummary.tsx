@@ -166,7 +166,7 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu, xpEarne
           className="flex-1 btn-primary py-3 flex items-center justify-center gap-2"
         >
           <RotateCcw className="w-4 h-4" />
-          Next Hand
+          Play Again
         </button>
         <button
           onClick={onBackToMenu}
