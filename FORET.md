@@ -205,10 +205,11 @@ poker-coach/
             │   │   └── TableView.tsx    # Table visualization
             │   └── game/               # Play vs AI components
             │       ├── GameSetup.tsx      # Config screen
-            │       ├── GameTable.tsx      # Poker table visualization
+            │       ├── GameTable.tsx      # Poker table visualization (supports isReplay)
             │       ├── ActionBar.tsx      # Betting controls + shortcuts
             │       ├── CoachingPanel.tsx  # Per-street coaching
-            │       └── HandSummary.tsx    # End-of-hand review
+            │       ├── HandSummary.tsx    # End-of-hand review
+            │       └── HandReplayModal.tsx # Step-through hand replayer
             ├── hooks/
             │   ├── useApi.ts       # React Query hooks
             │   ├── useGame.ts      # Game mode hooks
@@ -220,7 +221,8 @@ poker-coach/
             │   ├── preflopRanges.ts # Tier-based preflop hand lookup by position
             │   ├── handAnalysis.ts  # Draw detection, board texture, enhanced equity
             │   ├── aiOpponents.ts   # AI decision engine
-            │   └── coaching.ts      # Rule-based coaching
+            │   ├── coaching.ts      # Rule-based coaching
+            │   └── replayEngine.ts  # Pure-function replay state reconstruction
             ├── stores/
             │   └── gameStore.ts    # Zustand game state machine
             └── pages/
@@ -232,7 +234,7 @@ poker-coach/
                 ├── Leaderboard.tsx     # Rankings
                 ├── PlacementTest.tsx   # Initial assessment
                 ├── PlayVsAI.tsx        # Play vs AI game page
-                └── GameHistory.tsx     # Hand history list
+                └── GameHistory.tsx     # Hand history list + replay integration
 ```
 
 ## Bugs Encountered & Lessons Learned
@@ -337,11 +339,34 @@ Players get simple names (Steve, Betty, Chris, Dave, Emma) with style labels sho
 | Shark Slayer | Win on Hard | RARE |
 | Table Captain | Win 10 in a row | LEGENDARY |
 
+### Hand Replayer
+
+The hand replayer lets users step through any past hand action-by-action, like scrubbing through a video. It's accessible from the GameHistory page — click the play icon on any hand.
+
+**Architecture:**
+
+```
+GameHistory page → click "Replay" → fetches full handHistory JSON from GET /game/hand/:id
+                                   → opens HandReplayModal
+                                   → reconstructReplayState(record, actionIndex) derives table state
+                                   → GameTable renders in read-only mode (isReplay prop)
+```
+
+The replay engine (`replayEngine.ts`) is a set of pure functions. Given a `HandRecord` and an action index, it reconstructs: player chips, current bets, folded/all-in status, visible community cards, pot size, and current phase. No Zustand store needed — it's entirely derived state.
+
+**Controls:**
+- Prev/Next buttons + arrow keys
+- Scrubber slider
+- Auto-play with space bar
+- Street tabs (jump to preflop/flop/turn/river)
+- Coaching feedback shown inline for human actions
+- Reset button
+
 ### Key Frontend Files
 
 | File | Purpose |
 |------|---------|
-| `stores/gameStore.ts` | Zustand state machine (~800 lines) — the heart of the game |
+| `stores/gameStore.ts` | Zustand state machine (~830 lines) — the heart of the game |
 | `lib/poker.ts` | Deck, hand evaluation (all 10 rankings), card utilities |
 | `lib/preflopRanges.ts` | 169 canonical hands → 5 tiers, position-aware opening ranges |
 | `lib/handAnalysis.ts` | Draw detection, board texture, enhanced equity estimation |
@@ -353,6 +378,8 @@ Players get simple names (Steve, Betty, Chris, Dave, Emma) with style labels sho
 | `components/game/ActionBar.tsx` | Fold/Check/Call/Raise with slider, +/- buttons, keyboard shortcuts |
 | `components/game/CoachingPanel.tsx` | Per-street coaching: verdict + optimal play |
 | `components/game/HandSummary.tsx` | End-of-hand review: grade first, commentary, result at bottom |
+| `components/game/HandReplayModal.tsx` | Step-through hand replayer with auto-play, street tabs, coaching |
+| `lib/replayEngine.ts` | Pure-function replay state reconstruction from HandRecord + action index |
 
 ## Bugs Encountered & Lessons Learned
 
@@ -366,6 +393,7 @@ Players get simple names (Steve, Betty, Chris, Dave, Emma) with style labels sho
 | 2026-01-27 | Multiple PrismaClient instances (7 total) causing connection pool issues | Created singleton in `src/lib/prisma.ts`, updated all files to import from there |
 | 2026-02-11 | CORS rejected requests from `pokercoach.cc` after custom domain migration | Added `pokercoach.cc` and `www.pokercoach.cc` to hardcoded `allowedOrigins` in `index.ts` instead of relying solely on `FRONTEND_URL` env var |
 | 2026-02-11 | Clicking "Deal Me In" showed blank page | `useCallback` hook placed AFTER early return in PlayVsAI.tsx violated React Rules of Hooks. Moved all hooks before conditional returns. |
+| 2026-02-12 | chipDelta showed 0 for non-winners in HandSummary | `_goToShowdown()` computed delta from `state.players` (after bets deducted), so losers always showed 0. Fixed by snapshotting `handStartChips` in `newHand()` before blinds. |
 | 2026-02-11 | Number input for bet/raise wouldn't let you type freely | `type="number"` with strict validation rejected intermediate values (e.g., clearing the field). Changed to `type="text"` with `inputMode="numeric"`, free typing, and clamp-on-blur. |
 | 2026-02-11 | Claude Code OAuth token didn't work for API calls | `claude setup-token` generates tokens for CLI only. The Anthropic Messages API returns "OAuth authentication is currently not supported." Must use `ANTHROPIC_API_KEY` from console.anthropic.com. |
 
@@ -399,6 +427,10 @@ Players get simple names (Steve, Betty, Chris, Dave, Emma) with style labels sho
 
 14. **Coaching feedback should separate verdict from advice** - Users respond better when the coaching says "You folded with a flush draw — this is a mistake" (verdict, white) then "Optimal: Call. With 9 outs your equity exceeds the pot odds" (advice, grey). Mixing both into one paragraph made messages harder to parse quickly.
 
+15. **Snapshot mutable state before mutations** - The chipDelta bug happened because `_goToShowdown()` tried to compute win/loss from `state.players` — but by showdown, all bet amounts had already been deducted from player chips. The fix: capture `handStartChips` as an immutable snapshot in `newHand()` before any blinds are posted, then use `finalChips - handStartChips` at showdown. Anytime you need "before vs after" in a state machine, snapshot before the mutations begin.
+
+16. **Keep replay logic as pure functions** - The hand replayer uses `reconstructReplayState(record, actionIndex)` — a pure function that takes a `HandRecord` and an action index, returns the full table state. No store, no side effects. This makes it trivially testable and reusable (could power an auto-generated GIF, a different UI layout, etc.).
+
 ## Potential Pitfalls
 
 ### Authentication
@@ -414,10 +446,12 @@ Players get simple names (Steve, Betty, Chris, Dave, Emma) with style labels sho
 - Keep explanations beginner-friendly (no jargon)
 
 ### Game Mode
-- `gameStore.ts` is ~800 lines — the largest file. If extending, consider splitting into sub-stores
+- `gameStore.ts` is ~830 lines — the largest file. If extending, consider splitting into sub-stores
 - AI opponent decisions use random elements — tests should seed randomness
 - The hand evaluator handles all 10 poker hand rankings but edge cases (split pots, kickers) need thorough testing
 - LLM coaching responses are JSON-parsed from Claude — wrap in try/catch for malformed responses
+- Hand replayer infers starting chips from bet totals (HandRecord doesn't store absolute start chips) — works fine for display, but exact chip counts may differ slightly from original game
+- `handStartChips` is captured before blinds in `newHand()` — if you refactor blind posting, ensure the snapshot stays before any chip deductions
 
 ## Future Considerations
 
@@ -425,8 +459,7 @@ Players get simple names (Steve, Betty, Chris, Dave, Emma) with style labels sho
 - **Social features**: Challenge friends, share achievements
 - **Real hand history**: Import hands from PokerStars/etc.
 - **Tournament mode**: Multi-hand sessions with rising blinds
-- **Hand replayer**: Step through past hands action-by-action
 
 ---
 
-*Last updated: 2026-02-12 - Improved coaching accuracy with tier-based preflop ranges, draw detection, board texture analysis, enhanced equity estimation. Redesigned raise slider UX with inline +/- buttons. Restructured hand review to prioritize learning over results.*
+*Last updated: 2026-02-12 - Fixed chipDelta bug, added mobile responsiveness (sm: breakpoints, xs cards, touch-friendly action bar), built hand replayer with step-through controls, auto-play, and coaching. Added GET /game/hand/:id endpoint.*
