@@ -108,7 +108,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
           <Coins className="w-5 h-5 text-gold" />
           <h2 className="font-semibold">Blinds</h2>
         </div>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {BLIND_PRESETS.map((preset) => (
             <button
               key={preset.label}

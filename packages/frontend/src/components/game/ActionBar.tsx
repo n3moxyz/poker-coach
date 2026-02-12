@@ -138,7 +138,7 @@ export default function ActionBar({
       {showRaiseSlider && canRaise && (
         <div className="card bg-background-secondary space-y-3">
           {/* Slider row: "Raise to:" [slider] [-] $X [+] */}
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <span className="text-sm text-muted-foreground whitespace-nowrap">{raiseLabel} to:</span>
             <input
               type="range"
@@ -146,12 +146,12 @@ export default function ActionBar({
               max={maxRaise}
               value={raiseAmount}
               onChange={(e) => setRaiseAmount(Number(e.target.value))}
-              className="flex-1 accent-gold"
+              className="flex-1 min-w-[100px] accent-gold"
             />
             <div className="flex items-center gap-1">
               <button
                 onClick={() => adjustAmount(-step)}
-                className="w-7 h-7 flex items-center justify-center rounded bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors"
+                className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors"
               >
                 <Minus className="w-3.5 h-3.5" />
               </button>
@@ -186,7 +186,7 @@ export default function ActionBar({
 
               <button
                 onClick={() => adjustAmount(step)}
-                className="w-7 h-7 flex items-center justify-center rounded bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors"
+                className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
@@ -221,7 +221,7 @@ export default function ActionBar({
       )}
 
       {/* Action buttons */}
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
         {/* Fold */}
         <button
           onClick={onFold}

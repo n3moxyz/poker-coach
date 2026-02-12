@@ -76,7 +76,8 @@ export default function PlayingCard({ card, size = 'md', className }: PlayingCar
 
 // Card back component
 export function CardBack({ size = 'md', className }: Omit<PlayingCardProps, 'card'>) {
-  const sizeClasses = {
+  const sizeClasses: Record<string, string> = {
+    xs: 'w-7 h-10',
     sm: 'w-10 h-14',
     md: 'w-14 h-20',
     lg: 'w-20 h-28',

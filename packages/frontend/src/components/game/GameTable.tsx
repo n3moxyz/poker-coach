@@ -11,6 +11,7 @@ interface GameTableProps {
   activePlayerIndex: number;
   phase: GamePhase;
   handActions: HandAction[];
+  isReplay?: boolean;
 }
 
 // Calculate player positions around an oval table
@@ -47,6 +48,7 @@ export default function GameTable({
   activePlayerIndex,
   phase,
   handActions,
+  isReplay,
 }: GameTableProps) {
   const showdown = phase === 'showdown';
   const lastActions = getPlayerLastActions(handActions, phase);
@@ -55,26 +57,29 @@ export default function GameTable({
     <div className="relative w-full max-w-3xl mx-auto">
       <div className="pt-4 pb-4">
         {/* Poker Table */}
-        <div className="relative aspect-[16/10] bg-gradient-to-b from-felt-green to-felt-dark rounded-[50%] border-8 border-felt-border shadow-2xl">
-          <div className="absolute inset-0 rounded-[50%] border-4 border-felt-rim opacity-50" />
+        <div className="relative aspect-[4/3] sm:aspect-[16/10] bg-gradient-to-b from-felt-green to-felt-dark rounded-[50%] border-4 sm:border-8 border-felt-border shadow-2xl">
+          <div className="absolute inset-0 rounded-[50%] border-2 sm:border-4 border-felt-rim opacity-50" />
 
           {/* Community Cards + Pot (pot directly below cards) */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-1.5">
-            <div className="flex gap-1.5">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-1 sm:gap-1.5">
+            <div className="flex gap-1 sm:gap-1.5">
               {communityCards.map((card, i) => (
-                <PlayingCard key={i} card={cardToString(card)} size="sm" />
+                <PlayingCard key={i} card={cardToString(card)} size="xs" className="sm:hidden" />
+              ))}
+              {communityCards.map((card, i) => (
+                <PlayingCard key={`sm-${i}`} card={cardToString(card)} size="sm" className="hidden sm:block" />
               ))}
               {/* Placeholder slots for upcoming cards */}
               {Array.from({ length: 5 - communityCards.length }).map((_, i) => (
                 <div
                   key={`empty-${i}`}
-                  className="w-10 h-14 rounded-md border border-white/10 bg-white/5"
+                  className="w-7 h-10 sm:w-10 sm:h-14 rounded-md border border-white/10 bg-white/5"
                 />
               ))}
             </div>
             {pot > 0 && (
-              <div className="bg-black/60 backdrop-blur-sm rounded-full px-4 py-1 border border-gold/30">
-                <span className="text-gold font-bold text-sm">Pot: ${pot}</span>
+              <div className="bg-black/60 backdrop-blur-sm rounded-full px-2 sm:px-4 py-0.5 sm:py-1 border border-gold/30">
+                <span className="text-gold font-bold text-xs sm:text-sm">Pot: ${pot}</span>
               </div>
             )}
           </div>
@@ -82,7 +87,7 @@ export default function GameTable({
           {/* Players */}
           {players.map((player, idx) => {
             const pos = getPlayerPosition(idx, players.length);
-            const isActive = idx === activePlayerIndex && phase !== 'showdown' && phase !== 'setup';
+            const isActive = !isReplay && idx === activePlayerIndex && phase !== 'showdown' && phase !== 'setup';
             const isDealer = idx === dealerIndex;
             const isSB = idx === (dealerIndex + 1) % players.length;
             const isBB = idx === (dealerIndex + 2) % players.length;
@@ -98,7 +103,7 @@ export default function GameTable({
                 <PlayerSeat
                   player={player}
                   isActive={isActive}
-                  showCards={player.isHuman || showdown}
+                  showCards={player.isHuman || showdown || !!isReplay}
                   lastAction={lastActions[player.id]}
                 />
               </div>
@@ -147,7 +152,7 @@ function PlayerSeat({ player, isActive, showCards, lastAction }: PlayerSeatProps
   return (
     <div
       className={cn(
-        'flex flex-col items-center gap-1 p-2 rounded-lg border-2 transition-all min-w-[80px]',
+        'flex flex-col items-center gap-0.5 sm:gap-1 p-1 sm:p-2 rounded-lg border-2 transition-all min-w-[60px] sm:min-w-[80px]',
         hasFolded && 'opacity-40',
         isActive
           ? 'border-gold bg-gold/10 ring-2 ring-gold/40 scale-105'
@@ -159,13 +164,20 @@ function PlayerSeat({ player, isActive, showCards, lastAction }: PlayerSeatProps
       <div className="flex gap-0.5">
         {player.cards.length > 0 ? (
           showCards ? (
-            player.cards.map((card, i) => (
-              <PlayingCard key={i} card={cardToString(card)} size="sm" />
-            ))
+            <>
+              {player.cards.map((card, i) => (
+                <PlayingCard key={i} card={cardToString(card)} size="xs" className="sm:hidden" />
+              ))}
+              {player.cards.map((card, i) => (
+                <PlayingCard key={`sm-${i}`} card={cardToString(card)} size="sm" className="hidden sm:block" />
+              ))}
+            </>
           ) : (
             <>
-              <CardBack size="sm" />
-              <CardBack size="sm" />
+              <CardBack size="xs" className="sm:hidden" />
+              <CardBack size="xs" className="sm:hidden" />
+              <CardBack size="sm" className="hidden sm:block" />
+              <CardBack size="sm" className="hidden sm:block" />
             </>
           )
         ) : null}
@@ -175,15 +187,15 @@ function PlayerSeat({ player, isActive, showCards, lastAction }: PlayerSeatProps
       <div className="text-center">
         <span
           className={cn(
-            'text-xs font-medium truncate max-w-[70px] block',
+            'text-[10px] sm:text-xs font-medium truncate max-w-[50px] sm:max-w-[70px] block',
             isActive ? 'text-gold' : 'text-gray-300',
             hasFolded && 'line-through text-gray-500'
           )}
         >
           {player.isHuman ? 'You' : player.name}
         </span>
-        <div className="text-[10px] text-muted-foreground">
-          Stack: ${player.chips}
+        <div className="text-[8px] sm:text-[10px] text-muted-foreground">
+          ${player.chips}
         </div>
       </div>
 

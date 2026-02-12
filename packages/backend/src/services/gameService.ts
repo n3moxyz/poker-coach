@@ -119,6 +119,30 @@ export async function getGameStats(
   return { handsPlayed, handsWon, winRate, avgGrade, totalXpFromHands, bestGrade };
 }
 
+export async function getHandById(
+  prisma: PrismaClient,
+  userId: string,
+  handId: string
+) {
+  return prisma.pokerHand.findFirst({
+    where: { id: handId, userId },
+    select: {
+      id: true,
+      playerCount: true,
+      difficulty: true,
+      smallBlind: true,
+      bigBlind: true,
+      handHistory: true,
+      result: true,
+      chipsDelta: true,
+      xpEarned: true,
+      overallGrade: true,
+      duration: true,
+      createdAt: true,
+    },
+  });
+}
+
 export async function getHandHistory(
   prisma: PrismaClient,
   userId: string,

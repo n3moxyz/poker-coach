@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, type HandSummary as DeepAnalysis } from '@/lib/api';
 import { useApiToken } from './useApi';
-import type { DeepAnalysis } from '@/components/game/HandSummary';
 
 export function useCompleteHand() {
   const getToken = useApiToken();

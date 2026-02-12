@@ -285,6 +285,19 @@ export function usePlacementTestResults() {
 }
 
 // Game mode hooks
+export function useHandDetail(handId: string | null) {
+  const getToken = useApiToken();
+
+  return useQuery({
+    queryKey: ['handDetail', handId],
+    queryFn: async () => {
+      const token = await getToken();
+      return api.getHandDetail(token, handId!);
+    },
+    enabled: !!handId,
+  });
+}
+
 export function useGameHistory(limit = 20, offset = 0) {
   const getToken = useApiToken();
 

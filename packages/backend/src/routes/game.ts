@@ -9,6 +9,7 @@ import {
   hasPlayedToday,
   getGameStats,
   getHandHistory,
+  getHandById,
 } from '../services/gameService.js';
 import { analyzeStreet, generateHandSummary } from '../services/coachingService.js';
 import prisma from '../lib/prisma.js';
@@ -96,6 +97,24 @@ router.post('/complete-hand', requireAuth, async (req: Request, res: Response) =
   } catch (error) {
     console.error('Error completing hand:', error);
     res.status(500).json({ error: 'Failed to complete hand' });
+  }
+});
+
+// Get a single hand with full handHistory JSON
+router.get('/hand/:id', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.auth!.userId;
+    const hand = await getHandById(prisma, userId, req.params.id);
+
+    if (!hand) {
+      res.status(404).json({ error: 'Hand not found' });
+      return;
+    }
+
+    res.json(hand);
+  } catch (error) {
+    console.error('Error fetching hand:', error);
+    res.status(500).json({ error: 'Failed to fetch hand' });
   }
 });
 

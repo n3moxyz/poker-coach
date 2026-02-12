@@ -233,6 +233,21 @@ export interface GameHistoryEntry {
   createdAt: string;
 }
 
+export interface GameHandDetail {
+  id: string;
+  playerCount: number;
+  difficulty: string;
+  smallBlind: number;
+  bigBlind: number;
+  handHistory: unknown;
+  result: string;
+  chipsDelta: number;
+  xpEarned: number;
+  overallGrade: string | null;
+  duration: number | null;
+  createdAt: string;
+}
+
 export interface GameStats {
   handsPlayed: number;
   handsWon: number;
@@ -386,6 +401,9 @@ export const api = {
       token,
       body: JSON.stringify(data),
     }),
+
+  getHandDetail: (token: string, handId: string) =>
+    fetchApi<GameHandDetail>(`/game/hand/${handId}`, { token }),
 
   getGameHistory: (token: string, limit = 20, offset = 0) =>
     fetchApi<{ hands: GameHistoryEntry[]; total: number; limit: number; offset: number }>(

@@ -3,9 +3,12 @@ import { Link } from 'react-router-dom';
 import ArrowLeft from 'lucide-react/dist/esm/icons/arrow-left';
 import History from 'lucide-react/dist/esm/icons/history';
 import Gamepad2 from 'lucide-react/dist/esm/icons/gamepad-2';
+import PlayCircle from 'lucide-react/dist/esm/icons/play-circle';
 import { cn } from '@/lib/utils';
-import { useGameHistory } from '@/hooks/useApi';
+import { useGameHistory, useHandDetail } from '@/hooks/useApi';
 import { type GameHistoryEntry } from '@/lib/api';
+import { type HandRecord } from '@/stores/gameStore';
+import HandReplayModal from '@/components/game/HandReplayModal';
 
 const PAGE_SIZE = 20;
 
@@ -33,10 +36,17 @@ const DIFFICULTY_LABELS: Record<string, { label: string; color: string }> = {
 export default function GameHistory() {
   const [offset, setOffset] = useState(0);
   const { data, isLoading } = useGameHistory(PAGE_SIZE, offset);
+  const [replayHandId, setReplayHandId] = useState<string | null>(null);
+  const { data: handDetail } = useHandDetail(replayHandId);
 
   const hands = data?.hands || [];
   const total = data?.total || 0;
   const hasMore = offset + PAGE_SIZE < total;
+
+  // Convert API handHistory JSON to HandRecord for the replayer
+  const replayRecord = handDetail?.handHistory
+    ? (handDetail.handHistory as HandRecord)
+    : null;
 
   return (
     <div className="md:ml-64 pb-20 md:pb-6 space-y-6">
@@ -92,7 +102,7 @@ export default function GameHistory() {
       {!isLoading && hands.length > 0 && (
         <div className="space-y-2">
           {hands.map((hand) => (
-            <HandRow key={hand.id} hand={hand} />
+            <HandRow key={hand.id} hand={hand} onReplay={() => setReplayHandId(hand.id)} />
           ))}
         </div>
       )}
@@ -108,11 +118,19 @@ export default function GameHistory() {
           </button>
         </div>
       )}
+
+      {/* Replay Modal */}
+      {replayRecord && replayHandId && (
+        <HandReplayModal
+          record={replayRecord}
+          onClose={() => setReplayHandId(null)}
+        />
+      )}
     </div>
   );
 }
 
-function HandRow({ hand }: { hand: GameHistoryEntry }) {
+function HandRow({ hand, onReplay }: { hand: GameHistoryEntry; onReplay: () => void }) {
   const resultStyle = RESULT_STYLES[hand.result] || RESULT_STYLES.FOLDED;
   const gradeStyle = hand.overallGrade ? GRADE_STYLES[hand.overallGrade] || '' : '';
   const diff = DIFFICULTY_LABELS[hand.difficulty] || { label: hand.difficulty, color: 'text-gray-400' };
@@ -161,6 +179,15 @@ function HandRow({ hand }: { hand: GameHistoryEntry }) {
       <div className="text-right min-w-[60px]">
         <span className="text-xs text-gold font-medium">+{hand.xpEarned} XP</span>
       </div>
+
+      {/* Replay button */}
+      <button
+        onClick={onReplay}
+        className="p-2 rounded-lg hover:bg-gold/10 text-muted-foreground hover:text-gold transition-colors"
+        title="Replay hand"
+      >
+        <PlayCircle className="w-5 h-5" />
+      </button>
     </div>
   );
 }
