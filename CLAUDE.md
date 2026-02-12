@@ -77,10 +77,11 @@ poker-coach/
             │   │   └── TableView.tsx
             │   └── game/          # Play vs AI components
             │       ├── GameSetup.tsx      # Config (players, blinds, stacks, difficulty)
-            │       ├── GameTable.tsx      # Poker table with players, cards, pot
+            │       ├── GameTable.tsx      # Poker table with players, cards, pot (supports isReplay prop)
             │       ├── ActionBar.tsx      # Fold/Check/Call/Raise + keyboard shortcuts
             │       ├── CoachingPanel.tsx  # Per-street coaching feedback
-            │       └── HandSummary.tsx    # End-of-hand review + deep analysis
+            │       ├── HandSummary.tsx    # End-of-hand review + deep analysis
+            │       └── HandReplayModal.tsx # Step-through hand replayer modal
             ├── hooks/
             │   ├── useApi.ts      # React Query hooks
             │   ├── useGame.ts     # Game mode hooks (history, stats, analysis)
@@ -92,7 +93,8 @@ poker-coach/
             │   ├── preflopRanges.ts  # Tier-based preflop hand lookup by position
             │   ├── handAnalysis.ts   # Draw detection, board texture, enhanced equity
             │   ├── aiOpponents.ts    # AI decision engine (Easy/Medium/Hard)
-            │   └── coaching.ts       # Rule-based coaching (tiers, draws, texture)
+            │   ├── coaching.ts       # Rule-based coaching (tiers, draws, texture)
+            │   └── replayEngine.ts   # Pure-function replay state reconstruction
             ├── stores/
             │   └── gameStore.ts   # Zustand game state machine
             └── pages/
@@ -104,7 +106,7 @@ poker-coach/
                 ├── Leaderboard.tsx
                 ├── PlacementTest.tsx
                 ├── PlayVsAI.tsx       # Main game page
-                └── GameHistory.tsx     # Hand history list
+                └── GameHistory.tsx     # Hand history list + replay integration
 ```
 
 ## First Run Setup
@@ -188,6 +190,7 @@ cd packages/frontend && npm run dev
 - `POST /api/game/complete-hand` - Save hand, award XP (reuses streak/achievement services)
 - `POST /api/game/coach` - Per-street LLM coaching analysis (requires `ANTHROPIC_API_KEY`)
 - `POST /api/game/hand-summary` - End-of-hand LLM summary (requires `ANTHROPIC_API_KEY`)
+- `GET /api/game/hand/:id` - Full hand detail with handHistory JSON (for replayer)
 - `GET /api/game/history?limit=20&offset=0` - User's hand history
 - `GET /api/game/stats` - Game stats (hands played, win rate, avg grade)
 
@@ -312,6 +315,10 @@ New users take an initial assessment before accessing modules:
 - `poker.ts` ↔ `handAnalysis.ts` have a circular ESM import — works because all calls are runtime
 - Coaching feedback format: `message` = verdict (what you did + right/wrong), `detail` = optimal play
 - Hand summary layout: grade → hand review → result (win/loss at bottom, not top)
+- chipDelta uses `handStartChips` snapshot (captured before blinds) — NOT `state.players` at showdown
+- Mobile breakpoints: `sm:` (640px) for game components, `xs` card size on mobile, `sm` on desktop
+- Hand replayer: pure-function `reconstructReplayState()` in `replayEngine.ts` — no store dependency
+- GameTable accepts `isReplay` prop to disable active highlighting and show all cards
 
 ## Production Infrastructure
 
