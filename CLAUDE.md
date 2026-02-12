@@ -76,12 +76,14 @@ poker-coach/
             │   │   ├── PlayingCard.tsx
             │   │   └── TableView.tsx
             │   └── game/          # Play vs AI components
-            │       ├── GameSetup.tsx      # Config (players, blinds, stacks, difficulty)
-            │       ├── GameTable.tsx      # Poker table with players, cards, pot (supports isReplay prop)
+            │       ├── GameSetup.tsx      # Config (mode, players, blinds, stacks, difficulty)
+            │       ├── GameTable.tsx      # Poker table with players, cards, pot (supports isReplay, tournamentInfo)
             │       ├── ActionBar.tsx      # Fold/Check/Call/Raise + keyboard shortcuts
             │       ├── CoachingPanel.tsx  # Per-street coaching feedback
-            │       ├── HandSummary.tsx    # End-of-hand review + deep analysis
-            │       └── HandReplayModal.tsx # Step-through hand replayer modal
+            │       ├── HandSummary.tsx    # End-of-hand review + XP display + session context
+            │       ├── HandReplayModal.tsx # Step-through hand replayer modal
+            │       ├── RebuyModal.tsx     # Cash game rebuy prompt when busted
+            │       └── TournamentResults.tsx # End-of-tournament summary screen
             ├── hooks/
             │   ├── useApi.ts      # React Query hooks
             │   ├── useGame.ts     # Game mode hooks (history, stats, analysis)
@@ -277,6 +279,20 @@ Reuses streak multipliers and daily bonus from quiz XP
 - **Medium**: Top 25% hands, position-aware, 60% c-bet, occasional bluffs
 - **Hard**: GTO-approximate, balanced value/bluff ratio, board-texture-aware
 
+### Game Modes
+
+Three modes available from GameSetup, each with distinct behavior:
+
+| Mode | Chips | Busted Players | Blinds |
+|------|-------|----------------|--------|
+| **Practice** (hand-by-hand) | Reset to starting stack each hand | N/A | Fixed |
+| **Cash Game** | Carry over between hands | AI replaced at starting stack; human gets rebuy prompt | Fixed |
+| **Tournament** | Carry over, no rebuys | Eliminated permanently | Increase per blind schedule |
+
+**Tournament blind schedule**: 10 levels (1/2 up to 75/150 with antes), 3 speed presets (Fast: 5 hands/level, Normal: 8, Slow: 12). Constants exported as `BLIND_SCHEDULE` and `TOURNAMENT_SPEEDS` from `gameStore.ts`.
+
+**Fold skip option**: After folding, user can choose "Watch hand play out" or "Skip to review" (jumps to showdown). Implemented via `playerFoldAndSkip()` store action.
+
 ### Game State Machine
 `setup → preflop → flop → turn → river → showdown`
 
@@ -319,6 +335,11 @@ New users take an initial assessment before accessing modules:
 - Mobile breakpoints: `sm:` (640px) for game components, `xs` card size on mobile, `sm` on desktop
 - Hand replayer: pure-function `reconstructReplayState()` in `replayEngine.ts` — no store dependency
 - GameTable accepts `isReplay` prop to disable active highlighting and show all cards
+- XP submission converts coaching grade (Good/Okay/Mistake) → letter grade (A/B/C/D/F) via numeric score thresholds — backend expects letter grades
+- HandSummary accepts `isSignedIn` prop to show "Sign in to earn XP" when not authenticated
+- Action labels render as separate absolutely-positioned elements on the felt (40% interpolation between player and table center)
+- Tournament heads-up rule: when 2 players remain, dealer posts SB (standard heads-up)
+- `playerFoldAndSkip()` folds human then calls `_goToShowdown()` directly, skipping AI turns
 
 ## Production Infrastructure
 
