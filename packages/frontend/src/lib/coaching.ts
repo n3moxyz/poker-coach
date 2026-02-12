@@ -394,8 +394,8 @@ export function generateHandAnalysis(record: HandRecord): HandAnalysis {
     lessons.push('Every hand is a learning opportunity. Review your decisions at each street to build better instincts over time.');
   }
 
-  // Coach note
-  const coachNote = generateCoachNote(overallGrade, won);
+  // Coach note — hand-specific
+  const coachNote = generateCoachNote(overallGrade, won, humanHandName, winnerHandName, lessons);
 
   return { overallGrade, streetAnalysis, keyLessons: lessons, coachNote };
 }
@@ -624,19 +624,29 @@ function describeDrawsForAnalysis(draws: DrawInfo): string {
   return parts.join(' and ');
 }
 
-function generateCoachNote(grade: string, won: boolean): string {
+function generateCoachNote(grade: string, won: boolean, humanHand: string, winnerHand: string, lessons: string[]): string {
+  // Build a hand-specific note by combining grade feedback with hand context
+  const handContext = humanHand
+    ? (won
+      ? `You won with ${humanHand}.`
+      : winnerHand
+        ? `Your ${humanHand} lost to ${winnerHand}.`
+        : `You had ${humanHand}.`)
+    : '';
+
   if (grade === 'A') {
     return won
-      ? 'Excellent play this hand! You made solid decisions throughout and earned the pot. Keep this up.'
-      : 'You played this hand well despite the result. In poker, good decisions don\'t always win — but they always profit long-term. Don\'t let results change your approach.';
+      ? `${handContext} Excellent decisions throughout — you maximized value from this spot.`
+      : `${handContext} Strong play despite the result. Good decisions profit long-term even when individual hands don't go your way.`;
   }
   if (grade === 'B') {
-    return 'Good play overall with room for optimization. Focus on the spots where you left value on the table — small improvements compound over thousands of hands.';
+    const lessonHint = lessons.length > 0 && lessons[0].length < 100 ? ` ${lessons[0]}` : '';
+    return `${handContext} Solid play with room to optimize.${lessonHint}`;
   }
   if (grade === 'C') {
-    return 'Decent play, but some decisions were marginal. Review the spots flagged above and think about what information you had at the time. Pot odds and position should guide most decisions.';
+    return `${handContext} Some marginal spots — review the flagged decisions above. Pot odds and position should guide most choices.`;
   }
-  return 'This hand had some costly mistakes. Focus on the fundamentals: fold weak hands preflop, respect pot odds post-flop, and don\'t invest chips without a clear plan. Every mistake identified is progress.';
+  return `${handContext} A few costly mistakes here. Focus on folding weak hands preflop and respecting pot odds post-flop.`;
 }
 
 function groupByPhase(actions: HandAction[]): Record<string, HandAction[]> {

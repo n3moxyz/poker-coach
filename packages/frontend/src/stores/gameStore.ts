@@ -22,6 +22,32 @@ import { type CoachingFeedback, evaluateAction, calculateHandGrade } from '@/lib
 import { sounds } from '@/lib/sounds';
 
 export type GamePhase = 'setup' | 'preflop' | 'flop' | 'turn' | 'river' | 'showdown' | 'summary';
+export type GameMode = 'hand-by-hand' | 'cash-game' | 'tournament';
+
+export interface BlindLevel {
+  smallBlind: number;
+  bigBlind: number;
+  ante: number;
+}
+
+export const BLIND_SCHEDULE: BlindLevel[] = [
+  { smallBlind: 1, bigBlind: 2, ante: 0 },
+  { smallBlind: 2, bigBlind: 4, ante: 0 },
+  { smallBlind: 3, bigBlind: 6, ante: 1 },
+  { smallBlind: 5, bigBlind: 10, ante: 1 },
+  { smallBlind: 8, bigBlind: 16, ante: 2 },
+  { smallBlind: 12, bigBlind: 24, ante: 3 },
+  { smallBlind: 20, bigBlind: 40, ante: 5 },
+  { smallBlind: 30, bigBlind: 60, ante: 8 },
+  { smallBlind: 50, bigBlind: 100, ante: 10 },
+  { smallBlind: 75, bigBlind: 150, ante: 15 },
+];
+
+export const TOURNAMENT_SPEEDS: Record<string, { label: string; handsPerLevel: number }> = {
+  fast: { label: 'Fast', handsPerLevel: 5 },
+  normal: { label: 'Normal', handsPerLevel: 8 },
+  slow: { label: 'Slow', handsPerLevel: 12 },
+};
 
 export interface HandAction {
   playerId: string;
@@ -62,6 +88,11 @@ export interface GameConfig {
   bigBlind: number;
   startingChips: number;
   difficulty: AIDifficulty;
+  gameMode: GameMode;
+  showHandReview: boolean;
+  rebuyEnabled: boolean;
+  blindSchedule: BlindLevel[];
+  handsPerLevel: number;
 }
 
 interface GameState {
@@ -87,6 +118,19 @@ interface GameState {
   feedbacks: CoachingFeedback[];
   latestFeedback: CoachingFeedback | null;
 
+  // Tournament tracking
+  currentBlindLevel: number;
+  handsAtCurrentLevel: number;
+  eliminatedPlayers: string[];
+  tournamentFinished: boolean;
+  tournamentPlacement: number | null;
+
+  // Session tracking (all modes)
+  totalHandsPlayed: number;
+  rebuyCount: number;
+  sessionXpEarned: number;
+  needsRebuy: boolean;
+
   // UI state
   isProcessingAI: boolean;
 
@@ -94,12 +138,15 @@ interface GameState {
   updateConfig: (config: Partial<GameConfig>) => void;
   startGame: () => void;
   playerFold: () => void;
+  playerFoldAndSkip: () => void;
   playerCheck: () => void;
   playerCall: () => void;
   playerRaise: (amount: number) => void;
   playerAllIn: () => void;
   newHand: () => void;
   resetGame: () => void;
+  addSessionXp: (xp: number) => void;
+  doRebuy: () => void;
 
   // Internal
   _processAITurn: () => void;
@@ -114,6 +161,11 @@ const DEFAULT_CONFIG: GameConfig = {
   bigBlind: 2,
   startingChips: 200,
   difficulty: 'easy',
+  gameMode: 'hand-by-hand',
+  showHandReview: true,
+  rebuyEnabled: true,
+  blindSchedule: BLIND_SCHEDULE,
+  handsPerLevel: 8,
 };
 
 function createHandId(): string {
@@ -141,6 +193,15 @@ export const useGameStore = create<GameState>((set, get) => ({
   handHistory: [],
   feedbacks: [],
   latestFeedback: null,
+  currentBlindLevel: 0,
+  handsAtCurrentLevel: 0,
+  eliminatedPlayers: [],
+  tournamentFinished: false,
+  tournamentPlacement: null,
+  totalHandsPlayed: 0,
+  rebuyCount: 0,
+  sessionXpEarned: 0,
+  needsRebuy: false,
   isProcessingAI: false,
 
   updateConfig: (partial) => {
@@ -150,6 +211,13 @@ export const useGameStore = create<GameState>((set, get) => ({
   startGame: () => {
     const { config } = get();
     const aiPlayers = generateAIPlayers(config.playerCount - 1, config.difficulty);
+
+    // For tournament, override blinds from schedule
+    const effectiveConfig = { ...config };
+    if (config.gameMode === 'tournament' && config.blindSchedule.length > 0) {
+      effectiveConfig.smallBlind = config.blindSchedule[0].smallBlind;
+      effectiveConfig.bigBlind = config.blindSchedule[0].bigBlind;
+    }
 
     const human: PlayerState = {
       id: 'human',
@@ -178,8 +246,18 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     set({
       players,
+      config: effectiveConfig,
       dealerIndex: 0,
       handHistory: [],
+      currentBlindLevel: 0,
+      handsAtCurrentLevel: 0,
+      eliminatedPlayers: [],
+      tournamentFinished: false,
+      tournamentPlacement: null,
+      totalHandsPlayed: 0,
+      rebuyCount: 0,
+      sessionXpEarned: 0,
+      needsRebuy: false,
       phase: 'setup', // Will transition via newHand
     });
 
@@ -191,8 +269,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     const state = get();
     const { config, players, dealerIndex } = state;
 
+    // Hand-by-hand: reset ALL player chips to starting amount
+    let basePlayers = players;
+    if (config.gameMode === 'hand-by-hand') {
+      basePlayers = players.map((p) => ({ ...p, chips: config.startingChips }));
+    }
+
     // Reset player states
-    const resetPlayers = players.map((p) => ({
+    const resetPlayers = basePlayers.map((p) => ({
       ...p,
       cards: [] as Card[],
       currentBet: 0,
@@ -200,11 +284,78 @@ export const useGameStore = create<GameState>((set, get) => ({
       isAllIn: false,
     }));
 
-    // Remove busted players
-    const activePlayers = resetPlayers.filter((p) => p.chips > 0);
+    // Handle busted players per mode
+    let activePlayers: PlayerState[];
+    if (config.gameMode === 'tournament') {
+      // Tournament: remove busted players permanently
+      activePlayers = resetPlayers.filter((p) => p.chips > 0);
+      const human = activePlayers.find((p) => p.isHuman);
+      if (!human) {
+        // Human busted — set placement
+        const placement = activePlayers.length + 1;
+        set({ tournamentFinished: true, tournamentPlacement: placement, phase: 'showdown' });
+        return;
+      }
+      if (activePlayers.length <= 1) {
+        // Human is last player standing
+        set({ tournamentFinished: true, tournamentPlacement: 1, phase: 'showdown', players: activePlayers });
+        return;
+      }
+    } else if (config.gameMode === 'cash-game') {
+      // Cash game: check if human busted → need rebuy
+      const human = resetPlayers.find((p) => p.isHuman);
+      if (human && human.chips <= 0) {
+        if (config.rebuyEnabled) {
+          set({ needsRebuy: true, phase: 'showdown' });
+          return;
+        }
+        // No rebuys → end session
+        set({ phase: 'summary', players: resetPlayers });
+        return;
+      }
+      // Replace busted AI players with fresh ones at starting stack
+      activePlayers = resetPlayers.map((p) => {
+        if (!p.isHuman && p.chips <= 0) {
+          return { ...p, chips: config.startingChips };
+        }
+        return p;
+      });
+    } else {
+      // Hand-by-hand: all players are active (chips already reset)
+      activePlayers = resetPlayers;
+    }
+
     if (activePlayers.length < 2) {
       set({ phase: 'summary', players: activePlayers });
       return;
+    }
+
+    // Tournament: advance blind level if needed
+    let currentSmallBlind = config.smallBlind;
+    let currentBigBlind = config.bigBlind;
+    let antePot = 0;
+    let newBlindLevel = state.currentBlindLevel;
+    let newHandsAtLevel = state.handsAtCurrentLevel;
+
+    if (config.gameMode === 'tournament') {
+      newHandsAtLevel += 1;
+      if (newHandsAtLevel >= config.handsPerLevel && newBlindLevel < config.blindSchedule.length - 1) {
+        newBlindLevel += 1;
+        newHandsAtLevel = 0;
+      }
+      const level = config.blindSchedule[Math.min(newBlindLevel, config.blindSchedule.length - 1)];
+      currentSmallBlind = level.smallBlind;
+      currentBigBlind = level.bigBlind;
+
+      // Post antes
+      if (level.ante > 0) {
+        for (const p of activePlayers) {
+          const anteAmount = Math.min(level.ante, p.chips);
+          p.chips -= anteAmount;
+          antePot += anteAmount;
+          if (p.chips === 0) p.isAllIn = true;
+        }
+      }
     }
 
     // Snapshot chips before any bets for accurate chipDelta at showdown
@@ -218,14 +369,15 @@ export const useGameStore = create<GameState>((set, get) => ({
       deck = remaining;
     }
 
-    // Post blinds
-    const sbIdx = (dealerIndex + 1) % activePlayers.length;
-    const bbIdx = (dealerIndex + 2) % activePlayers.length;
+    // Post blinds — heads-up rule: dealer posts SB
+    const isHeadsUp = activePlayers.length === 2;
+    const sbIdx = isHeadsUp ? dealerIndex % activePlayers.length : (dealerIndex + 1) % activePlayers.length;
+    const bbIdx = isHeadsUp ? (dealerIndex + 1) % activePlayers.length : (dealerIndex + 2) % activePlayers.length;
     const sbPlayer = activePlayers[sbIdx];
     const bbPlayer = activePlayers[bbIdx];
 
-    const sbAmount = Math.min(config.smallBlind, sbPlayer.chips);
-    const bbAmount = Math.min(config.bigBlind, bbPlayer.chips);
+    const sbAmount = Math.min(currentSmallBlind, sbPlayer.chips);
+    const bbAmount = Math.min(currentBigBlind, bbPlayer.chips);
 
     sbPlayer.chips -= sbAmount;
     sbPlayer.currentBet = sbAmount;
@@ -245,14 +397,14 @@ export const useGameStore = create<GameState>((set, get) => ({
     setTimeout(() => sounds.deal(), 150);
     setTimeout(() => sounds.blind(), 400);
 
-    // First to act: UTG (after BB)
-    const utgIdx = (bbIdx + 1) % activePlayers.length;
+    // First to act: UTG (after BB) — in heads-up, SB acts first preflop
+    const utgIdx = isHeadsUp ? sbIdx : (bbIdx + 1) % activePlayers.length;
 
     set({
       players: activePlayers,
       communityCards: [],
       deck,
-      pot: sbAmount + bbAmount,
+      pot: sbAmount + bbAmount + antePot,
       currentBet: bbAmount,
       activePlayerIndex: utgIdx,
       lastRaiseIndex: bbIdx,
@@ -263,6 +415,14 @@ export const useGameStore = create<GameState>((set, get) => ({
       latestFeedback: null,
       phase: 'preflop',
       isProcessingAI: false,
+      needsRebuy: false,
+      totalHandsPlayed: state.totalHandsPlayed + 1,
+      currentBlindLevel: newBlindLevel,
+      handsAtCurrentLevel: newHandsAtLevel,
+      // Update effective blinds for tournament
+      ...(config.gameMode === 'tournament' ? {
+        config: { ...config, smallBlind: currentSmallBlind, bigBlind: currentBigBlind },
+      } : {}),
     });
 
     // If first player is AI, process their turn
@@ -303,6 +463,41 @@ export const useGameStore = create<GameState>((set, get) => ({
     }));
 
     get()._advanceToNextPlayer();
+  },
+
+  playerFoldAndSkip: () => {
+    const { players, activePlayerIndex, phase } = get();
+    const player = players[activePlayerIndex];
+    if (!player.isHuman) return;
+    sounds.fold();
+
+    const updated = players.map((p, i) =>
+      i === activePlayerIndex ? { ...p, hasFolded: true } : p
+    );
+
+    const feedback = {
+      ...evaluateAction(
+        { action: 'fold', amount: 0 },
+        buildCoachingCtx(player, get())
+      ),
+      phase: phase as CoachingFeedback['phase'],
+      playerAction: 'fold',
+    };
+
+    const action: HandAction = {
+      playerId: player.id, playerName: player.name,
+      action: 'fold', amount: 0, phase, timestamp: Date.now(),
+    };
+
+    set((s) => ({
+      players: updated,
+      handActions: [...s.handActions, action],
+      feedbacks: [...s.feedbacks, feedback],
+      latestFeedback: feedback,
+    }));
+
+    // Skip directly to showdown instead of continuing AI turns
+    get()._goToShowdown();
   },
 
   playerCheck: () => {
@@ -736,12 +931,18 @@ export const useGameStore = create<GameState>((set, get) => ({
         timestamp: Date.now(),
       };
 
+      // Track eliminated players in tournament mode
+      const newlyEliminated = state.config.gameMode === 'tournament'
+        ? updatedPlayers.filter((p) => p.chips === 0 && !state.eliminatedPlayers.includes(p.name)).map((p) => p.name)
+        : [];
+
       set((s) => ({
         phase: 'showdown',
         communityCards: newCommunity,
         players: updatedPlayers,
         pot: 0,
         handHistory: [...s.handHistory, record],
+        eliminatedPlayers: [...s.eliminatedPlayers, ...newlyEliminated],
       }));
       return;
     }
@@ -782,12 +983,18 @@ export const useGameStore = create<GameState>((set, get) => ({
       timestamp: Date.now(),
     };
 
+    // Track eliminated players in tournament mode
+    const newlyEliminated = state.config.gameMode === 'tournament'
+      ? updatedPlayers.filter((p) => p.chips === 0 && !state.eliminatedPlayers.includes(p.name)).map((p) => p.name)
+      : [];
+
     set((s) => ({
       phase: 'showdown',
       communityCards: newCommunity,
       players: updatedPlayers,
       pot: 0,
       handHistory: [...s.handHistory, record],
+      eliminatedPlayers: [...s.eliminatedPlayers, ...newlyEliminated],
     }));
   },
 
@@ -810,7 +1017,34 @@ export const useGameStore = create<GameState>((set, get) => ({
       feedbacks: [],
       latestFeedback: null,
       isProcessingAI: false,
+      currentBlindLevel: 0,
+      handsAtCurrentLevel: 0,
+      eliminatedPlayers: [],
+      tournamentFinished: false,
+      tournamentPlacement: null,
+      totalHandsPlayed: 0,
+      rebuyCount: 0,
+      sessionXpEarned: 0,
+      needsRebuy: false,
     });
+  },
+
+  addSessionXp: (xp: number) => {
+    set((s) => ({ sessionXpEarned: s.sessionXpEarned + xp }));
+  },
+
+  doRebuy: () => {
+    set((s) => {
+      const players = s.players.map((p) =>
+        p.isHuman ? { ...p, chips: s.config.startingChips } : p
+      );
+      return { players, needsRebuy: false, rebuyCount: s.rebuyCount + 1 };
+    });
+    // Rotate dealer and start new hand
+    useGameStore.setState((s) => ({
+      dealerIndex: (s.dealerIndex + 1) % s.players.length,
+    }));
+    get().newHand();
   },
 }));
 

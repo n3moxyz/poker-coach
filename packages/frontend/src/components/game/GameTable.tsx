@@ -3,6 +3,15 @@ import { type PlayerState, type GamePhase, type HandAction } from '@/stores/game
 import PlayingCard, { CardBack } from '@/components/games/PlayingCard';
 import { type Card, cardToString } from '@/lib/poker';
 
+interface TournamentInfo {
+  blindLevel: number;
+  smallBlind: number;
+  bigBlind: number;
+  ante: number;
+  handsUntilNextLevel: number;
+  playersRemaining: number;
+}
+
 interface GameTableProps {
   players: PlayerState[];
   communityCards: Card[];
@@ -12,6 +21,7 @@ interface GameTableProps {
   phase: GamePhase;
   handActions: HandAction[];
   isReplay?: boolean;
+  tournamentInfo?: TournamentInfo;
 }
 
 // Calculate player positions around an oval table
@@ -49,12 +59,23 @@ export default function GameTable({
   phase,
   handActions,
   isReplay,
+  tournamentInfo,
 }: GameTableProps) {
   const showdown = phase === 'showdown';
   const lastActions = getPlayerLastActions(handActions, phase);
 
   return (
     <div className="relative w-full max-w-3xl mx-auto">
+      {/* Tournament info banner */}
+      {tournamentInfo && (
+        <div className="flex items-center justify-center gap-3 text-xs text-muted-foreground bg-background-tertiary/50 rounded-lg px-3 py-1.5 mb-1">
+          <span className="text-gold font-medium">Level {tournamentInfo.blindLevel + 1}</span>
+          <span>${tournamentInfo.smallBlind}/${tournamentInfo.bigBlind}</span>
+          {tournamentInfo.ante > 0 && <span>Ante ${tournamentInfo.ante}</span>}
+          <span>{tournamentInfo.handsUntilNextLevel} hands to next</span>
+          <span>{tournamentInfo.playersRemaining} players</span>
+        </div>
+      )}
       <div className="pt-4 pb-4">
         {/* Poker Table */}
         <div className="relative aspect-[4/3] sm:aspect-[16/10] bg-gradient-to-b from-felt-green to-felt-dark rounded-[50%] border-4 sm:border-8 border-felt-border shadow-2xl">
@@ -98,14 +119,49 @@ export default function GameTable({
                 className="absolute -translate-x-1/2 -translate-y-1/2 z-20"
                 style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
               >
-                {/* Position badge — outside the player card */}
                 <PositionBadge isDealer={isDealer} isSB={isSB} isBB={isBB} />
                 <PlayerSeat
                   player={player}
                   isActive={isActive}
                   showCards={player.isHuman || showdown || !!isReplay}
-                  lastAction={lastActions[player.id]}
                 />
+              </div>
+            );
+          })}
+
+          {/* Action labels — positioned on the felt between player and board center */}
+          {players.map((player, idx) => {
+            const pos = getPlayerPosition(idx, players.length);
+            const actionLabel = lastActions[player.id];
+            const hasAction = actionLabel || player.hasFolded || player.isAllIn || (player.currentBet > 0 && !player.hasFolded);
+            if (!hasAction) return null;
+
+            // Position 40% of the way from player toward center (50,50)
+            const actionX = pos.x + (50 - pos.x) * 0.4;
+            const actionY = pos.y + (50 - pos.y) * 0.4;
+
+            return (
+              <div
+                key={`action-${player.id}`}
+                className="absolute -translate-x-1/2 -translate-y-1/2 z-15 pointer-events-none flex flex-col items-center"
+                style={{ left: `${actionX}%`, top: `${actionY}%` }}
+              >
+                {player.currentBet > 0 && !player.hasFolded && (
+                  <div className="text-[10px] text-gold font-semibold bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-full border border-gold/30 whitespace-nowrap">
+                    ${player.currentBet}
+                  </div>
+                )}
+                {actionLabel && !player.hasFolded && !player.isAllIn && (
+                  <div className="text-[9px] sm:text-[10px] text-cyan-400 font-medium italic whitespace-nowrap animate-in fade-in duration-300">
+                    {actionLabel}
+                  </div>
+                )}
+                {player.isAllIn && !player.hasFolded && (
+                  <div className="text-[9px] sm:text-[10px] text-red-400 font-bold uppercase whitespace-nowrap">All-In</div>
+                )}
+                {player.hasFolded && (
+                  <div className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase whitespace-nowrap">Fold</div>
+                )}
               </div>
             );
           })}
@@ -143,10 +199,9 @@ interface PlayerSeatProps {
   player: PlayerState;
   isActive: boolean;
   showCards: boolean;
-  lastAction?: string;
 }
 
-function PlayerSeat({ player, isActive, showCards, lastAction }: PlayerSeatProps) {
+function PlayerSeat({ player, isActive, showCards }: PlayerSeatProps) {
   const { hasFolded, isAllIn } = player;
 
   return (
@@ -198,35 +253,6 @@ function PlayerSeat({ player, isActive, showCards, lastAction }: PlayerSeatProps
           ${player.chips}
         </div>
       </div>
-
-      {/* Bet + Action area — visually separated from the card above */}
-      {(player.currentBet > 0 || lastAction || isAllIn || hasFolded) && (
-        <div className="flex flex-col items-center gap-0.5 border-t border-white/10 pt-1 w-full">
-          {/* Current bet chip */}
-          {player.currentBet > 0 && !hasFolded && (
-            <div className="text-[10px] text-gold font-semibold bg-gold/15 px-2 py-0.5 rounded-full border border-gold/30">
-              ${player.currentBet}
-            </div>
-          )}
-
-          {/* Last action label */}
-          {lastAction && !hasFolded && !isAllIn && (
-            <div className="text-[9px] text-cyan-400 font-medium italic animate-in fade-in duration-300">
-              {lastAction}
-            </div>
-          )}
-
-          {/* All-in badge */}
-          {isAllIn && !hasFolded && (
-            <div className="text-[9px] text-red-400 font-bold uppercase">All-In</div>
-          )}
-
-          {/* Folded badge */}
-          {hasFolded && (
-            <div className="text-[9px] text-gray-500 font-bold uppercase">Fold</div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
