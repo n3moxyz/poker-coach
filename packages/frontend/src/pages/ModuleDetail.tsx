@@ -77,7 +77,7 @@ export default function ModuleDetail() {
               </span>
               <span className="text-muted">·</span>
               <span className="text-muted-foreground">
-                {module.questionCount} questions
+                10 of {module.questionCount} questions per session
               </span>
               {isMastered && (
                 <>
