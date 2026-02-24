@@ -18,6 +18,7 @@ import Leaderboard from '@/pages/Leaderboard';
 import PlacementTest from '@/pages/PlacementTest';
 import PlayVsAI from '@/pages/PlayVsAI';
 import GameHistory from '@/pages/GameHistory';
+import RangeMatrix from '@/pages/RangeMatrix';
 
 function AuthenticatedApp() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -94,6 +95,7 @@ function AuthenticatedApp() {
         <Route path="/achievements" element={<Achievements />} />
         <Route path="/play" element={<PlayVsAI />} />
         <Route path="/play/history" element={<GameHistory />} />
+        <Route path="/ranges" element={<RangeMatrix />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
