@@ -213,13 +213,15 @@ poker-coach/
             │       ├── GameTable.tsx      # Poker table visualization (supports isReplay)
             │       ├── ActionBar.tsx      # Betting controls + shortcuts
             │       ├── CoachingPanel.tsx  # Per-street coaching
-            │       ├── HandSummary.tsx    # End-of-hand review + XP + session context
-            │       ├── HandReplayModal.tsx # Step-through hand replayer
+            │       ├── HandSummary.tsx    # End-of-hand review + XP + equity bars
+            │       ├── HandReplayModal.tsx # Step-through hand replayer + live equity
+            │       ├── EquityBar.tsx       # Color-coded equity bar component
             │       ├── RebuyModal.tsx     # Cash game rebuy prompt
             │       └── TournamentResults.tsx # Tournament end summary
             ├── hooks/
             │   ├── useApi.ts       # React Query hooks
             │   ├── useGame.ts      # Game mode hooks
+            │   ├── useEquity.ts    # Monte Carlo equity hooks
             │   └── useHotkeys.ts   # Keyboard shortcuts
             ├── lib/
             │   ├── api.ts          # Typed API client
@@ -229,7 +231,9 @@ poker-coach/
             │   ├── handAnalysis.ts  # Draw detection, board texture, enhanced equity
             │   ├── aiOpponents.ts   # AI decision engine
             │   ├── coaching.ts      # Rule-based coaching
-            │   └── replayEngine.ts  # Pure-function replay state reconstruction
+            │   ├── replayEngine.ts  # Pure-function replay state reconstruction
+            │   ├── equityEngine.ts  # Monte Carlo simulation (self-contained)
+            │   └── equity.worker.ts # Web Worker wrapper for equity engine
             ├── stores/
             │   └── gameStore.ts    # Zustand game state machine
             └── pages/
@@ -391,6 +395,24 @@ Important: the frontend coaching system uses Good/Okay/Mistake grades, but the b
 
 After folding, players see two choices: "Watch hand play out" (AI continues normally) or "Skip to review" (jumps straight to showdown). The skip is implemented via `playerFoldAndSkip()` in the store, which folds the human then calls `_goToShowdown()` directly, bypassing remaining AI turns.
 
+### Monte Carlo Equity Engine
+
+The coaching heuristic (`scoreMadeHand() + outs × 0.02`) is fast but can be ±15% off real equity. For review contexts (not live play), we added a Monte Carlo simulation that runs in a Web Worker.
+
+**How it works:**
+1. `equityEngine.ts` — self-contained simulation that inlines eval logic from `poker.ts`. This avoids the `poker.ts` ↔ `handAnalysis.ts` circular ESM import that would break in Worker context.
+2. `equity.worker.ts` — thin Worker wrapper. Receives calculate/cancel messages, posts results.
+3. `useEquity.ts` — two React hooks: `useEquity()` for single calculations (HandReplayModal) and `useStreetEquities()` for batch 4-street calculations (HandSummary). Workers are lazily created and terminated on unmount.
+4. `EquityBar.tsx` — Tailwind horizontal bar, color-coded by equity (red → emerald), with shimmer animation while computing.
+
+**Iteration counts:** Preflop 10,000 (~150ms, ±1.5%), postflop 7,000 (~80ms, ±2%). All off-thread — zero UI jank.
+
+**Where it shows up:**
+- **HandSummary**: Per-street equity bar between the street header and action list
+- **HandReplayModal**: Live equity bar that updates as you step through actions (hidden when human has folded)
+
+**Important**: MC equity is supplemental. Live coaching during gameplay still uses the instant heuristic. Equity bars only appear in review/replay contexts.
+
 ### Key Frontend Files
 
 | File | Purpose |
@@ -401,13 +423,17 @@ After folding, players see two choices: "Watch hand play out" (AI continues norm
 | `lib/handAnalysis.ts` | Draw detection, board texture, enhanced equity estimation |
 | `lib/aiOpponents.ts` | AI decision engine with difficulty profiles |
 | `lib/coaching.ts` | Rule-based instant coaching (uses tiers, draws, texture) |
+| `lib/equityEngine.ts` | Self-contained Monte Carlo simulation (inlined eval, no poker.ts imports) |
+| `lib/equity.worker.ts` | Web Worker wrapper for equity engine |
+| `hooks/useEquity.ts` | `useEquity()` + `useStreetEquities()` hooks with lazy worker lifecycle |
 | `pages/PlayVsAI.tsx` | Main game page — composes all game components |
 | `components/game/GameSetup.tsx` | Config screen (players, blinds, stacks, difficulty) |
 | `components/game/GameTable.tsx` | Visual table with player seats, cards, pot, dealer/SB/BB badges |
 | `components/game/ActionBar.tsx` | Fold/Check/Call/Raise with slider, +/- buttons, keyboard shortcuts |
 | `components/game/CoachingPanel.tsx` | Per-street coaching: verdict + optimal play |
-| `components/game/HandSummary.tsx` | End-of-hand review: grade first, XP display, commentary, result at bottom |
-| `components/game/HandReplayModal.tsx` | Step-through hand replayer with auto-play, street tabs, coaching |
+| `components/game/HandSummary.tsx` | End-of-hand review: grade, XP, equity bars, commentary, result |
+| `components/game/HandReplayModal.tsx` | Step-through hand replayer with auto-play, street tabs, coaching, live equity |
+| `components/game/EquityBar.tsx` | Color-coded equity bar (red→emerald, shimmer animation) |
 | `components/game/RebuyModal.tsx` | Cash game rebuy prompt when human busts |
 | `components/game/TournamentResults.tsx` | End-of-tournament placement, stats, elimination order |
 | `lib/replayEngine.ts` | Pure-function replay state reconstruction from HandRecord + action index |
@@ -485,7 +511,9 @@ After folding, players see two choices: "Watch hand play out" (AI continues norm
 
 23. **Use a threshold guard for idempotent seeding** - When `prisma db seed` runs on every deploy (like in Coolify's start command), you need to avoid wiping and re-creating data unnecessarily. A simple `if (existingQuestions < THRESHOLD)` check lets the seed expand the pool once, then become a no-op on subsequent deploys.
 
-24. **Always verify migrations are applied to remote databases** - Creating a migration locally with `prisma migrate dev` only applies it to your local DB. Remote databases (Neon, production Coolify) need `prisma migrate deploy` separately. If a feature works locally but fails in production with "table does not exist", check pending migrations. Coolify's start command includes `prisma migrate deploy` so production auto-applies, but dev DBs (like Neon for local dev) need manual runs.
+24. **Inline dependencies for Web Workers** - Web Workers run in a separate context and can't rely on your app's module graph. The `poker.ts` ↔ `handAnalysis.ts` circular import works in the main thread (Vite resolves it at runtime) but breaks in a Worker. Solution: inline the ~120 lines of pure eval logic into `equityEngine.ts` with zero external imports. Duplication is acceptable when it buys you isolation.
+
+25. **Always verify migrations are applied to remote databases** - Creating a migration locally with `prisma migrate dev` only applies it to your local DB. Remote databases (Neon, production Coolify) need `prisma migrate deploy` separately. If a feature works locally but fails in production with "table does not exist", check pending migrations. Coolify's start command includes `prisma migrate deploy` so production auto-applies, but dev DBs (like Neon for local dev) need manual runs.
 
 ## Potential Pitfalls
 
@@ -514,6 +542,8 @@ After folding, players see two choices: "Watch hand play out" (AI continues norm
 - Tournament blind schedule is capped at level 10 — if exceeded, stays at last level via `Math.min(currentBlindLevel, schedule.length - 1)`
 - `playerFoldAndSkip()` bypasses all remaining AI turns — the hand record won't show what AI would have done
 - XP requires Clerk authentication — `useCompleteHand` mutation fails silently when not signed in
+- `equityEngine.ts` intentionally duplicates eval logic from `poker.ts` — don't refactor them to share code, the Worker isolation requires zero external imports
+- Monte Carlo equity values are probabilistic — preflop numbers vary ±1.5% between runs, postflop ±2%. This is expected and acceptable for display purposes
 
 ## Question Pool Expansion
 
@@ -562,4 +592,4 @@ Updated ModuleDetail to show "10 of N questions per session" so users know the p
 
 ---
 
-*Last updated: 2026-02-24 - Expanded question pool from ~91 to 385 questions across 10 modules. Extracted questions into per-module files under prisma/questions/. Added smart seed guard (threshold-based) to preserve user data on production deploys. Fixed duplicate card in Four of a Kind seed question.*
+*Last updated: 2026-02-24 - Added Monte Carlo equity engine running in Web Worker. Equity bars display per-street in HandSummary and live in HandReplayModal. Self-contained equityEngine.ts inlines eval logic to avoid circular ESM import issues in Worker context.*
