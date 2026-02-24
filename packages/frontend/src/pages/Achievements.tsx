@@ -1,41 +1,15 @@
-import { useState, memo } from 'react';
+import { memo } from 'react';
 import Trophy from 'lucide-react/dist/esm/icons/trophy';
 import Lock from 'lucide-react/dist/esm/icons/lock';
 import Target from 'lucide-react/dist/esm/icons/target';
 import Flame from 'lucide-react/dist/esm/icons/flame';
 import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
-import GraduationCap from 'lucide-react/dist/esm/icons/graduation-cap';
-import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
-import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
-import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
-import CheckCircle from 'lucide-react/dist/esm/icons/check-circle';
-import XCircle from 'lucide-react/dist/esm/icons/x-circle';
-import MinusCircle from 'lucide-react/dist/esm/icons/minus-circle';
-import Loader2 from 'lucide-react/dist/esm/icons/loader-2';
-import { useAchievements, useStats, usePlacementTestResults, useResetPlacementTest } from '@/hooks/useApi';
+import { useAchievements, useStats } from '@/hooks/useApi';
 import { cn, formatXp, getRarityColor, formatTimeAgo } from '@/lib/utils';
 
 export default function Achievements() {
   const { data: achievementData, isLoading: achievementsLoading } = useAchievements();
   const { data: statsData, isLoading: statsLoading } = useStats();
-  const { data: placementResults } = usePlacementTestResults();
-  const resetPlacementTest = useResetPlacementTest();
-  const [showPlacementDetails, setShowPlacementDetails] = useState(false);
-  const [confirmReset, setConfirmReset] = useState(false);
-
-  const handleResetPlacementTest = async () => {
-    if (!confirmReset) {
-      setConfirmReset(true);
-      return;
-    }
-    try {
-      await resetPlacementTest.mutateAsync();
-      window.location.href = '/placement-test';
-    } catch (error) {
-      console.error('Failed to reset placement test:', error);
-      setConfirmReset(false);
-    }
-  };
 
   if (achievementsLoading || statsLoading) {
     return <AchievementsSkeleton />;
@@ -134,176 +108,6 @@ export default function Achievements() {
         </div>
       )}
 
-      {/* Placement Test Results */}
-      {placementResults && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-purple-400" />
-              Placement Test
-            </h2>
-            <button
-              onClick={() => setShowPlacementDetails(!showPlacementDetails)}
-              className="text-muted-foreground hover:text-white transition-colors"
-              aria-label={showPlacementDetails ? 'Hide details' : 'Show details'}
-              aria-expanded={showPlacementDetails}
-            >
-              {showPlacementDetails ? (
-                <ChevronUp className="w-5 h-5" />
-              ) : (
-                <ChevronDown className="w-5 h-5" />
-              )}
-            </button>
-          </div>
-
-          {/* Summary */}
-          <div className="grid grid-cols-3 gap-3 mb-3">
-            <div className="text-center p-2 rounded-lg bg-background-tertiary">
-              <div className="text-xl font-bold text-green-400">
-                {placementResults.score}/{placementResults.totalQuestions}
-              </div>
-              <div className="text-xs text-muted-foreground">Score</div>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-background-tertiary">
-              <div className="text-xl font-bold text-purple-400">
-                {placementResults.level}
-              </div>
-              <div className="text-xs text-muted-foreground">Starting Level</div>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-background-tertiary">
-              <div className="text-xl font-bold text-muted-foreground">
-                {new Date(placementResults.completedAt).toLocaleDateString()}
-              </div>
-              <div className="text-xs text-muted-foreground">Completed</div>
-            </div>
-          </div>
-
-          {/* Answer summary bar */}
-          <div className="flex gap-1 mb-3">
-            {placementResults.answers.map((answer, i) => (
-              <div
-                key={i}
-                className={cn(
-                  'flex-1 h-3 rounded-full flex items-center justify-center',
-                  answer.isCorrect
-                    ? 'bg-green-500'
-                    : answer.isSkipped
-                    ? 'bg-yellow-500'
-                    : 'bg-red-500'
-                )}
-              >
-                <span className="text-[10px] font-bold text-white">
-                  {i + 1}
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="flex justify-between text-sm text-muted-foreground flex-wrap gap-2 mb-3">
-            <span className="flex items-center gap-1">
-              <CheckCircle className="w-4 h-4 text-green-400" />
-              {placementResults.answers.filter((a) => a.isCorrect).length} correct
-            </span>
-            {placementResults.answers.some((a) => a.isSkipped) && (
-              <span className="flex items-center gap-1">
-                <MinusCircle className="w-4 h-4 text-yellow-400" />
-                {placementResults.answers.filter((a) => a.isSkipped).length} skipped
-              </span>
-            )}
-            {placementResults.answers.some((a) => !a.isCorrect && !a.isSkipped) && (
-              <span className="flex items-center gap-1">
-                <XCircle className="w-4 h-4 text-red-400" />
-                {placementResults.answers.filter((a) => !a.isCorrect && !a.isSkipped).length} incorrect
-              </span>
-            )}
-          </div>
-
-          {/* Detailed answers (collapsible) */}
-          {showPlacementDetails && (
-            <div className="space-y-2 mb-3 border-t border-border pt-3">
-              {placementResults.answers.map((answer, i) => (
-                <div
-                  key={answer.questionId}
-                  className={cn(
-                    'p-2.5 rounded-lg border-l-4',
-                    answer.isCorrect
-                      ? 'border-l-green-500 bg-green-500/5'
-                      : answer.isSkipped
-                      ? 'border-l-yellow-500 bg-yellow-500/5'
-                      : 'border-l-red-500 bg-red-500/5'
-                  )}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-muted-foreground">
-                      Q{i + 1} • {answer.moduleName}
-                    </span>
-                    {answer.isCorrect ? (
-                      <CheckCircle className="w-4 h-4 text-green-400" />
-                    ) : answer.isSkipped ? (
-                      <span className="text-xs px-2 py-0.5 rounded bg-yellow-500/20 text-yellow-400">
-                        Skipped
-                      </span>
-                    ) : (
-                      <XCircle className="w-4 h-4 text-red-400" />
-                    )}
-                  </div>
-                  {answer.questionText && (
-                    <p className="text-sm text-white mb-1">{answer.questionText}</p>
-                  )}
-                  {!answer.isCorrect && (
-                    <div className="text-xs space-y-0.5">
-                      {!answer.isSkipped && (
-                        <div className="text-red-400">
-                          Your answer: <span className="line-through">{answer.userAnswer}</span>
-                        </div>
-                      )}
-                      <div className="text-green-400">
-                        Correct: {answer.correctAnswer}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Retake button */}
-          <button
-            onClick={handleResetPlacementTest}
-            disabled={resetPlacementTest.isPending}
-            className={cn(
-              'w-full py-2.5 rounded-lg flex items-center justify-center gap-2 transition-all text-sm',
-              confirmReset
-                ? 'bg-red-500/20 text-red-400 border border-red-500'
-                : 'bg-background-tertiary text-muted-foreground hover:text-white hover:bg-background-secondary'
-            )}
-          >
-            {resetPlacementTest.isPending ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Resetting...
-              </>
-            ) : confirmReset ? (
-              <>
-                <RotateCcw className="w-4 h-4" />
-                Click again to confirm retake (progress will be kept)
-              </>
-            ) : (
-              <>
-                <RotateCcw className="w-4 h-4" />
-                Retake Placement Test
-              </>
-            )}
-          </button>
-          {confirmReset && !resetPlacementTest.isPending && (
-            <button
-              onClick={() => setConfirmReset(false)}
-              className="w-full mt-2 py-2 text-sm text-muted-foreground hover:text-white transition-colors"
-            >
-              Cancel
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }
