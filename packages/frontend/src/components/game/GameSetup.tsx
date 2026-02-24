@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Users from 'lucide-react/dist/esm/icons/users';
 import Coins from 'lucide-react/dist/esm/icons/coins';
 import Brain from 'lucide-react/dist/esm/icons/brain';
@@ -9,9 +9,11 @@ import BookOpen from 'lucide-react/dist/esm/icons/book-open';
 import Trophy from 'lucide-react/dist/esm/icons/trophy';
 import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down';
 import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up';
+import Zap from 'lucide-react/dist/esm/icons/zap';
 import { cn } from '@/lib/utils';
 import { type AIDifficulty } from '@/lib/aiOpponents';
 import { type GameConfig, type GameMode, BLIND_SCHEDULE, TOURNAMENT_SPEEDS } from '@/stores/gameStore';
+import { COMMON_SPOTS, CATEGORY_STYLES } from '@/lib/commonSpots';
 
 interface GameSetupProps {
   config: GameConfig;
@@ -63,6 +65,32 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
   const [customSb, setCustomSb] = useState(config.smallBlind);
   const [customBb, setCustomBb] = useState(config.bigBlind);
   const [showBlindSchedule, setShowBlindSchedule] = useState(false);
+  const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
+
+  // Grey-out helpers: determine which config sections are pre-filled by the selected spot
+  const selectedSpot = selectedSpotId ? COMMON_SPOTS.find(s => s.id === selectedSpotId) : null;
+  const spotConfigKeys = useMemo(
+    () => selectedSpot ? new Set(Object.keys(selectedSpot.config)) : new Set<string>(),
+    [selectedSpot],
+  );
+  const isCovered = (...keys: string[]) => selectedSpotId !== null && keys.every(k => spotConfigKeys.has(k));
+
+  // Clear selected spot when user manually changes any setting
+  const handleManualConfig = (updates: Partial<GameConfig>) => {
+    setSelectedSpotId(null);
+    onUpdateConfig(updates);
+  };
+
+  const handleSpotSelect = (spotId: string) => {
+    if (selectedSpotId === spotId) {
+      setSelectedSpotId(null);
+      return;
+    }
+    const spot = COMMON_SPOTS.find((s) => s.id === spotId);
+    if (!spot) return;
+    setSelectedSpotId(spotId);
+    onUpdateConfig(spot.config);
+  };
 
   const currentStackBb = Math.round(config.startingChips / config.bigBlind);
   const isPresetStack = STACK_PRESETS.some((p) => p.multiplier === currentStackBb);
@@ -75,7 +103,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
 
   const handleBlindPreset = (small: number, big: number) => {
     setCustomBlinds(false);
-    onUpdateConfig({
+    handleManualConfig({
       smallBlind: small,
       bigBlind: big,
       startingChips: currentStackBb * big,
@@ -84,7 +112,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
 
   const handleCustomBlindsApply = () => {
     if (customSb > 0 && customBb > 0 && customBb >= customSb) {
-      onUpdateConfig({
+      handleManualConfig({
         smallBlind: customSb,
         bigBlind: customBb,
         startingChips: currentStackBb * customBb,
@@ -93,7 +121,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
   };
 
   const handleStackPreset = (multiplier: number) => {
-    onUpdateConfig({ startingChips: multiplier * config.bigBlind });
+    handleManualConfig({ startingChips: multiplier * config.bigBlind });
   };
 
   const handleModeChange = (mode: GameMode) => {
@@ -102,7 +130,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
     if (mode === 'tournament' && config.playerCount < 3) {
       updates.playerCount = 3;
     }
-    onUpdateConfig(updates);
+    handleManualConfig(updates);
   };
 
   const currentSpeed = SPEED_OPTIONS.find((s) => s.handsPerLevel === config.handsPerLevel) || SPEED_OPTIONS[1];
@@ -114,8 +142,56 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
         <p className="text-muted-foreground">Set up your table and start playing</p>
       </div>
 
-      {/* Game Mode */}
+      {/* Quick Start — pre-filled scenarios */}
       <div className="card space-y-4">
+        <div className="flex items-center gap-2 text-white">
+          <Zap className="w-5 h-5 text-gold" />
+          <h2 className="font-semibold">Quick Start</h2>
+        </div>
+        <p className="text-xs text-muted-foreground -mt-2">
+          Pick a scenario to auto-fill all settings below, then hit Deal Me In.
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          {COMMON_SPOTS.map((spot) => {
+            const isSelected = selectedSpotId === spot.id;
+            const catStyle = CATEGORY_STYLES[spot.category];
+            return (
+              <button
+                key={spot.id}
+                onClick={() => handleSpotSelect(spot.id)}
+                className={cn(
+                  'flex flex-col gap-1.5 p-3 rounded-lg border-2 transition-all text-left',
+                  isSelected
+                    ? 'border-gold bg-gold/10'
+                    : 'border-border bg-background-tertiary hover:border-border-light'
+                )}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className={cn('font-medium text-sm', isSelected ? 'text-gold' : 'text-white')}>
+                    {spot.name}
+                  </span>
+                  <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium shrink-0', catStyle.color)}>
+                    {catStyle.label}
+                  </span>
+                </div>
+                <span className={cn('text-xs leading-tight', isSelected ? 'text-gold/70' : 'text-muted-foreground')}>
+                  {spot.description}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-border" />
+        <span className="text-xs text-muted-foreground uppercase tracking-wider">or customize manually</span>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+
+      {/* Game Mode */}
+      <div className={cn('card space-y-4 transition-opacity duration-300', isCovered('gameMode') && 'opacity-30')}>
         <h2 className="font-semibold text-white">Game Mode</h2>
         <div className="grid grid-cols-3 gap-3">
           {MODE_OPTIONS.map((mode) => {
@@ -157,7 +233,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
           <input
             type="checkbox"
             checked={config.showHandReview}
-            onChange={(e) => onUpdateConfig({ showHandReview: e.target.checked })}
+            onChange={(e) => handleManualConfig({ showHandReview: e.target.checked })}
             className="w-4 h-4 rounded border-border bg-background-tertiary accent-gold"
           />
           <div>
@@ -170,14 +246,14 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
       </div>
 
       {/* Player Count */}
-      <div className="card space-y-4">
+      <div className={cn('card space-y-4 transition-opacity duration-300', isCovered('playerCount') && 'opacity-30')}>
         <div className="flex items-center gap-2 text-white">
           <Users className="w-5 h-5 text-gold" />
           <h2 className="font-semibold">Players</h2>
         </div>
         <div className="flex items-center justify-center gap-4">
           <button
-            onClick={() => onUpdateConfig({ playerCount: Math.max(minPlayers, config.playerCount - 1) })}
+            onClick={() => handleManualConfig({ playerCount: Math.max(minPlayers, config.playerCount - 1) })}
             disabled={effectivePlayerCount <= minPlayers}
             className="w-10 h-10 flex items-center justify-center rounded-lg bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
@@ -187,7 +263,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
             {effectivePlayerCount}
           </span>
           <button
-            onClick={() => onUpdateConfig({ playerCount: Math.min(8, config.playerCount + 1) })}
+            onClick={() => handleManualConfig({ playerCount: Math.min(8, config.playerCount + 1) })}
             disabled={config.playerCount >= 8}
             className="w-10 h-10 flex items-center justify-center rounded-lg bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
@@ -204,7 +280,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
 
       {/* Blinds — hidden for tournament (comes from schedule) */}
       {!isTournament && (
-        <div className="card space-y-4">
+        <div className={cn('card space-y-4 transition-opacity duration-300', isCovered('smallBlind', 'bigBlind') && 'opacity-30')}>
           <div className="flex items-center gap-2 text-white">
             <Coins className="w-5 h-5 text-gold" />
             <h2 className="font-semibold">Blinds</h2>
@@ -272,7 +348,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
 
       {/* Tournament Speed + Blind Schedule */}
       {isTournament && (
-        <div className="card space-y-4">
+        <div className={cn('card space-y-4 transition-opacity duration-300', isCovered('handsPerLevel') && 'opacity-30')}>
           <div className="flex items-center gap-2 text-white">
             <Coins className="w-5 h-5 text-gold" />
             <h2 className="font-semibold">Tournament Speed</h2>
@@ -281,7 +357,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
             {SPEED_OPTIONS.map((speed) => (
               <button
                 key={speed.value}
-                onClick={() => onUpdateConfig({ handsPerLevel: speed.handsPerLevel })}
+                onClick={() => handleManualConfig({ handsPerLevel: speed.handsPerLevel })}
                 className={cn(
                   'py-3 px-3 rounded-lg border-2 font-medium transition-all text-sm',
                   config.handsPerLevel === speed.handsPerLevel
@@ -326,7 +402,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
       )}
 
       {/* Stack Size */}
-      <div className="card space-y-4">
+      <div className={cn('card space-y-4 transition-opacity duration-300', isCovered('startingChips') && 'opacity-30')}>
         <div className="flex items-center gap-2 text-white">
           <Layers className="w-5 h-5 text-gold" />
           <h2 className="font-semibold">{isTournament ? 'Buy-in' : 'Stack Size'}</h2>
@@ -357,13 +433,13 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
 
       {/* Cash Game Options */}
       {isCashGame && (
-        <div className="card space-y-4">
+        <div className={cn('card space-y-4 transition-opacity duration-300', isCovered('rebuyEnabled') && 'opacity-30')}>
           <h2 className="font-semibold text-white">Cash Game Options</h2>
           <label className="flex items-center gap-3 cursor-pointer group">
             <input
               type="checkbox"
               checked={config.rebuyEnabled}
-              onChange={(e) => onUpdateConfig({ rebuyEnabled: e.target.checked })}
+              onChange={(e) => handleManualConfig({ rebuyEnabled: e.target.checked })}
               className="w-4 h-4 rounded border-border bg-background-tertiary accent-gold"
             />
             <span className="text-sm text-white group-hover:text-gold transition-colors">
@@ -374,7 +450,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
       )}
 
       {/* Difficulty */}
-      <div className="card space-y-4">
+      <div className={cn('card space-y-4 transition-opacity duration-300', isCovered('difficulty') && 'opacity-30')}>
         <div className="flex items-center gap-2 text-white">
           <Brain className="w-5 h-5 text-gold" />
           <h2 className="font-semibold">AI Difficulty</h2>
@@ -383,7 +459,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
           {DIFFICULTIES.map((diff) => (
             <button
               key={diff.value}
-              onClick={() => onUpdateConfig({ difficulty: diff.value })}
+              onClick={() => handleManualConfig({ difficulty: diff.value })}
               className={cn(
                 'w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-all text-left',
                 config.difficulty === diff.value
@@ -401,15 +477,25 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
       </div>
 
       {/* Start Button */}
+      {selectedSpotId && (
+        <p className="text-center text-sm text-gold animate-pulse -mb-4">
+          Settings ready — hit Deal Me In!
+        </p>
+      )}
       <button
         onClick={() => {
           // Enforce min players before starting
           if (isTournament && config.playerCount < 3) {
-            onUpdateConfig({ playerCount: 3 });
+            handleManualConfig({ playerCount: 3 });
           }
           onStart();
         }}
-        className="w-full py-5 text-xl font-bold rounded-xl bg-gradient-to-r from-gold/90 to-yellow-500/90 text-black shadow-lg shadow-gold/20 hover:shadow-gold/40 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 tracking-wide"
+        className={cn(
+          'w-full py-5 text-xl font-bold rounded-xl bg-gradient-to-r from-gold/90 to-yellow-500/90 text-black shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 tracking-wide',
+          selectedSpotId
+            ? 'shadow-gold/40 ring-2 ring-gold/50 ring-offset-2 ring-offset-background'
+            : 'shadow-gold/20 hover:shadow-gold/40'
+        )}
       >
         Deal Me In
       </button>

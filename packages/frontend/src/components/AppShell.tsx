@@ -8,6 +8,7 @@ import Medal from 'lucide-react/dist/esm/icons/medal';
 import Flame from 'lucide-react/dist/esm/icons/flame';
 import Gamepad2 from 'lucide-react/dist/esm/icons/gamepad-2';
 import History from 'lucide-react/dist/esm/icons/history';
+import Grid3x3 from 'lucide-react/dist/esm/icons/grid-3x3';
 import { cn } from '@/lib/utils';
 import { useProgress } from '@/hooks/useApi';
 
@@ -18,9 +19,10 @@ interface AppShellProps {
 const navItems = [
   { path: '/', icon: Home, label: 'Dashboard' },
   { path: '/play', icon: Gamepad2, label: 'Play' },
-  { path: '/play/history', icon: History, label: 'History' },
   { path: '/modules', icon: BookOpen, label: 'Modules' },
+  { path: '/ranges', icon: Grid3x3, label: 'Ranges' },
   { path: '/achievements', icon: Trophy, label: 'Achievements' },
+  { path: '/play/history', icon: History, label: 'History' },
   { path: '/leaderboard', icon: Medal, label: 'Leaderboard' },
 ];
 
