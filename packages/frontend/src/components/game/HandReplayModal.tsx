@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { type HandRecord } from '@/stores/gameStore';
 import {
@@ -6,7 +6,9 @@ import {
   getPhases,
   getFirstIndexForPhase,
 } from '@/lib/replayEngine';
+import { useEquity } from '@/hooks/useEquity';
 import GameTable from './GameTable';
+import EquityBar from './EquityBar';
 import X from 'lucide-react/dist/esm/icons/x';
 import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left';
 import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right';
@@ -71,6 +73,19 @@ export default function HandReplayModal({ record, onClose }: HandReplayModalProp
 
   // Build handActions for GameTable's last-action display (only up to current index)
   const visibleActions = actionIndex >= 0 ? record.actions.slice(0, actionIndex + 1) : [];
+
+  // Monte Carlo equity for the current replay state
+  const humanPlayer = record.players.find((p) => p.id === 'human');
+  const heroCards = humanPlayer?.cards;
+  const visibleBoard = useMemo(() => state.communityCards, [state.communityCards.join(',')]);
+  const numOpponents = record.players.length - 1;
+  const humanFolded = state.players.find((p) => p.isHuman)?.hasFolded ?? false;
+  const { equity, isComputing: equityComputing } = useEquity(
+    heroCards,
+    visibleBoard,
+    numOpponents,
+    !humanFolded
+  );
 
   // Current action description
   const currentAction = state.currentAction;
@@ -249,6 +264,11 @@ export default function HandReplayModal({ record, onClose }: HandReplayModalProp
             </button>
             <div className="flex-1 text-sm text-white">{actionDesc}</div>
           </div>
+
+          {/* Equity bar */}
+          {(equity != null || equityComputing) && !humanFolded && (
+            <EquityBar equity={equity} isComputing={equityComputing} label="Your Equity" size="md" />
+          )}
 
           {/* Coaching feedback for current human action */}
           {currentFeedback && (
