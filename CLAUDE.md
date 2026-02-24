@@ -104,11 +104,11 @@ poker-coach/
                 ├── ModuleList.tsx
                 ├── ModuleDetail.tsx
                 ├── PracticeSession.tsx
-                ├── Achievements.tsx    # Merged: stats + achievements + placement test
+                ├── Achievements.tsx    # Stats + achievements
                 ├── Leaderboard.tsx
                 ├── PlacementTest.tsx
                 ├── PlayVsAI.tsx       # Main game page
-                └── GameHistory.tsx     # Hand history list + replay integration
+                └── GameHistory.tsx     # Hand history list + replay + placement test results
 ```
 
 ## First Run Setup

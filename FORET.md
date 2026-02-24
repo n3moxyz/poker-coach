@@ -232,11 +232,11 @@ poker-coach/
                 ├── ModuleList.tsx      # All modules with progress
                 ├── ModuleDetail.tsx    # Module info + questions
                 ├── PracticeSession.tsx # Active question answering
-                ├── Achievements.tsx    # Merged: stats + achievements + placement test
+                ├── Achievements.tsx    # Stats + achievements
                 ├── Leaderboard.tsx     # Rankings
                 ├── PlacementTest.tsx   # Initial assessment
                 ├── PlayVsAI.tsx        # Play vs AI game page
-                └── GameHistory.tsx     # Hand history list + replay integration
+                └── GameHistory.tsx     # Hand history list + replay + placement test results
 ```
 
 ## Bugs Encountered & Lessons Learned
@@ -430,6 +430,7 @@ After folding, players see two choices: "Watch hand play out" (AI continues norm
 | 2026-02-13 | Coaching analysis showed double outs: "(9 outs) (16 outs)" | `describeDrawsForAnalysis()` embedded per-draw outs, then caller appended `(totalOuts)` again. Fixed: removed duplicate total from caller; combined total now only shown when multiple draws present. |
 | 2026-02-13 | Coaching text: "Semi-bluff on the River with You had a flush draw" | `drawContext` starts with `" You had..."` which broke grammar when placed after "with". Restructured sentence to use `drawContext` as a standalone sentence after a period. |
 | 2026-02-13 | Unequal spacing between action labels and player boxes | 40% interpolation meant players farther from center (e.g., Steve on right) had larger gaps than closer players (Betty at bottom). Fixed by using a fixed 14-unit offset with normalized direction vector. |
+| 2026-02-24 | Hand history showed "No hands played yet" despite playing hands | The `PokerHand` migration existed locally but was never applied to the Neon database. `prisma migrate deploy` fixed it. Always run migrations against remote DBs after creating them locally. |
 
 ### Lessons Learned
 
@@ -475,6 +476,8 @@ After folding, players see two choices: "Watch hand play out" (AI continues norm
 
 21. **Avoid redundant data in helper output** - `describeDrawsForAnalysis()` embedded per-draw outs like `"a flush draw (9 outs)"`, but the caller also appended `(${totalOuts} outs)`. This caused double outs display. When a helper includes detail, don't re-add it at the call site. Show combined totals only when they add new information (i.e., multiple draws).
 
+22. **Always verify migrations are applied to remote databases** - Creating a migration locally with `prisma migrate dev` only applies it to your local DB. Remote databases (Neon, production Coolify) need `prisma migrate deploy` separately. If a feature works locally but fails in production with "table does not exist", check pending migrations. Coolify's start command includes `prisma migrate deploy` so production auto-applies, but dev DBs (like Neon for local dev) need manual runs.
+
 ## Potential Pitfalls
 
 ### Authentication
@@ -510,4 +513,4 @@ After folding, players see two choices: "Watch hand play out" (AI continues norm
 
 ---
 
-*Last updated: 2026-02-13 - Fixed coaching text grammar/double outs, BB badge overlap, action label spacing. Added 3 game modes (Practice/Cash Game/Tournament), XP integration via useCompleteHand, auth-aware XP display, fold skip option, tournament blind schedule, rebuy modal, tournament results screen.*
+*Last updated: 2026-02-24 - Added History nav link to sidebar. Moved placement test results from Achievements to GameHistory page. Fixed PokerHand table missing from Neon DB (migration not applied). Hand history persistence now fully working end-to-end.*
