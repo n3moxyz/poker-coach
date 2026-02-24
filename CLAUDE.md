@@ -81,7 +81,7 @@ poker-coach/
             │   │   ├── PlayingCard.tsx
             │   │   └── TableView.tsx
             │   └── game/          # Play vs AI components
-            │       ├── GameSetup.tsx      # Config (mode, players, blinds, stacks, difficulty)
+            │       ├── GameSetup.tsx      # Config (mode, players, blinds, stacks, difficulty, quick start)
             │       ├── GameTable.tsx      # Poker table with players, cards, pot (supports isReplay, tournamentInfo)
             │       ├── ActionBar.tsx      # Fold/Check/Call/Raise + keyboard shortcuts
             │       ├── CoachingPanel.tsx  # Per-street coaching feedback
@@ -105,7 +105,9 @@ poker-coach/
             │   ├── coaching.ts       # Rule-based coaching (tiers, draws, texture)
             │   ├── replayEngine.ts   # Pure-function replay state reconstruction
             │   ├── equityEngine.ts   # Self-contained Monte Carlo simulation (no poker.ts imports)
-            │   └── equity.worker.ts  # Web Worker wrapper for equity engine
+            │   ├── equity.worker.ts  # Web Worker wrapper for equity engine
+            │   ├── rangeData.ts      # 13x13 grid data mapping 169 hands to tiers
+            │   └── commonSpots.ts    # Quick Start preset scenarios (6 spots, 3 categories)
             ├── stores/
             │   └── gameStore.ts   # Zustand game state machine
             └── pages/
@@ -117,7 +119,8 @@ poker-coach/
                 ├── Leaderboard.tsx
                 ├── PlacementTest.tsx
                 ├── PlayVsAI.tsx       # Main game page
-                └── GameHistory.tsx     # Hand history list + replay + placement test results
+                ├── GameHistory.tsx     # Hand history list + replay + placement test results
+                └── RangeMatrix.tsx     # 13x13 preflop range grid with position filtering
 ```
 
 ## First Run Setup
@@ -301,6 +304,18 @@ Three modes available from GameSetup, each with distinct behavior:
 **Tournament blind schedule**: 10 levels (1/2 up to 75/150 with antes), 3 speed presets (Fast: 5 hands/level, Normal: 8, Slow: 12). Constants exported as `BLIND_SCHEDULE` and `TOURNAMENT_SPEEDS` from `gameStore.ts`.
 
 **Fold skip option**: After folding, user can choose "Watch hand play out" or "Skip to review" (jumps to showdown). Implemented via `playerFoldAndSkip()` store action.
+
+### Quick Start Presets
+
+GameSetup includes 6 preset scenarios in `commonSpots.ts` (2 preflop, 2 postflop, 2 tournament). When a user selects a preset:
+- Config sections covered by the preset grey out (`opacity-30`)
+- Clicking any greyed section clears the selection (calls `handleManualConfig` which resets `selectedSpotId`)
+- "Deal Me In" gets a gold ring highlight with pulsing "Settings ready" text
+- Clicking the same preset again toggles it off
+
+### Range Matrix
+
+Visual 13x13 preflop hand grid at `/ranges`. Uses `rangeData.ts` which maps all 169 canonical hands to tiers from `preflopRanges.ts`. Position selector (Early/Middle/Late/Blind) dims hands that are folds from that position.
 
 ### Game State Machine
 `setup → preflop → flop → turn → river → showdown`

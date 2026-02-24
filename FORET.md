@@ -413,6 +413,23 @@ The coaching heuristic (`scoreMadeHand() + outs × 0.02`) is fast but can be ±1
 
 **Important**: MC equity is supplemental. Live coaching during gameplay still uses the instant heuristic. Equity bars only appear in review/replay contexts.
 
+### Range Matrix
+
+A visual 13x13 preflop hand grid at `/ranges`. Every starting hand is color-coded by tier (Premium/Strong/Playable/Marginal/Trash) using the same tier system from `preflopRanges.ts`. Select a position (Early/Middle/Late/Blind) and hands outside that position's opening range dim to 15% opacity. Hover any cell for details — label, tier badge, suited/offsuit/pair, and open/fold recommendation.
+
+`rangeData.ts` builds the grid data at module load. It reuses `HandTier` from `preflopRanges.ts` but maintains its own `TIER_MAP` for the 169-hand mapping.
+
+### Quick Start Presets
+
+GameSetup now has a "Quick Start" section at the top with 6 preset scenarios from `commonSpots.ts`:
+- **Preflop**: Beginner Friendly (3p, easy), Heads-Up Battle (2p, hard cash)
+- **Postflop**: 6-Max Table (6p, medium), Deep Stack Cash (4p, 200bb cash)
+- **Tournament**: Push/Fold Drill (6p, 10bb tourney), Short Stack Tourney (6p, hard)
+
+When selected, config sections already filled by the preset grey out (`opacity-30`) with a smooth transition. The user can still click greyed sections — doing so clears the preset and returns to manual config. "Deal Me In" gets a gold ring highlight. Clicking the same preset toggles it off.
+
+The grey-out uses `isCovered()` which checks if the preset's config keys cover a section's settings (e.g., `isCovered('gameMode')` greys the Game Mode card). `spotConfigKeys` is memoized to avoid recreating the Set each render.
+
 ### Key Frontend Files
 
 | File | Purpose |
@@ -427,7 +444,7 @@ The coaching heuristic (`scoreMadeHand() + outs × 0.02`) is fast but can be ±1
 | `lib/equity.worker.ts` | Web Worker wrapper for equity engine |
 | `hooks/useEquity.ts` | `useEquity()` + `useStreetEquities()` hooks with lazy worker lifecycle |
 | `pages/PlayVsAI.tsx` | Main game page — composes all game components |
-| `components/game/GameSetup.tsx` | Config screen (players, blinds, stacks, difficulty) |
+| `components/game/GameSetup.tsx` | Config screen with Quick Start presets + manual config + grey-out UX |
 | `components/game/GameTable.tsx` | Visual table with player seats, cards, pot, dealer/SB/BB badges |
 | `components/game/ActionBar.tsx` | Fold/Check/Call/Raise with slider, +/- buttons, keyboard shortcuts |
 | `components/game/CoachingPanel.tsx` | Per-street coaching: verdict + optimal play |
@@ -437,6 +454,9 @@ The coaching heuristic (`scoreMadeHand() + outs × 0.02`) is fast but can be ±1
 | `components/game/RebuyModal.tsx` | Cash game rebuy prompt when human busts |
 | `components/game/TournamentResults.tsx` | End-of-tournament placement, stats, elimination order |
 | `lib/replayEngine.ts` | Pure-function replay state reconstruction from HandRecord + action index |
+| `lib/rangeData.ts` | 13x13 grid mapping 169 hands to tiers for Range Matrix page |
+| `lib/commonSpots.ts` | 6 Quick Start preset scenarios (2 preflop, 2 postflop, 2 tournament) |
+| `pages/RangeMatrix.tsx` | Visual preflop range grid with position filtering |
 
 ## Bugs Encountered & Lessons Learned
 
