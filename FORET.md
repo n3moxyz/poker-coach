@@ -164,7 +164,12 @@ poker-coach/
     │   ├── .env.example
     │   ├── prisma/
     │   │   ├── schema.prisma   # Database models (11 models incl. PokerHand)
-    │   │   └── seed.ts         # Initial data (10 modules + questions + game achievements)
+    │   │   ├── seed.ts         # Smart seeder with threshold guard
+    │   │   └── questions/      # Per-module question files (385 total)
+    │   │       ├── hand-rankings.ts, board-reading.ts, hand-flow.ts
+    │   │       ├── position.ts, preflop.ts, betting-basics.ts
+    │   │       ├── flop-play.ts, pot-odds.ts, bluffing.ts
+    │   │       └── mental-game.ts
     │   └── src/
     │       ├── index.ts        # Express server entry + health check
     │       ├── lib/
@@ -476,7 +481,11 @@ After folding, players see two choices: "Watch hand play out" (AI continues norm
 
 21. **Avoid redundant data in helper output** - `describeDrawsForAnalysis()` embedded per-draw outs like `"a flush draw (9 outs)"`, but the caller also appended `(${totalOuts} outs)`. This caused double outs display. When a helper includes detail, don't re-add it at the call site. Show combined totals only when they add new information (i.e., multiple draws).
 
-22. **Always verify migrations are applied to remote databases** - Creating a migration locally with `prisma migrate dev` only applies it to your local DB. Remote databases (Neon, production Coolify) need `prisma migrate deploy` separately. If a feature works locally but fails in production with "table does not exist", check pending migrations. Coolify's start command includes `prisma migrate deploy` so production auto-applies, but dev DBs (like Neon for local dev) need manual runs.
+22. **Extract large seed data into per-module files** - A monolithic `seed.ts` with 400+ questions becomes unreadable and hard to maintain. Splitting into `questions/hand-rankings.ts`, `questions/position.ts`, etc. makes each module's questions independently editable and reviewable. The seed file becomes a thin orchestrator.
+
+23. **Use a threshold guard for idempotent seeding** - When `prisma db seed` runs on every deploy (like in Coolify's start command), you need to avoid wiping and re-creating data unnecessarily. A simple `if (existingQuestions < THRESHOLD)` check lets the seed expand the pool once, then become a no-op on subsequent deploys.
+
+24. **Always verify migrations are applied to remote databases** - Creating a migration locally with `prisma migrate dev` only applies it to your local DB. Remote databases (Neon, production Coolify) need `prisma migrate deploy` separately. If a feature works locally but fails in production with "table does not exist", check pending migrations. Coolify's start command includes `prisma migrate deploy` so production auto-applies, but dev DBs (like Neon for local dev) need manual runs.
 
 ## Potential Pitfalls
 
@@ -491,6 +500,9 @@ After folding, players see two choices: "Watch hand play out" (AI continues norm
 ### Question Content
 - JSON content must be validated before saving
 - Keep explanations beginner-friendly (no jargon)
+- Questions live in `prisma/questions/` (one `.ts` file per module, 35-50 questions each)
+- Seed threshold guard: questions only re-seeded when pool is below 200, preserving user progress on production deploys
+- Watch for duplicate cards in hand comparison questions (e.g., Ks appearing in both hands)
 
 ### Game Mode
 - `gameStore.ts` is ~1050 lines — the largest file. If extending, consider splitting into sub-stores (e.g., tournament logic, cash game logic)
@@ -503,6 +515,43 @@ After folding, players see two choices: "Watch hand play out" (AI continues norm
 - `playerFoldAndSkip()` bypasses all remaining AI turns — the hand record won't show what AI would have done
 - XP requires Clerk authentication — `useCompleteHand` mutation fails silently when not signed in
 
+## Question Pool Expansion
+
+### The Problem
+
+The original seed had ~91 questions across 10 modules — barely enough for variety. Users would start seeing repeats after a couple of practice sessions. We needed 35-50 per module to keep things fresh.
+
+### The Solution
+
+Extracted all questions from the monolithic `seed.ts` into per-module files under `prisma/questions/`. Each file exports an array of question objects matching the existing schema. The seed file imports all 10 and upserts them.
+
+```
+prisma/questions/
+├── hand-rankings.ts    (50 questions)
+├── board-reading.ts    (50 questions)
+├── hand-flow.ts        (35 questions)
+├── position.ts         (40 questions)
+├── preflop.ts          (40 questions)
+├── betting-basics.ts   (35 questions)
+├── flop-play.ts        (40 questions)
+├── pot-odds.ts         (40 questions)
+├── bluffing.ts         (35 questions)
+└── mental-game.ts      (20 questions)
+```
+
+### Smart Seed Guard
+
+The seed now checks `QUESTION_POOL_THRESHOLD` (200). If the DB already has 200+ questions, it skips re-seeding questions entirely — preserving user answer data and progress. This is critical for production deploys where `prisma db seed` runs on every startup via Coolify's start command.
+
+Three cases:
+1. **Fresh DB**: Seeds everything (modules, questions, achievements)
+2. **Existing DB, small pool**: Re-seeds questions only (deletes old, inserts new), preserves users/progress
+3. **Existing DB, large pool**: Skips questions, just ensures achievements exist
+
+### ModuleDetail Update
+
+Updated ModuleDetail to show "10 of N questions per session" so users know the pool is larger than what they see in a single session.
+
 ## Future Considerations
 
 - **Mobile app**: React Native could share component logic
@@ -513,4 +562,4 @@ After folding, players see two choices: "Watch hand play out" (AI continues norm
 
 ---
 
-*Last updated: 2026-02-24 - Added History nav link to sidebar. Moved placement test results from Achievements to GameHistory page. Fixed PokerHand table missing from Neon DB (migration not applied). Hand history persistence now fully working end-to-end.*
+*Last updated: 2026-02-24 - Expanded question pool from ~91 to 385 questions across 10 modules. Extracted questions into per-module files under prisma/questions/. Added smart seed guard (threshold-based) to preserve user data on production deploys. Fixed duplicate card in Four of a Kind seed question.*

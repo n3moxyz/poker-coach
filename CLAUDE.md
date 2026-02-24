@@ -63,7 +63,12 @@ poker-coach/
     │   │       └── coachingService.ts  # Claude API for deep analysis
     │   └── prisma/
     │       ├── schema.prisma      # Database models (incl. PokerHand)
-    │       └── seed.ts            # Initial data (10 modules + questions + game achievements)
+    │       ├── seed.ts            # Smart seeder (threshold guard, re-seeds questions only)
+    │       └── questions/         # Per-module question files (35-50 each, 385 total)
+    │           ├── hand-rankings.ts, board-reading.ts, hand-flow.ts
+    │           ├── position.ts, preflop.ts, betting-basics.ts
+    │           ├── flop-play.ts, pot-odds.ts, bluffing.ts
+    │           └── mental-game.ts
     │
     └── frontend/                  # React SPA (Vite)
         └── src/
@@ -334,6 +339,7 @@ New users take an initial assessment before accessing modules:
 - chipDelta uses `handStartChips` snapshot (captured before blinds) — NOT `state.players` at showdown
 - Mobile breakpoints: `sm:` (640px) for game components, `xs` card size on mobile, `sm` on desktop
 - Hand replayer: pure-function `reconstructReplayState()` in `replayEngine.ts` — no store dependency
+- Questions live in `prisma/questions/` (one file per module). Seed uses a threshold guard (`QUESTION_POOL_THRESHOLD = 200`) to re-seed only when pool is small, preserving user data on production deploys
 - GameTable accepts `isReplay` prop to disable active highlighting and show all cards
 - XP submission converts coaching grade (Good/Okay/Mistake) → letter grade (A/B/C/D/F) via numeric score thresholds — backend expects letter grades
 - HandSummary accepts `isSignedIn` prop to show "Sign in to earn XP" when not authenticated
