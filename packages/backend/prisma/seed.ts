@@ -276,7 +276,7 @@ async function seedAllQuestions(modules: { id: string; slug: string }[]) {
       difficulty: 1,
       content: {
         hand1: { cards: ['As', 'Ks', 'Qs', 'Js', '10s'], name: 'Royal Flush' },
-        hand2: { cards: ['Kd', 'Kh', 'Kc', 'Ks', '7d'], name: 'Four of a Kind' },
+        hand2: { cards: ['9d', '9h', '9c', '9s', '7c'], name: 'Four of a Kind' },
         question: 'Which hand wins?',
       },
       correctAnswer: 'hand1',
