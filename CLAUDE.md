@@ -85,13 +85,15 @@ poker-coach/
             │       ├── GameTable.tsx      # Poker table with players, cards, pot (supports isReplay, tournamentInfo)
             │       ├── ActionBar.tsx      # Fold/Check/Call/Raise + keyboard shortcuts
             │       ├── CoachingPanel.tsx  # Per-street coaching feedback
-            │       ├── HandSummary.tsx    # End-of-hand review + XP display + session context
-            │       ├── HandReplayModal.tsx # Step-through hand replayer modal
+            │       ├── HandSummary.tsx    # End-of-hand review + XP display + equity bars + session context
+            │       ├── HandReplayModal.tsx # Step-through hand replayer modal + live equity
+            │       ├── EquityBar.tsx       # Color-coded equity bar (Tailwind, no chart lib)
             │       ├── RebuyModal.tsx     # Cash game rebuy prompt when busted
             │       └── TournamentResults.tsx # End-of-tournament summary screen
             ├── hooks/
             │   ├── useApi.ts      # React Query hooks
             │   ├── useGame.ts     # Game mode hooks (history, stats, analysis)
+            │   ├── useEquity.ts   # Monte Carlo equity hooks (single + batch)
             │   └── useHotkeys.ts  # Keyboard shortcuts
             ├── lib/
             │   ├── api.ts            # Typed API client
@@ -101,7 +103,9 @@ poker-coach/
             │   ├── handAnalysis.ts   # Draw detection, board texture, enhanced equity
             │   ├── aiOpponents.ts    # AI decision engine (Easy/Medium/Hard)
             │   ├── coaching.ts       # Rule-based coaching (tiers, draws, texture)
-            │   └── replayEngine.ts   # Pure-function replay state reconstruction
+            │   ├── replayEngine.ts   # Pure-function replay state reconstruction
+            │   ├── equityEngine.ts   # Self-contained Monte Carlo simulation (no poker.ts imports)
+            │   └── equity.worker.ts  # Web Worker wrapper for equity engine
             ├── stores/
             │   └── gameStore.ts   # Zustand game state machine
             └── pages/
@@ -349,6 +353,9 @@ New users take an initial assessment before accessing modules:
 - Analysis text uses `drawContext` as a sentence (`" You had a flush draw (9 outs)."`) — never interpolate it after prepositions like "with"
 - Tournament heads-up rule: when 2 players remain, dealer posts SB (standard heads-up)
 - `playerFoldAndSkip()` folds human then calls `_goToShowdown()` directly, skipping AI turns
+- Monte Carlo equity runs in a Web Worker (`equity.worker.ts`) — zero UI jank. `equityEngine.ts` inlines eval logic from `poker.ts` to avoid circular ESM imports in Worker context
+- `useEquity()` hook: single calculation for HandReplayModal. `useStreetEquities()`: batch 4-street calculation for HandSummary
+- Equity is **supplemental** (review contexts only) — does NOT replace the instant heuristic used during live coaching
 
 ## Production Infrastructure
 
