@@ -2,7 +2,9 @@ import { useMemo, Fragment } from 'react';
 import { cn } from '@/lib/utils';
 import { type HandRecord, type HandAction } from '@/stores/gameStore';
 import { type FeedbackGrade, generateHandAnalysis } from '@/lib/coaching';
+import { useStreetEquities } from '@/hooks/useEquity';
 import PlayingCard from '@/components/games/PlayingCard';
+import EquityBar from './EquityBar';
 import Trophy from 'lucide-react/dist/esm/icons/trophy';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw';
@@ -46,6 +48,15 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu, xpEarne
 
   // Auto-generate retrospective analysis (instant, no API)
   const analysis = useMemo(() => generateHandAnalysis(record), [record]);
+
+  // Monte Carlo equity per street (runs in Web Worker)
+  const numOpponents = record.players.length - 1;
+  const { equities: streetEquities, isComputing: equityComputing } = useStreetEquities(
+    humanPlayer?.cards,
+    record.communityCards,
+    numOpponents,
+    !!humanPlayer?.cards?.length
+  );
 
   // Group actions by phase
   const actionsByPhase = groupActionsByPhase(record.actions);
@@ -114,6 +125,8 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu, xpEarne
           const streetAnalysis = analysis.streetAnalysis.find((sa) => sa.street === phase);
           const streetFeedbacks = record.feedbacks.filter((fb) => fb.phase === phase);
 
+          const equity = streetEquities[phase as keyof typeof streetEquities] ?? null;
+
           return (
             <StreetSection
               key={phase}
@@ -124,6 +137,8 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu, xpEarne
               potSize={potAtStreet}
               streetAnalysis={streetAnalysis}
               streetFeedbacks={streetFeedbacks}
+              equity={equity}
+              equityComputing={equityComputing}
             />
           );
         })}
@@ -188,9 +203,11 @@ interface StreetSectionProps {
   potSize: number;
   streetAnalysis?: { grade: string; analysis: string };
   streetFeedbacks: { grade: FeedbackGrade; message: string; detail?: string; playerAction?: string }[];
+  equity: number | null;
+  equityComputing: boolean;
 }
 
-function StreetSection({ phase, actions, board, playerCards, potSize, streetAnalysis, streetFeedbacks }: StreetSectionProps) {
+function StreetSection({ phase, actions, board, playerCards, potSize, streetAnalysis, streetFeedbacks, equity, equityComputing }: StreetSectionProps) {
   return (
     <div>
       {/* Street header */}
@@ -220,6 +237,13 @@ function StreetSection({ phase, actions, board, playerCards, potSize, streetAnal
           Pot: ${potSize}
         </span>
       </div>
+
+      {/* Equity bar */}
+      {(equity != null || equityComputing) && (
+        <div className="mb-2">
+          <EquityBar equity={equity} isComputing={equityComputing} label="Your Equity" />
+        </div>
+      )}
 
       {/* Actions */}
       <div className="space-y-1 pl-3 border-l-2 border-border">
