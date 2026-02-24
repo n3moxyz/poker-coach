@@ -129,7 +129,7 @@ export default function ModuleList() {
                   </div>
                   <span className="text-muted hidden sm:inline">·</span>
                   <span className="text-muted-foreground hidden sm:inline">
-                    {module.questionCount} questions
+                    10 questions per session
                   </span>
                   {isLocked && (
                     <>
