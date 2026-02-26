@@ -92,9 +92,9 @@ export default function Dashboard() {
           <SessionStatsCard progress={progress} gameStats={gameStats} />
         </div>
 
-        {/* Play CTA — spans 2 cols */}
+        {/* Play zone — spans 2 cols */}
         <div className="lg:col-span-2">
-          <PlayCTA />
+          <PlayZoneCard gameStats={gameStats} />
         </div>
 
         {/* Recent hands — 1 col */}
@@ -252,15 +252,28 @@ const StatTile = memo(function StatTile({
   );
 });
 
-/* ─── Play CTA ─── */
+/* ─── Play Zone Card ─── */
 
-function PlayCTA() {
+interface PlayZoneCardProps {
+  gameStats: {
+    winRate: number;
+    handsPlayed: number;
+    handsWon: number;
+    avgGrade: string;
+    bestGrade: string;
+  } | undefined;
+}
+
+const PlayZoneCard = memo(function PlayZoneCard({ gameStats }: PlayZoneCardProps) {
+  const hasStats = gameStats && gameStats.handsPlayed > 0;
+
   return (
-    <Link
-      to="/play"
-      className="group block card border-gold/30 hover:border-gold/60 hover:shadow-glow-gold transition-all duration-300 h-full"
-    >
-      <div className="flex items-center gap-4">
+    <div className="card border-gold/30 h-full flex flex-col">
+      {/* CTA row */}
+      <Link
+        to="/play"
+        className="group flex items-center gap-4 mb-4"
+      >
         <div className="p-3 rounded-xl bg-gold/15 border border-gold/25 group-hover:bg-gold/25 group-hover:scale-105 transition-all duration-300">
           <Gamepad2 className="w-6 h-6 text-gold" />
         </div>
@@ -268,17 +281,45 @@ function PlayCTA() {
           <h3 className="text-lg font-bold text-gold mb-0.5">
             Ready to Play?
           </h3>
-          <p className="text-sm text-muted-foreground group-hover:text-gray-300 transition-colors truncate">
+          <p className="text-sm text-muted-foreground group-hover:text-gray-300 transition-colors">
             Test your skills against AI opponents with real-time coaching
           </p>
         </div>
-        <span className="hidden sm:inline-flex px-4 py-2 rounded-lg bg-gold/15 border border-gold/25 text-gold font-semibold text-sm group-hover:bg-gold/25 transition-colors">
+        <span className="hidden sm:inline-flex px-4 py-2 rounded-lg bg-gold/15 border border-gold/25 text-gold font-semibold text-sm group-hover:bg-gold/25 transition-colors shrink-0">
           Play Now
         </span>
+      </Link>
+
+      {/* Game stats row */}
+      <div className="border-t border-border/40 pt-4 mt-auto">
+        {hasStats ? (
+          <div className="grid grid-cols-4 gap-3">
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">{gameStats.handsWon}</div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Won</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">{Math.round(gameStats.winRate)}%</div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Win Rate</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">{gameStats.bestGrade || '—'}</div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Best</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-bold text-white">{gameStats.handsPlayed}</div>
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Played</div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground text-center">
+            Play your first hand to start tracking stats
+          </p>
+        )}
       </div>
-    </Link>
+    </div>
   );
-}
+});
 
 /* ─── Recent Hands Card ─── */
 

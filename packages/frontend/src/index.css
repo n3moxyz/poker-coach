@@ -46,9 +46,9 @@
     @apply bg-felt-light;
   }
 
-  /* Headings with display font */
+  /* Headings — use DM Sans by default, apply font-display explicitly for branding */
   h1, h2, h3 {
-    @apply font-display tracking-tight;
+    @apply tracking-tight;
   }
 }
 
