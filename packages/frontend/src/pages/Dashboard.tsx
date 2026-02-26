@@ -1,16 +1,28 @@
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
 import Flame from 'lucide-react/dist/esm/icons/flame';
-import Target from 'lucide-react/dist/esm/icons/target';
-import TrendingUp from 'lucide-react/dist/esm/icons/trending-up';
 import Gamepad2 from 'lucide-react/dist/esm/icons/gamepad-2';
+import Trophy from 'lucide-react/dist/esm/icons/trophy';
+import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
 import { useProgress, useModules } from '@/hooks/useApi';
-import { cn, formatXp, getLevelProgress, getStatusColor, getStatusLabel } from '@/lib/utils';
+import { useGameStats, useGameHistory } from '@/hooks/useGame';
+import {
+  cn,
+  getLevelProgress,
+  getLevelTitle,
+  getStatusColor,
+  getStatusLabel,
+  formatTimeAgo,
+} from '@/lib/utils';
 
 export default function Dashboard() {
+  const { user } = useUser();
   const { data: progress, isLoading: progressLoading } = useProgress();
   const { data: modulesData, isLoading: modulesLoading } = useModules();
+  const { data: gameStats } = useGameStats();
+  const { data: gameHistory } = useGameHistory(3, 0);
 
   if (progressLoading || modulesLoading) {
     return <DashboardSkeleton />;
@@ -20,236 +32,482 @@ export default function Dashboard() {
     (m) => m.status === 'IN_PROGRESS' || m.status === 'UNLOCKED'
   );
 
+  const level = progress?.stats.level || 1;
+  const levelTitle = getLevelTitle(level);
+  const levelPercent = progress
+    ? getLevelProgress(progress.stats.totalXp, level)
+    : 0;
+
+  const firstName = user?.firstName || 'Player';
+
   return (
     <div className="md:ml-64 space-y-6 pb-20 md:pb-6">
-      {/* Welcome section */}
-      <div className="card felt-bg">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-white mb-1">
-              Welcome back!
-            </h1>
-            <p className="text-muted-foreground">
-              Keep up the great work on your poker journey.
-            </p>
-          </div>
+      {/* Welcome header */}
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-widest text-gold mb-1">
+            Welcome back
+          </p>
+          <h1 className="text-3xl sm:text-4xl font-display font-bold text-white tracking-tight">
+            {firstName}
+          </h1>
+        </div>
+        <div className="flex items-center gap-4">
           {progress?.streak.current && progress.streak.current > 0 && (
-            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500/20 border border-orange-500/30">
-              <Flame className="w-6 h-6 text-orange-400 animate-fire" />
-              <div>
-                <div className="text-orange-400 font-bold">
-                  {progress.streak.current} Day Streak
-                </div>
-                <div className="text-xs text-orange-400/70">
-                  {progress.streak.freezes} freezes available
-                </div>
-              </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/15 border border-orange-500/25">
+              <Flame className="w-4 h-4 text-orange-400 animate-fire" />
+              <span className="text-sm font-semibold text-orange-400">
+                {progress.streak.current}
+              </span>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Play vs AI CTA */}
-      <Link
-        to="/play"
-        className="relative group block overflow-hidden rounded-xl border-2 border-gold/40 bg-gradient-to-r from-gold/15 via-yellow-500/10 to-gold/15 hover:border-gold/70 hover:shadow-lg hover:shadow-gold/20 transition-all duration-300"
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-gold/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        <div className="relative flex items-center gap-4 p-5">
-          <div className="p-3.5 rounded-xl bg-gold/20 border border-gold/30 group-hover:bg-gold/30 group-hover:scale-110 transition-all duration-300">
-            <Gamepad2 className="w-7 h-7 text-gold" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-gold">
-              Ready to Play?
-            </h3>
-            <p className="text-sm text-gray-400 group-hover:text-gray-300 transition-colors">
-              Test your skills against AI opponents with real-time coaching
-            </p>
-          </div>
-          <div className="px-4 py-2 rounded-lg bg-gold/20 border border-gold/30 text-gold font-semibold text-sm group-hover:bg-gold/30 transition-colors">
-            Play Now
-          </div>
-        </div>
-      </Link>
-
-      {/* Stats grid */}
-      <div className="grid grid-cols-3 gap-4">
-        <StatCard
-          icon={<TrendingUp className="w-5 h-5" />}
-          label="Level"
-          value={progress?.stats.level || 1}
-          subValue={`${formatXp(progress?.stats.xpToNextLevel || 0)} XP to next`}
-          color="text-gold"
-        />
-        <StatCard
-          icon={<Target className="w-5 h-5" />}
-          label="Total XP"
-          value={formatXp(progress?.stats.totalXp || 0)}
-          subValue={`${progress?.stats.totalQuestions || 0} questions`}
-          color="text-blue-400"
-        />
-        <StatCard
-          icon={<Target className="w-5 h-5" />}
-          label="Accuracy"
-          value={`${progress?.stats.accuracy || 0}%`}
-          subValue={`${progress?.stats.totalCorrect || 0} correct`}
-          color="text-green-400"
-        />
-      </div>
-
-      {/* Level progress */}
-      {progress && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-muted-foreground">
-              Level {progress.stats.level} Progress
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium text-gold">
+              Level {level}
+              <span className="text-muted-foreground mx-1.5">&middot;</span>
+              <span className="text-muted-foreground">{levelTitle}</span>
             </span>
-            <span className="text-sm text-gold">
-              {formatXp(progress.stats.totalXp)} XP
-            </span>
-          </div>
-          <div className="progress-bar">
-            <div
-              className="progress-bar-fill"
-              style={{
-                width: `${getLevelProgress(progress.stats.totalXp, progress.stats.level)}%`,
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Continue learning */}
-      {activeModule && (
-        <div className="card">
-          <h2 className="text-lg font-semibold text-white mb-4">
-            Continue Learning
-          </h2>
-          <Link
-            to={`/modules/${activeModule.slug}`}
-            className="flex items-center justify-between p-4 rounded-xl bg-background-tertiary border border-border hover:border-border-light transition-all group"
-          >
-            <div className="flex items-center gap-4">
-              <span className="text-3xl">{activeModule.iconEmoji}</span>
-              <div>
-                <h3 className="font-medium text-white group-hover:text-gold transition-colors">
-                  {activeModule.name}
-                </h3>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className={getStatusColor(activeModule.status)}>
-                    {getStatusLabel(activeModule.status)}
-                  </span>
-                  {activeModule.progress && (
-                    <>
-                      <span className="text-muted">·</span>
-                      <span className="text-muted-foreground">
-                        {Math.round(activeModule.progress.masteryScore)}% mastery
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
+            <div className="w-28 h-1.5 rounded-full bg-background-tertiary overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-gold to-gold-light transition-all duration-700"
+                style={{ width: `${levelPercent}%` }}
+              />
             </div>
-            <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-gold transition-colors" />
-          </Link>
-        </div>
-      )}
-
-      {/* Module progress */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-white">Your Modules</h2>
-          <Link
-            to="/modules"
-            className="text-sm text-gold hover:text-gold-light transition-colors"
-          >
-            View all
-          </Link>
-        </div>
-        <div className="space-y-3">
-          {modulesData?.modules.slice(0, 3).map((module) => (
-            <div
-              key={module.id}
-              className={cn(
-                'flex items-center gap-4 p-3 rounded-lg',
-                module.status === 'LOCKED'
-                  ? 'opacity-50'
-                  : 'hover:bg-background-tertiary transition-colors'
-              )}
-            >
-              <span className="text-2xl">{module.iconEmoji}</span>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-white truncate">
-                  {module.name}
-                </h3>
-                <div className="flex items-center gap-2 text-sm">
-                  <span className={getStatusColor(module.status)}>
-                    {getStatusLabel(module.status)}
-                  </span>
-                </div>
-              </div>
-              {module.progress && (
-                <div className="w-16 text-right">
-                  <div className={cn(
-                    "text-sm font-semibold",
-                    module.status === 'MASTERED' ? "text-gold" : "text-white"
-                  )}>
-                    {module.status === 'MASTERED' ? '✓' : `${Math.round(module.progress.masteryScore)}%`}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {module.status === 'MASTERED' ? 'Mastered' : 'accuracy'}
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
+          </div>
         </div>
       </div>
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-2 gap-4">
-        <Link to="/modules" className="btn-primary text-center py-4">
-          Start Practice
-        </Link>
-        <Link to="/achievements" className="btn-secondary text-center py-4">
-          Achievements
-        </Link>
+      {/* Gold divider */}
+      <div className="h-px bg-gradient-to-r from-gold/40 via-gold/20 to-transparent" />
+
+      {/* Main grid: 3 cols on desktop, 1 on mobile */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Hero course card — spans 2 cols */}
+        <div className="lg:col-span-2">
+          <HeroCourseCard activeModule={activeModule} progress={progress} />
+        </div>
+
+        {/* Session stats — 1 col */}
+        <div>
+          <SessionStatsCard progress={progress} gameStats={gameStats} />
+        </div>
+
+        {/* Play CTA — spans 2 cols */}
+        <div className="lg:col-span-2">
+          <PlayCTA />
+        </div>
+
+        {/* Recent hands — 1 col */}
+        <div>
+          <RecentHandsCard hands={gameHistory?.hands} />
+        </div>
       </div>
+
+      {/* Course progress — full width */}
+      <CourseProgressList modules={modulesData?.modules} />
     </div>
   );
 }
 
-interface StatCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  subValue: string;
-  color: string;
+/* ─── Hero Course Card ─── */
+
+interface HeroCourseCardProps {
+  activeModule: {
+    slug: string;
+    name: string;
+    iconEmoji: string;
+    status: string;
+    progress: {
+      correctAnswers: number;
+      totalAnswers: number;
+      masteryScore: number;
+    } | null;
+  } | undefined;
+  progress: {
+    stats: { totalXp: number };
+  } | undefined;
 }
 
-const StatCard = memo(function StatCard({ icon, label, value, subValue, color }: StatCardProps) {
+const HeroCourseCard = memo(function HeroCourseCard({
+  activeModule,
+}: HeroCourseCardProps) {
+  if (!activeModule) {
+    return (
+      <div className="card felt-bg h-full flex flex-col justify-center items-center text-center py-10 px-6">
+        <Trophy className="w-10 h-10 text-gold/60 mb-4" />
+        <h2 className="text-xl font-display font-bold text-white mb-2">
+          Start Your Journey
+        </h2>
+        <p className="text-muted-foreground mb-5 max-w-sm">
+          Begin with Hand Rankings and work your way to mastering the game.
+        </p>
+        <Link to="/modules" className="btn-primary">
+          Browse Modules
+        </Link>
+      </div>
+    );
+  }
+
+  const mastery = activeModule.progress?.masteryScore ?? 0;
+  const answered = activeModule.progress?.totalAnswers ?? 0;
+
   return (
-    <div className="card">
-      <div className={cn('mb-2', color)}>{icon}</div>
-      <div className="text-2xl font-bold text-white">{value}</div>
-      <div className="text-sm text-muted-foreground">{label}</div>
-      <div className="text-xs text-muted">{subValue}</div>
+    <div className="card felt-bg h-full flex flex-col justify-between">
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-gold/80">
+            Current Course
+          </p>
+          <span className="text-xs font-semibold text-emerald-400">
+            {Math.round(mastery)}% Complete
+          </span>
+        </div>
+        <h2 className="text-2xl sm:text-3xl font-display font-bold text-white mb-1">
+          {activeModule.name}
+        </h2>
+        <p className="text-sm text-muted-foreground mb-6">
+          {answered} questions answered &middot;{' '}
+          <span className={getStatusColor(activeModule.status)}>
+            {getStatusLabel(activeModule.status)}
+          </span>
+        </p>
+
+        {/* Progress bar */}
+        <div className="mb-6">
+          <div className="h-2 rounded-full bg-black/30 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-gold/80 to-gold transition-all duration-700"
+              style={{ width: `${Math.min(mastery, 100)}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <Link
+        to={`/modules/${activeModule.slug}`}
+        className="btn-primary text-center w-full sm:w-auto sm:self-start"
+      >
+        Continue Lesson
+      </Link>
     </div>
   );
 });
 
+/* ─── Session Stats Card ─── */
+
+interface SessionStatsCardProps {
+  progress: {
+    stats: {
+      accuracy: number;
+      totalQuestions: number;
+      totalCorrect: number;
+    };
+  } | undefined;
+  gameStats: {
+    winRate: number;
+    handsPlayed: number;
+    avgGrade: string;
+    handsWon: number;
+  } | undefined;
+}
+
+const SessionStatsCard = memo(function SessionStatsCard({
+  progress,
+  gameStats,
+}: SessionStatsCardProps) {
+  const accuracy = progress?.stats.accuracy ?? 0;
+  const winRate = gameStats?.winRate ?? 0;
+  const avgGrade = gameStats?.avgGrade ?? '—';
+  const handsPlayed = gameStats?.handsPlayed ?? 0;
+
+  return (
+    <div className="card h-full">
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+        Session Stats
+      </h3>
+      <div className="grid grid-cols-2 gap-3">
+        <StatTile value={`${accuracy}%`} label="Accuracy" />
+        <StatTile value={`${Math.round(winRate)}%`} label="Win Rate" />
+        <StatTile value={avgGrade} label="Avg Grade" />
+        <StatTile value={handsPlayed.toString()} label="Hands" />
+      </div>
+    </div>
+  );
+});
+
+const StatTile = memo(function StatTile({
+  value,
+  label,
+}: {
+  value: string;
+  label: string;
+}) {
+  return (
+    <div className="rounded-xl bg-background-tertiary/60 border border-border/50 p-3 text-center">
+      <div className="text-xl font-bold text-white">{value}</div>
+      <div className="text-[11px] uppercase tracking-wider text-muted-foreground mt-0.5">
+        {label}
+      </div>
+    </div>
+  );
+});
+
+/* ─── Play CTA ─── */
+
+function PlayCTA() {
+  return (
+    <Link
+      to="/play"
+      className="group block card border-gold/30 hover:border-gold/60 hover:shadow-glow-gold transition-all duration-300 h-full"
+    >
+      <div className="flex items-center gap-4">
+        <div className="p-3 rounded-xl bg-gold/15 border border-gold/25 group-hover:bg-gold/25 group-hover:scale-105 transition-all duration-300">
+          <Gamepad2 className="w-6 h-6 text-gold" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-lg font-bold text-gold mb-0.5">
+            Ready to Play?
+          </h3>
+          <p className="text-sm text-muted-foreground group-hover:text-gray-300 transition-colors truncate">
+            Test your skills against AI opponents with real-time coaching
+          </p>
+        </div>
+        <span className="hidden sm:inline-flex px-4 py-2 rounded-lg bg-gold/15 border border-gold/25 text-gold font-semibold text-sm group-hover:bg-gold/25 transition-colors">
+          Play Now
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+/* ─── Recent Hands Card ─── */
+
+interface RecentHandsCardProps {
+  hands: Array<{
+    id: string;
+    result: string;
+    chipsDelta: number;
+    overallGrade: string | null;
+    createdAt: string;
+  }> | undefined;
+}
+
+const RecentHandsCard = memo(function RecentHandsCard({
+  hands,
+}: RecentHandsCardProps) {
+  const hasHands = hands && hands.length > 0;
+
+  return (
+    <div className="card h-full flex flex-col">
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+        Recent Hands
+      </h3>
+
+      {!hasHands ? (
+        <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
+          <BarChart3 className="w-8 h-8 text-muted/40 mb-2" />
+          <p className="text-sm text-muted-foreground">No hands yet</p>
+          <Link
+            to="/play"
+            className="text-xs text-gold hover:text-gold-light mt-1"
+          >
+            Play your first hand
+          </Link>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2 flex-1">
+            {hands.map((hand) => (
+              <div
+                key={hand.id}
+                className="flex items-center justify-between py-2 px-1 border-b border-border/30 last:border-0"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={cn(
+                      'text-xs font-semibold w-9',
+                      hand.result === 'win'
+                        ? 'text-emerald-400'
+                        : hand.result === 'loss'
+                          ? 'text-red-400'
+                          : 'text-muted-foreground'
+                    )}
+                  >
+                    {hand.result === 'win'
+                      ? 'Won'
+                      : hand.result === 'loss'
+                        ? 'Lost'
+                        : 'Fold'}
+                  </span>
+                  <span className="text-xs text-muted">
+                    {formatTimeAgo(hand.createdAt)}
+                  </span>
+                </div>
+                <span
+                  className={cn(
+                    'text-sm font-bold tabular-nums',
+                    hand.chipsDelta > 0
+                      ? 'text-emerald-400'
+                      : hand.chipsDelta < 0
+                        ? 'text-red-400'
+                        : 'text-muted-foreground'
+                  )}
+                >
+                  {hand.chipsDelta > 0 ? '+' : ''}
+                  {hand.chipsDelta}
+                </span>
+              </div>
+            ))}
+          </div>
+          <Link
+            to="/play/history"
+            className="text-xs font-semibold uppercase tracking-wider text-gold hover:text-gold-light mt-3 self-end"
+          >
+            View All
+          </Link>
+        </>
+      )}
+    </div>
+  );
+});
+
+/* ─── Course Progress List ─── */
+
+interface CourseProgressListProps {
+  modules: Array<{
+    id: string;
+    slug: string;
+    name: string;
+    iconEmoji: string;
+    status: string;
+    progress: {
+      masteryScore: number;
+    } | null;
+  }> | undefined;
+}
+
+const CourseProgressList = memo(function CourseProgressList({
+  modules,
+}: CourseProgressListProps) {
+  if (!modules) return null;
+
+  const displayed = modules.slice(0, 5);
+
+  return (
+    <div className="card">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          Course Progress
+        </h2>
+        <Link
+          to="/modules"
+          className="flex items-center gap-1 text-xs font-semibold text-gold hover:text-gold-light transition-colors"
+        >
+          View all <ArrowRight className="w-3 h-3" />
+        </Link>
+      </div>
+      <div className="space-y-3">
+        {displayed.map((mod) => {
+          const mastery = mod.progress?.masteryScore ?? 0;
+          const isMastered = mod.status === 'MASTERED';
+          const isLocked = mod.status === 'LOCKED';
+
+          return (
+            <Link
+              key={mod.id}
+              to={isLocked ? '#' : `/modules/${mod.slug}`}
+              className={cn(
+                'flex items-center gap-4 p-3 rounded-xl transition-all',
+                isLocked
+                  ? 'opacity-40 cursor-not-allowed'
+                  : 'hover:bg-background-tertiary/50'
+              )}
+              onClick={isLocked ? (e) => e.preventDefault() : undefined}
+            >
+              <span className="text-xl w-8 text-center">{mod.iconEmoji}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1.5">
+                  <h3 className="text-sm font-medium text-white truncate">
+                    {mod.name}
+                  </h3>
+                  <span
+                    className={cn(
+                      'text-xs font-semibold ml-3 shrink-0',
+                      isMastered
+                        ? 'text-gold'
+                        : isLocked
+                          ? 'text-muted'
+                          : getStatusColor(mod.status)
+                    )}
+                  >
+                    {isMastered
+                      ? 'Mastered'
+                      : isLocked
+                        ? 'Locked'
+                        : `${Math.round(mastery)}%`}
+                  </span>
+                </div>
+                <div className="h-1.5 rounded-full bg-background-tertiary overflow-hidden">
+                  <div
+                    className={cn(
+                      'h-full rounded-full transition-all duration-500',
+                      isMastered
+                        ? 'bg-gold'
+                        : 'bg-gradient-to-r from-felt-light to-emerald-500'
+                    )}
+                    style={{
+                      width: `${isMastered ? 100 : Math.min(mastery, 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+              {!isLocked && (
+                <ArrowRight className="w-4 h-4 text-muted shrink-0" />
+              )}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+});
+
+/* ─── Skeleton ─── */
+
 function DashboardSkeleton() {
   return (
     <div className="md:ml-64 space-y-6 pb-20 md:pb-6 animate-pulse">
-      <div className="card felt-bg h-24" />
-      <div className="grid grid-cols-3 gap-4">
+      {/* Header skeleton */}
+      <div className="flex justify-between items-end">
+        <div>
+          <div className="h-3 w-24 bg-background-tertiary rounded mb-2" />
+          <div className="h-9 w-48 bg-background-tertiary rounded" />
+        </div>
+        <div className="h-5 w-40 bg-background-tertiary rounded" />
+      </div>
+      <div className="h-px bg-border/30" />
+
+      {/* Grid skeleton */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="lg:col-span-2 h-56 card felt-bg" />
+        <div className="h-56 card" />
+        <div className="lg:col-span-2 h-24 card" />
+        <div className="h-48 card" />
+      </div>
+
+      {/* Module list skeleton */}
+      <div className="card">
+        <div className="h-4 w-32 bg-background-tertiary rounded mb-4" />
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="card h-28" />
+          <div key={i} className="flex items-center gap-4 p-3">
+            <div className="w-8 h-8 bg-background-tertiary rounded" />
+            <div className="flex-1">
+              <div className="h-4 w-40 bg-background-tertiary rounded mb-2" />
+              <div className="h-1.5 bg-background-tertiary rounded" />
+            </div>
+          </div>
         ))}
       </div>
-      <div className="card h-16" />
-      <div className="card h-40" />
     </div>
   );
 }
