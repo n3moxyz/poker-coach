@@ -268,7 +268,7 @@ const PlayZoneCard = memo(function PlayZoneCard({ gameStats }: PlayZoneCardProps
   const hasStats = gameStats && gameStats.handsPlayed > 0;
 
   return (
-    <div className="card border-gold/30 h-full flex flex-col">
+    <div className="card bg-gold/5 border-gold/20 h-full flex flex-col">
       {/* CTA row */}
       <Link
         to="/play"
