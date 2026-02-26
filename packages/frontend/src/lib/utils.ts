@@ -155,3 +155,12 @@ export function parseCard(card: string): { rank: string; suit: string } {
 export function isRedSuit(suit: string): boolean {
   return suit === 'h' || suit === 'd';
 }
+
+// Get level title based on numeric level
+export function getLevelTitle(level: number): string {
+  if (level >= 21) return 'Pro';
+  if (level >= 16) return 'Expert';
+  if (level >= 11) return 'Advanced';
+  if (level >= 6) return 'Intermediate';
+  return 'Beginner';
+}
