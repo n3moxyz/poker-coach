@@ -398,6 +398,22 @@
   }
 }
 
+/* Sign-in page background with subtle card-suit pattern */
+.signin-bg {
+  background-color: #0a0e12;
+  position: relative;
+}
+
+.signin-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Ctext x='15' y='35' font-size='18' fill='white' font-family='serif'%3E%E2%99%A0%3C/text%3E%3Ctext x='75' y='35' font-size='18' fill='white' font-family='serif'%3E%E2%99%A5%3C/text%3E%3Ctext x='15' y='85' font-size='18' fill='white' font-family='serif'%3E%E2%99%A6%3C/text%3E%3Ctext x='75' y='85' font-size='18' fill='white' font-family='serif'%3E%E2%99%A3%3C/text%3E%3C/svg%3E");
+  background-size: 120px 120px;
+}
+
 /* Custom animations */
 @keyframes animate-in {
   from {
