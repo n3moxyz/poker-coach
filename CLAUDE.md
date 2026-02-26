@@ -73,8 +73,8 @@ poker-coach/
     └── frontend/                  # React SPA (Vite)
         └── src/
             ├── main.tsx
-            ├── App.tsx            # Routes + auth flows
-            ├── index.css          # Tailwind + casino theme
+            ├── App.tsx            # Routes + auth flows + sign-in page (card-suit bg, gold CTA)
+            ├── index.css          # Tailwind + casino theme + signin-bg class
             ├── components/
             │   ├── AppShell.tsx   # Layout + navigation
             │   ├── games/
@@ -97,7 +97,7 @@ poker-coach/
             │   └── useHotkeys.ts  # Keyboard shortcuts
             ├── lib/
             │   ├── api.ts            # Typed API client
-            │   ├── utils.ts
+            │   ├── utils.ts          # Helpers (getLevelTitle, getLevelProgress, formatTimeAgo, etc.)
             │   ├── poker.ts          # Deck, hand evaluation, card utilities
             │   ├── preflopRanges.ts  # Tier-based preflop hand lookup by position
             │   ├── handAnalysis.ts   # Draw detection, board texture, enhanced equity
@@ -111,7 +111,7 @@ poker-coach/
             ├── stores/
             │   └── gameStore.ts   # Zustand game state machine
             └── pages/
-                ├── Dashboard.tsx
+                ├── Dashboard.tsx      # 2-col grid: hero course, stats, play zone, recent hands, course progress
                 ├── ModuleList.tsx
                 ├── ModuleDetail.tsx
                 ├── PracticeSession.tsx
@@ -371,6 +371,9 @@ New users take an initial assessment before accessing modules:
 - Monte Carlo equity runs in a Web Worker (`equity.worker.ts`) — zero UI jank. `equityEngine.ts` inlines eval logic from `poker.ts` to avoid circular ESM imports in Worker context
 - `useEquity()` hook: single calculation for HandReplayModal. `useStreetEquities()`: batch 4-street calculation for HandSummary
 - Equity is **supplemental** (review contexts only) — does NOT replace the instant heuristic used during live coaching
+- Font convention: DM Sans is the global default (h1-h3 get `tracking-tight` only). Playfair Display (`font-display`) is applied explicitly on branding elements only (welcome name, hero course title, sign-in logo)
+- Dashboard layout: 3-col grid on `lg` (left 2 cols, right 1 col), single column on mobile. Hero course card uses `felt-bg`. Play zone card matches sidebar Play tab style (`bg-gold/5 border-gold/20`)
+- Sign-in page: `signin-bg` class in index.css provides SVG card-suit tiling pattern. Gold radial glow behind form. Clerk `appearance` prop customizes button, footer, and input styles
 
 ## Production Infrastructure
 

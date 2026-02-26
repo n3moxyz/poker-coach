@@ -602,6 +602,51 @@ Three cases:
 
 Updated ModuleDetail to show "10 of N questions per session" so users know the pool is larger than what they see in a single session.
 
+## Sign-In Page & Dashboard Redesign
+
+### Sign-In Page
+
+The default Clerk sign-in component looked generic — flat dark background, default button styling, no brand presence. We redesigned it without ejecting from Clerk's `<SignIn>` component:
+
+- **Card-suit background**: A subtle SVG tiling pattern (spades, hearts, diamonds, clubs) at 2.5% opacity via the `.signin-bg` CSS class. Uses a `::before` pseudo-element with a data URI SVG — no extra assets to load.
+- **Gold radial glow**: A `pointer-events-none` div with `bg-gold/[0.04] blur-[100px]` positioned behind the form. Creates a warm spotlight effect.
+- **Gold CTA button**: Clerk's `formButtonPrimary` element styled with a gold gradient (`from-gold to-gold-dark`) and shadow.
+- **Vertical positioning**: `pt-[12vh]` pushes the form up from center, reducing the "floating in void" feel.
+- **Softer footer**: Clerk's default footer divider and action links toned down with lower opacity and transparent background.
+
+All customization happens via Clerk's `appearance={{ elements: {...} }}` prop — no custom form, no auth logic to maintain.
+
+### Dashboard Redesign
+
+The original Dashboard was a flat vertical stack of cards — welcome banner, stats row, level bar, module list — with no visual hierarchy. The redesign uses a **3-column grid** (2 left + 1 right on desktop, single column on mobile):
+
+**Layout:**
+1. **Welcome header** (full width) — "WELCOME BACK" label in gold, user's first name in large Playfair Display, level badge + XP progress bar on the right, streak badge when active.
+2. **Hero Course Card** (2 cols) — `felt-bg` background, shows current in-progress module with mastery progress bar and "Continue Lesson" CTA. Falls back to "Start Your Journey" if no active module.
+3. **Session Stats** (1 col) — 2×2 grid of stat tiles: Accuracy, Win Rate, Avg Grade, Hands Played. Pulls from both `useProgress()` and `useGameStats()`.
+4. **Play Zone Card** (2 cols) — Matches sidebar Play tab styling (`bg-gold/5 border-gold/20`). Gamepad icon + CTA + game stats row (Won, Win Rate, Best Grade, Played). Empty state prompts first hand.
+5. **Recent Hands** (1 col) — Last 3 hands from `useGameHistory(3)` with result, chip delta, and time ago. "View All" links to `/play/history`.
+6. **Course Progress** (full width) — First 5 modules with horizontal progress bars, status badges, mastery percentages.
+
+**Data sources** — all existing hooks, no new API endpoints needed:
+- `useProgress()` → XP, level, streak, accuracy
+- `useModules()` → module list with status and progress
+- `useGameStats()` → hands played, win rate, avg grade
+- `useGameHistory(3)` → recent hands
+- `useUser()` from Clerk → personalized greeting
+
+**New helper**: `getLevelTitle(level)` in `utils.ts` maps level ranges to rank titles (Beginner → Intermediate → Advanced → Expert → Pro).
+
+### Font Convention
+
+The app uses three font families: DM Sans (sans, default), Playfair Display (display, serif), JetBrains Mono (mono). After experimentation, we settled on:
+
+- **DM Sans for everything by default** — the global `h1, h2, h3` rule applies only `tracking-tight`, not `font-display`
+- **Playfair Display for branding elements only** — applied via explicit `font-display` class on the welcome name ("Edward"), hero course title ("Hand Rankings"), and the sign-in page logo
+- This gives key headings a premium serif feel while keeping the rest of the UI consistent with the clean sans-serif
+
+The lesson: serif fonts stand out more, but using them on all headings makes the site feel inconsistent. Reserve serif for the 2-3 elements you want to feel "special."
+
 ## Future Considerations
 
 - **Mobile app**: React Native could share component logic
@@ -612,4 +657,4 @@ Updated ModuleDetail to show "10 of N questions per session" so users know the p
 
 ---
 
-*Last updated: 2026-02-24 - Added Monte Carlo equity engine running in Web Worker. Equity bars display per-street in HandSummary and live in HandReplayModal. Self-contained equityEngine.ts inlines eval logic to avoid circular ESM import issues in Worker context.*
+*Last updated: 2026-02-27 - Redesigned sign-in page (card-suit background, gold CTA) and dashboard (2-column grid with hero course card, stat tiles, play zone, recent hands, course progress). Standardized fonts: DM Sans default, Playfair Display explicit on branding elements only.*
