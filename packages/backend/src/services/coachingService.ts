@@ -6,7 +6,7 @@ const anthropic = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   : null;
 
-const MODEL_STANDARD = 'claude-haiku-4-5-20251001';
+const MODEL_STANDARD = 'claude-haiku-4-5';
 const MODEL_SHARP = 'claude-opus-4-6';
 
 const SYSTEM_PROMPT = `You are a friendly poker coach for beginners learning Texas Hold'em.
