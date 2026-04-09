@@ -374,6 +374,12 @@ New users take an initial assessment before accessing modules:
 - Font convention: DM Sans is the global default (h1-h3 get `tracking-tight` only). Playfair Display (`font-display`) is applied explicitly on branding elements only (welcome name, hero course title, sign-in logo)
 - Dashboard layout: 3-col grid on `lg` (left 2 cols, right 1 col), single column on mobile. Hero course card uses `felt-bg`. Play zone card matches sidebar Play tab style (`bg-gold/5 border-gold/20`)
 - Sign-in page: `signin-bg` class in index.css provides SVG card-suit tiling pattern. Gold radial glow behind form. Clerk `appearance` prop customizes button, footer, and input styles
+- Zustand selectors: PlayVsAI uses individual selectors (`useGameStore(s => s.phase)`) not full-store destructuring — prevents unnecessary re-renders
+- React.lazy: PlayVsAI and PracticeSession are lazy-loaded with Suspense (gold spinner fallback)
+- ARIA pattern: all icon-only buttons MUST have `aria-label`; toggle buttons MUST have `aria-pressed`; modals MUST have `role="dialog"`, `aria-modal="true"`, and a focus trap
+- Form inputs MUST have `id`/`htmlFor` label associations and visible focus indicators (`focus:ring-2 focus:ring-gold/50`)
+- Touch targets: all interactive elements MUST be ≥44px on mobile (use `min-w-10 min-h-10` or adequate padding)
+- Design context lives in `.impeccable.md` (detailed) and the Design Context section below (summary)
 
 ## Production Infrastructure
 

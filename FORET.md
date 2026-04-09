@@ -482,6 +482,10 @@ The grey-out uses `isCovered()` which checks if the preset's config keys cover a
 | 2026-02-13 | Coaching text: "Semi-bluff on the River with You had a flush draw" | `drawContext` starts with `" You had..."` which broke grammar when placed after "with". Restructured sentence to use `drawContext` as a standalone sentence after a period. |
 | 2026-02-13 | Unequal spacing between action labels and player boxes | 40% interpolation meant players farther from center (e.g., Steve on right) had larger gaps than closer players (Betty at bottom). Fixed by using a fixed 14-unit offset with normalized direction vector. |
 | 2026-02-24 | Hand history showed "No hands played yet" despite playing hands | The `PokerHand` migration existed locally but was never applied to the Neon database. `prisma migrate deploy` fixed it. Always run migrations against remote DBs after creating them locally. |
+| 2026-04-09 | `text-muted` (#5a6670) failed WCAG AA contrast (3.29:1 on #0a0e12) | Bumped `muted` to `#7a838c` (~5:1) and `muted-foreground` to `#9ba3ab` (~7.2:1 AAA) in tailwind.config.js |
+| 2026-04-09 | PlayVsAI re-rendered on every Zustand state change (30 properties destructured at once) | Replaced single `useGameStore()` destructure with individual selectors: `useGameStore(s => s.phase)` etc. |
+| 2026-04-09 | Modals (HandReplay, Rebuy) had no focus traps — Tab key escaped to background content | Added `role="dialog"`, `aria-modal="true"`, and keyboard focus trap (Tab wrapping + Escape to close) |
+| 2026-04-09 | 7+ icon-only buttons had no accessible names — screen readers announced empty buttons | Added `aria-label` to all icon buttons (close, prev, next, play/pause, reset, +/-, raise toggle) |
 
 ### Lessons Learned
 
@@ -533,7 +537,19 @@ The grey-out uses `isCovered()` which checks if the preset's config keys cover a
 
 24. **Inline dependencies for Web Workers** - Web Workers run in a separate context and can't rely on your app's module graph. The `poker.ts` ↔ `handAnalysis.ts` circular import works in the main thread (Vite resolves it at runtime) but breaks in a Worker. Solution: inline the ~120 lines of pure eval logic into `equityEngine.ts` with zero external imports. Duplication is acceptable when it buys you isolation.
 
-25. **Always verify migrations are applied to remote databases** - Creating a migration locally with `prisma migrate dev` only applies it to your local DB. Remote databases (Neon, production Coolify) need `prisma migrate deploy` separately. If a feature works locally but fails in production with "table does not exist", check pending migrations. Coolify's start command includes `prisma migrate deploy` so production auto-applies, but dev DBs (like Neon for local dev) need manual runs.
+25. **Use Zustand selectors, not full-store destructuring** — `const { a, b, c, ...30 more } = useGameStore()` subscribes the component to ALL state changes, causing re-renders on every AI action, card deal, and pot update. Individual selectors (`useGameStore(s => s.phase)`) ensure each property only triggers a re-render when its own value changes. Group selectors by concern (game state, session stats, actions) for readability.
+
+26. **Every icon button needs an `aria-label`** — Screen readers announce buttons by their text content. An `<button><X /></button>` with no text is announced as just "button" — useless. Add `aria-label="Close replay"` etc. This applies to all icon-only controls: close, navigation arrows, +/- buttons, play/pause toggles.
+
+27. **Modals need three things: `role="dialog"`, `aria-modal="true"`, and a focus trap** — Without these, keyboard users Tab into background content, screen readers don't announce modal context, and Escape doesn't close the modal. Implement focus trapping with a `useEffect` that listens for Tab (wraps focus from last→first element) and Escape (calls `onClose`).
+
+28. **Toggle buttons need `aria-pressed`** — When a button toggles between selected/unselected (like game mode selection, difficulty, quick start presets), sighted users see the border/background change but screen readers get nothing. `aria-pressed={isSelected}` communicates the state. Similarly, expandable triggers need `aria-expanded`.
+
+29. **Lazy-load heavy page components** — PlayVsAI (1087 lines) and PracticeSession load the entire game engine even when users are browsing the dashboard. `React.lazy()` + `Suspense` defers loading until the route is visited. The Suspense fallback should match the app's theme (gold spinner, dark background).
+
+30. **Bump contrast tokens before adding more UI** — The original `muted` color (#5a6670) had 3.29:1 contrast on the dark background — below WCAG AA. This affected 54+ components using `text-muted`. Fixing the token in `tailwind.config.js` is a one-line change that improves readability across the entire app. Always verify contrast ratios when choosing muted/secondary text colors on dark backgrounds.
+
+31. **Always verify migrations are applied to remote databases** - Creating a migration locally with `prisma migrate dev` only applies it to your local DB. Remote databases (Neon, production Coolify) need `prisma migrate deploy` separately. If a feature works locally but fails in production with "table does not exist", check pending migrations. Coolify's start command includes `prisma migrate deploy` so production auto-applies, but dev DBs (like Neon for local dev) need manual runs.
 
 ## Potential Pitfalls
 
@@ -657,4 +673,4 @@ The lesson: serif fonts stand out more, but using them on all headings makes the
 
 ---
 
-*Last updated: 2026-02-27 - Redesigned sign-in page (card-suit background, gold CTA) and dashboard (2-column grid with hero course card, stat tiles, play zone, recent hands, course progress). Standardized fonts: DM Sans default, Playfair Display explicit on branding elements only.*
+*Last updated: 2026-04-09 - Comprehensive accessibility/performance/design audit: WCAG AAA contrast fixes, ARIA labels on all icon buttons, focus traps in modals, Zustand individual selectors in PlayVsAI, React.lazy for game pages, Achievements stat strip redesign, poker-specific copy. Design context established in `.impeccable.md`.*
