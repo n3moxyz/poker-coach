@@ -215,7 +215,7 @@ function PlayerSeat({ player, isActive, showCards }: PlayerSeatProps) {
         hasFolded && 'opacity-40',
         isActive
           ? 'border-gold bg-gold/10 ring-2 ring-gold/40 scale-105'
-          : 'border-gray-700 bg-gray-900/80',
+          : 'border-border-light bg-background-secondary/80',
         isAllIn && !hasFolded && 'border-red-500 bg-red-500/10'
       )}
     >
@@ -247,7 +247,7 @@ function PlayerSeat({ player, isActive, showCards }: PlayerSeatProps) {
         <span
           className={cn(
             'text-[10px] sm:text-xs font-medium truncate max-w-[50px] sm:max-w-[70px] block',
-            isActive ? 'text-gold' : 'text-gray-300',
+            isActive ? 'text-gold' : 'text-muted-foreground',
             hasFolded && 'line-through text-gray-500'
           )}
         >

@@ -456,3 +456,29 @@ Traefik routes api.pokercoach.cc → container
 2. **Vercel:** Go to `vercel.com` → poker-coach project
 3. **Cloudflare:** Go to `dash.cloudflare.com` → pokercoach.cc
 4. **Clerk:** Go to `dashboard.clerk.com`
+
+## Design Context
+
+### Users
+Poker beginners learning Texas Hold'em. They come curious but potentially intimidated by poker's complexity. Their job: build real poker skills through practice, not just memorize rules. They use the app in focused learning sessions (quizzes, modules) and casual play sessions (vs AI). They want to feel progress and understand *why* plays are good or bad.
+
+### Brand Personality
+**Sharp. Sleek. Competitive.**
+
+Confident and knowledgeable — like a sharp-dressed poker coach who respects your intelligence. Not condescending, not overly casual. Precision over playfulness, but never cold.
+
+### Emotional Goals
+- **"I'm in control"** — Every concept clicks, progress is visible, decisions feel informed
+- **"This is actually fun"** — Learning feels like playing, not studying
+
+### Aesthetic Direction
+- **References**: Brilliant.org (elegant interactive learning), Chess.com (clean game UI, competitive polish)
+- **Anti-references**: Flashy casino apps with neon overload; overly cute gamification; cluttered dashboards
+- **Theme**: Dark mode only. Casino atmosphere: rich blacks, felt green, gold accents
+
+### Design Principles
+1. **Clarity over decoration** — Every element earns its place
+2. **Progress is always visible** — XP, streaks, mastery, grades are prominent but not overwhelming
+3. **Premium restraint** — Gold accents and glow effects used sparingly for emphasis
+4. **Teach through interaction** — Interactive elements over walls of text
+5. **Accessible by default** — WCAG AAA target. Never rely on color alone to convey meaning

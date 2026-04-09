@@ -100,9 +100,9 @@ export default function GameHistory() {
       {!isLoading && hands.length === 0 && (
         <div className="card text-center py-12">
           <History className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-white mb-2">No hands played yet</h2>
+          <h2 className="text-lg font-semibold text-white mb-2">No hands on record</h2>
           <p className="text-muted-foreground mb-6">
-            Play your first hand against AI opponents to see your history here.
+            Play a hand against the AI to start building your history.
           </p>
           <Link to="/play" className="btn-primary px-6 py-3">
             Start Playing

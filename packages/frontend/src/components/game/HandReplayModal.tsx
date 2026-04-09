@@ -148,6 +148,36 @@ export default function HandReplayModal({ record, onClose }: HandReplayModalProp
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
+  // Focus trap: keep Tab cycling within the modal and auto-focus first element
+  useEffect(() => {
+    const modal = document.querySelector('[role="dialog"]');
+    if (!modal) return;
+    const focusableEls = modal.querySelectorAll(
+      'button, input, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstEl = focusableEls[0] as HTMLElement;
+    const lastEl = focusableEls[focusableEls.length - 1] as HTMLElement;
+
+    const trapFocus = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) {
+          e.preventDefault();
+          lastEl?.focus();
+        }
+      } else {
+        if (document.activeElement === lastEl) {
+          e.preventDefault();
+          firstEl?.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', trapFocus);
+    firstEl?.focus();
+    return () => document.removeEventListener('keydown', trapFocus);
+  }, []);
+
   const goToPhase = (phase: string) => {
     setIsPlaying(false);
     setActionIndex(getFirstIndexForPhase(record.actions, phase));
@@ -159,14 +189,20 @@ export default function HandReplayModal({ record, onClose }: HandReplayModalProp
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="replay-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+    >
       <div className="bg-background border border-border rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-bold text-white">Hand Replay</h2>
+          <h2 id="replay-title" className="text-lg font-bold text-white">Hand Replay</h2>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg hover:bg-background-secondary text-muted-foreground hover:text-white transition-colors"
+            aria-label="Close hand replay"
+            className="p-2.5 rounded-lg hover:bg-background-secondary text-muted-foreground hover:text-white transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -214,7 +250,8 @@ export default function HandReplayModal({ record, onClose }: HandReplayModalProp
                 setActionIndex((i) => Math.max(-1, i - 1));
               }}
               disabled={actionIndex <= -1}
-              className="p-2 rounded-lg hover:bg-background-secondary text-muted-foreground hover:text-white transition-colors disabled:opacity-30"
+              aria-label="Previous action"
+              className="p-2.5 rounded-lg hover:bg-background-secondary text-muted-foreground hover:text-white transition-colors disabled:opacity-30"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -229,6 +266,7 @@ export default function HandReplayModal({ record, onClose }: HandReplayModalProp
                   setIsPlaying(false);
                   setActionIndex(Number(e.target.value));
                 }}
+                aria-label="Replay progress"
                 className="w-full accent-gold"
               />
               <div className="text-center text-xs text-muted-foreground mt-1">
@@ -242,7 +280,8 @@ export default function HandReplayModal({ record, onClose }: HandReplayModalProp
                 setActionIndex((i) => Math.min(totalActions - 1, i + 1));
               }}
               disabled={actionIndex >= totalActions - 1}
-              className="p-2 rounded-lg hover:bg-background-secondary text-muted-foreground hover:text-white transition-colors disabled:opacity-30"
+              aria-label="Next action"
+              className="p-2.5 rounded-lg hover:bg-background-secondary text-muted-foreground hover:text-white transition-colors disabled:opacity-30"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -252,13 +291,15 @@ export default function HandReplayModal({ record, onClose }: HandReplayModalProp
           <div className="flex items-center gap-3">
             <button
               onClick={() => setIsPlaying((p) => !p)}
-              className="p-2 rounded-lg bg-gold/10 border border-gold/30 text-gold hover:bg-gold/20 transition-colors"
+              aria-label={isPlaying ? 'Pause replay' : 'Play replay'}
+              className="p-2.5 rounded-lg bg-gold/10 border border-gold/30 text-gold hover:bg-gold/20 transition-colors"
             >
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             </button>
             <button
               onClick={reset}
-              className="p-2 rounded-lg hover:bg-background-secondary text-muted-foreground hover:text-white transition-colors"
+              aria-label="Reset to start"
+              className="p-2.5 rounded-lg hover:bg-background-secondary text-muted-foreground hover:text-white transition-colors"
             >
               <RotateCcw className="w-4 h-4" />
             </button>

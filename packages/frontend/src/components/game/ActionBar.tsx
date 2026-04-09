@@ -146,12 +146,14 @@ export default function ActionBar({
               max={maxRaise}
               value={raiseAmount}
               onChange={(e) => setRaiseAmount(Number(e.target.value))}
+              aria-label="Raise amount"
               className="flex-1 min-w-[100px] accent-gold"
             />
             <div className="flex items-center gap-1">
               <button
                 onClick={() => adjustAmount(-step)}
-                className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors"
+                aria-label="Decrease bet"
+                className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors"
               >
                 <Minus className="w-3.5 h-3.5" />
               </button>
@@ -173,7 +175,8 @@ export default function ActionBar({
                       setIsEditingAmount(false);
                     }
                   }}
-                  className="w-14 bg-background-tertiary border border-gold/50 rounded px-1 py-0.5 text-gold text-sm text-center font-bold"
+                  aria-label="Bet amount"
+                  className="w-14 bg-background-tertiary border border-gold/50 rounded px-1 py-0.5 text-gold text-sm text-center font-bold focus:ring-2 focus:ring-gold/50"
                 />
               ) : (
                 <button
@@ -186,7 +189,8 @@ export default function ActionBar({
 
               <button
                 onClick={() => adjustAmount(step)}
-                className="w-9 h-9 sm:w-7 sm:h-7 flex items-center justify-center rounded bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors"
+                aria-label="Increase bet"
+                className="w-10 h-10 sm:w-8 sm:h-8 flex items-center justify-center rounded bg-background-tertiary border border-border text-muted-foreground hover:text-white hover:border-gold/50 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
               </button>
@@ -273,6 +277,8 @@ export default function ActionBar({
           <button
             onClick={() => setShowRaiseSlider((s) => !s)}
             disabled={disabled}
+            aria-label="Toggle raise slider"
+            aria-expanded={showRaiseSlider}
             className={cn(
               'flex-1 py-3 rounded-lg font-semibold transition-all border-2',
               showRaiseSlider

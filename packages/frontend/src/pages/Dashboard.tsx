@@ -46,7 +46,7 @@ export default function Dashboard() {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-gold mb-1">
-            Welcome back
+            Good to see you
           </p>
           <h1 className="text-3xl sm:text-4xl font-display font-bold text-white tracking-tight">
             {firstName}
@@ -136,7 +136,7 @@ const HeroCourseCard = memo(function HeroCourseCard({
       <div className="card felt-bg h-full flex flex-col justify-center items-center text-center py-10 px-6">
         <Trophy className="w-10 h-10 text-gold/60 mb-4" />
         <h2 className="text-xl font-display font-bold text-white mb-2">
-          Start Your Journey
+          Deal Me In
         </h2>
         <p className="text-muted-foreground mb-5 max-w-sm">
           Begin with Hand Rankings and work your way to mastering the game.
@@ -282,7 +282,7 @@ const PlayZoneCard = memo(function PlayZoneCard({ gameStats }: PlayZoneCardProps
             Ready to Play?
           </h3>
           <p className="text-sm text-muted-foreground group-hover:text-gray-300 transition-colors">
-            Test your skills against AI opponents with real-time coaching
+            Practice hands against AI with real-time coaching feedback
           </p>
         </div>
         <span className="hidden sm:inline-flex px-4 py-2 rounded-lg bg-gold/15 border border-gold/25 text-gold font-semibold text-sm group-hover:bg-gold/25 transition-colors shrink-0">
