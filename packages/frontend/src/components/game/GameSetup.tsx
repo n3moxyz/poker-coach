@@ -159,6 +159,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
               <button
                 key={spot.id}
                 onClick={() => handleSpotSelect(spot.id)}
+                aria-pressed={isSelected}
                 className={cn(
                   'flex flex-col gap-1.5 p-3 rounded-lg border-2 transition-all text-left',
                   isSelected
@@ -202,6 +203,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
               <div key={mode.value} className="relative group">
                 <button
                   onClick={() => handleModeChange(mode.value)}
+                  aria-pressed={isSelected}
                   className={cn(
                     'w-full flex flex-col items-center gap-2 p-3 sm:p-4 rounded-lg border-2 transition-all text-center',
                     isSelected && isPractice && 'border-green-500 bg-green-500/10 text-green-400',
@@ -218,7 +220,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
                 {/* Hover tooltip for all modes */}
                 {mode.note && (
                   <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-40">
-                    <div className="bg-gray-800 text-gray-200 text-[10px] px-2.5 py-1 rounded-md shadow-lg border border-border whitespace-nowrap">
+                    <div className="bg-background-tertiary text-white text-[10px] px-2.5 py-1 rounded-md shadow-lg border border-border whitespace-nowrap">
                       {mode.note}
                     </div>
                   </div>
@@ -229,8 +231,9 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
         </div>
 
         {/* Hand Review Toggle */}
-        <label className="flex items-center gap-3 cursor-pointer group">
+        <label htmlFor="show-review" className="flex items-center gap-3 cursor-pointer group">
           <input
+            id="show-review"
             type="checkbox"
             checked={config.showHandReview}
             onChange={(e) => handleManualConfig({ showHandReview: e.target.checked })}
@@ -316,23 +319,25 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
           {customBlinds && (
             <div className="flex items-center gap-3">
               <div className="flex-1">
-                <label className="text-xs text-muted-foreground mb-1 block">SB</label>
+                <label htmlFor="sb-input" className="text-xs text-muted-foreground mb-1 block">SB</label>
                 <input
+                  id="sb-input"
                   type="number"
                   min={1}
                   value={customSb}
                   onChange={(e) => setCustomSb(Math.max(1, Number(e.target.value)))}
-                  className="w-full bg-background-tertiary border border-border rounded px-3 py-2 text-white text-sm"
+                  className="w-full bg-background-tertiary border border-border rounded px-3 py-2 text-white text-sm focus:ring-2 focus:ring-gold/50 focus:ring-offset-1 focus:ring-offset-background"
                 />
               </div>
               <div className="flex-1">
-                <label className="text-xs text-muted-foreground mb-1 block">BB</label>
+                <label htmlFor="bb-input" className="text-xs text-muted-foreground mb-1 block">BB</label>
                 <input
+                  id="bb-input"
                   type="number"
                   min={1}
                   value={customBb}
                   onChange={(e) => setCustomBb(Math.max(1, Number(e.target.value)))}
-                  className="w-full bg-background-tertiary border border-border rounded px-3 py-2 text-white text-sm"
+                  className="w-full bg-background-tertiary border border-border rounded px-3 py-2 text-white text-sm focus:ring-2 focus:ring-gold/50 focus:ring-offset-1 focus:ring-offset-background"
                 />
               </div>
               <button
@@ -460,6 +465,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
             <button
               key={diff.value}
               onClick={() => handleManualConfig({ difficulty: diff.value })}
+              aria-pressed={config.difficulty === diff.value}
               className={cn(
                 'w-full flex items-center gap-4 p-4 rounded-lg border-2 transition-all text-left',
                 config.difficulty === diff.value

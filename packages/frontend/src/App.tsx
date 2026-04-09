@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import {
   SignedIn,
@@ -12,11 +12,12 @@ import AppShell from '@/components/AppShell';
 import Dashboard from '@/pages/Dashboard';
 import ModuleList from '@/pages/ModuleList';
 import ModuleDetail from '@/pages/ModuleDetail';
-import PracticeSession from '@/pages/PracticeSession';
 import Achievements from '@/pages/Achievements';
 import Leaderboard from '@/pages/Leaderboard';
 import PlacementTest from '@/pages/PlacementTest';
-import PlayVsAI from '@/pages/PlayVsAI';
+
+const PlayVsAI = React.lazy(() => import('@/pages/PlayVsAI'));
+const PracticeSession = React.lazy(() => import('@/pages/PracticeSession'));
 import GameHistory from '@/pages/GameHistory';
 import RangeMatrix from '@/pages/RangeMatrix';
 
@@ -91,9 +92,9 @@ function AuthenticatedApp() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/modules" element={<ModuleList />} />
         <Route path="/modules/:slug" element={<ModuleDetail />} />
-        <Route path="/practice/:slug" element={<PracticeSession />} />
+        <Route path="/practice/:slug" element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>}><PracticeSession /></Suspense>} />
         <Route path="/achievements" element={<Achievements />} />
-        <Route path="/play" element={<PlayVsAI />} />
+        <Route path="/play" element={<Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="w-8 h-8 border-2 border-gold border-t-transparent rounded-full animate-spin" /></div>}><PlayVsAI /></Suspense>} />
         <Route path="/play/history" element={<GameHistory />} />
         <Route path="/ranges" element={<RangeMatrix />} />
         <Route path="/leaderboard" element={<Leaderboard />} />

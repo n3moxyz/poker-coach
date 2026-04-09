@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@clerk/clerk-react';
 import { useGameStore, BLIND_SCHEDULE } from '@/stores/gameStore';
 import { useCompleteHand } from '@/hooks/useGame';
@@ -18,41 +18,50 @@ import ClipboardList from 'lucide-react/dist/esm/icons/clipboard-list';
 import { cn } from '@/lib/utils';
 
 export default function PlayVsAI() {
-  const {
-    phase,
-    config,
-    players,
-    communityCards,
-    pot,
-    currentBet,
-    dealerIndex,
-    activePlayerIndex,
-    feedbacks,
-    handActions,
-    isProcessingAI,
-    handHistory,
-    totalHandsPlayed,
-    sessionXpEarned,
-    rebuyCount,
-    needsRebuy,
-    currentBlindLevel,
-    handsAtCurrentLevel,
-    eliminatedPlayers,
-    tournamentFinished,
-    tournamentPlacement,
-    updateConfig,
-    startGame,
-    playerFold,
-    playerFoldAndSkip,
-    playerCheck,
-    playerCall,
-    playerRaise,
-    playerAllIn,
-    newHand,
-    resetGame,
-    addSessionXp,
-    doRebuy,
-  } = useGameStore();
+  // Game state
+  const phase = useGameStore(s => s.phase);
+  const config = useGameStore(s => s.config);
+  const players = useGameStore(s => s.players);
+  const communityCards = useGameStore(s => s.communityCards);
+  const pot = useGameStore(s => s.pot);
+  const currentBet = useGameStore(s => s.currentBet);
+  const dealerIndex = useGameStore(s => s.dealerIndex);
+  const activePlayerIndex = useGameStore(s => s.activePlayerIndex);
+  const isProcessingAI = useGameStore(s => s.isProcessingAI);
+
+  // Feedback & history
+  const feedbacks = useGameStore(s => s.feedbacks);
+  const handActions = useGameStore(s => s.handActions);
+  const handHistory = useGameStore(s => s.handHistory);
+
+  // Session stats
+  const totalHandsPlayed = useGameStore(s => s.totalHandsPlayed);
+  const sessionXpEarned = useGameStore(s => s.sessionXpEarned);
+  const rebuyCount = useGameStore(s => s.rebuyCount);
+
+  // Tournament state
+  const currentBlindLevel = useGameStore(s => s.currentBlindLevel);
+  const handsAtCurrentLevel = useGameStore(s => s.handsAtCurrentLevel);
+  const eliminatedPlayers = useGameStore(s => s.eliminatedPlayers);
+  const tournamentFinished = useGameStore(s => s.tournamentFinished);
+  const tournamentPlacement = useGameStore(s => s.tournamentPlacement);
+
+  // Cash game
+  const needsRebuy = useGameStore(s => s.needsRebuy);
+
+  // Actions (stable references — don't cause re-renders)
+  const updateConfig = useGameStore(s => s.updateConfig);
+  const startGame = useGameStore(s => s.startGame);
+  const playerFold = useGameStore(s => s.playerFold);
+  const playerFoldAndSkip = useGameStore(s => s.playerFoldAndSkip);
+  const playerCheck = useGameStore(s => s.playerCheck);
+  const playerCall = useGameStore(s => s.playerCall);
+  const playerRaise = useGameStore(s => s.playerRaise);
+  const playerAllIn = useGameStore(s => s.playerAllIn);
+  const newHand = useGameStore(s => s.newHand);
+  const resetGame = useGameStore(s => s.resetGame);
+  const addSessionXp = useGameStore(s => s.addSessionXp);
+  const doRebuy = useGameStore(s => s.doRebuy);
 
   const { isSignedIn } = useAuth();
   const [soundOn, setSoundOn] = useState(isSoundEnabled);
@@ -145,7 +154,7 @@ export default function PlayVsAI() {
   }
 
   // Build session context string
-  function getSessionContext(): string {
+  const getSessionContext = useCallback((): string => {
     const handNum = `Hand #${totalHandsPlayed}`;
     if (config.gameMode === 'hand-by-hand') return handNum;
 
@@ -163,7 +172,7 @@ export default function PlayVsAI() {
     const blindInfo = BLIND_SCHEDULE[Math.min(currentBlindLevel, BLIND_SCHEDULE.length - 1)];
     const remaining = players.filter((p) => p.chips > 0).length;
     return `${handNum} | Level ${level} ($${blindInfo.smallBlind}/$${blindInfo.bigBlind}) | ${remaining} players left`;
-  }
+  }, [totalHandsPlayed, config.gameMode, config.startingChips, players, rebuyCount, currentBlindLevel]);
 
   // Average grade across all hands this session
   function getAverageGrade(): string {
@@ -329,7 +338,7 @@ export default function PlayVsAI() {
           <button
             onClick={handleToggleReview}
             className={cn(
-              'p-1 rounded hover:bg-white/10 transition-colors',
+              'p-2 rounded hover:bg-white/10 transition-colors',
               config.showHandReview ? 'text-gold' : 'text-gray-600'
             )}
             title={config.showHandReview ? 'Hand review ON' : 'Hand review OFF'}
@@ -338,7 +347,7 @@ export default function PlayVsAI() {
           </button>
           <button
             onClick={() => setSoundOn(toggleSound())}
-            className="p-1 rounded hover:bg-white/10 transition-colors"
+            className="p-2 rounded hover:bg-white/10 transition-colors"
             title={soundOn ? 'Mute sounds' : 'Enable sounds'}
           >
             {soundOn
@@ -348,7 +357,7 @@ export default function PlayVsAI() {
           </button>
           <button
             onClick={resetGame}
-            className="p-1 rounded hover:bg-red-500/20 transition-colors"
+            className="p-2 rounded hover:bg-red-500/20 transition-colors"
             title="Exit to setup"
           >
             <LogOut className="w-4 h-4 text-red-400" />

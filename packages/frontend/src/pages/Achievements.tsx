@@ -35,13 +35,40 @@ export default function Achievements() {
         </p>
       </div>
 
-      {/* Quick stats */}
+      {/* Quick stats strip */}
       {statsData && (
-        <div className="grid grid-cols-4 gap-3 mb-6">
-          <MiniStat icon={<TrendingUp className="w-4 h-4" />} label="Level" value={statsData.overview.level} color="text-gold" />
-          <MiniStat icon={<Target className="w-4 h-4" />} label="XP" value={formatXp(statsData.overview.totalXp)} color="text-blue-400" />
-          <MiniStat icon={<Target className="w-4 h-4" />} label="Accuracy" value={`${statsData.overview.overallAccuracy}%`} color="text-green-400" />
-          <MiniStat icon={<Flame className="w-4 h-4" />} label="Streak" value={`${statsData.streak.current}d`} color="text-orange-400" />
+        <div className="flex flex-wrap items-center gap-6 bg-background-secondary border border-border rounded-2xl px-6 py-4 mb-6">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-gold" />
+            <div>
+              <div className="text-2xl font-bold text-white">{statsData.overview.level}</div>
+              <div className="text-xs text-muted-foreground">Level</div>
+            </div>
+          </div>
+          <div className="w-px h-8 bg-border" />
+          <div className="flex items-center gap-2">
+            <Target className="w-4 h-4 text-blue-400" />
+            <div>
+              <div className="text-2xl font-bold text-white">{formatXp(statsData.overview.totalXp)}</div>
+              <div className="text-xs text-muted-foreground">XP</div>
+            </div>
+          </div>
+          <div className="w-px h-8 bg-border" />
+          <div className="flex items-center gap-2">
+            <Target className="w-4 h-4 text-green-400" />
+            <div>
+              <div className="text-2xl font-bold text-white">{statsData.overview.overallAccuracy}%</div>
+              <div className="text-xs text-muted-foreground">Accuracy</div>
+            </div>
+          </div>
+          <div className="w-px h-8 bg-border" />
+          <div className="flex items-center gap-2">
+            <Flame className="w-4 h-4 text-orange-400" />
+            <div>
+              <div className="text-2xl font-bold text-white">{statsData.streak.current}d</div>
+              <div className="text-xs text-muted-foreground">Streak</div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -108,16 +135,6 @@ export default function Achievements() {
         </div>
       )}
 
-    </div>
-  );
-}
-
-function MiniStat({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: string | number; color: string }) {
-  return (
-    <div className="card flex flex-col items-center justify-center py-4 px-2">
-      <div className={cn('mb-2', color)}>{icon}</div>
-      <div className="text-xl font-bold text-white">{value}</div>
-      <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
     </div>
   );
 }
@@ -233,11 +250,7 @@ function AchievementsSkeleton() {
         <div className="h-8 w-40 bg-background-secondary rounded mb-2" />
         <div className="h-4 w-72 bg-background-secondary rounded" />
       </div>
-      <div className="grid grid-cols-4 gap-3 mb-6">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="card h-20" />
-        ))}
-      </div>
+      <div className="h-20 bg-background-secondary rounded-2xl mb-6" />
       <div className="card felt-bg h-28 mb-6" />
       <div className="grid md:grid-cols-2 gap-3">
         {[...Array(4)].map((_, i) => (

@@ -23,8 +23,8 @@ export default {
         // UI colors
         border: '#1e3a2f',
         'border-light': '#2d5a48',
-        muted: '#5a6670',
-        'muted-foreground': '#8b9299',
+        muted: '#7a838c',
+        'muted-foreground': '#9ba3ab',
         // Accent colors for achievements
         'accent-blue': '#3b82f6',
         'accent-purple': '#8b5cf6',
