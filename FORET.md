@@ -549,7 +549,17 @@ The grey-out uses `isCovered()` which checks if the preset's config keys cover a
 
 30. **Bump contrast tokens before adding more UI** — The original `muted` color (#5a6670) had 3.29:1 contrast on the dark background — below WCAG AA. This affected 54+ components using `text-muted`. Fixing the token in `tailwind.config.js` is a one-line change that improves readability across the entire app. Always verify contrast ratios when choosing muted/secondary text colors on dark backgrounds.
 
-31. **Always verify migrations are applied to remote databases** - Creating a migration locally with `prisma migrate dev` only applies it to your local DB. Remote databases (Neon, production Coolify) need `prisma migrate deploy` separately. If a feature works locally but fails in production with "table does not exist", check pending migrations. Coolify's start command includes `prisma migrate deploy` so production auto-applies, but dev DBs (like Neon for local dev) need manual runs.
+31. **Unify brand voice across ALL user-facing copy** — Error messages, empty states, CTAs, and feedback should all sound like the same confident poker coach. "Failed to load modules. Please try again." is generic SaaS; "Modules are taking a moment to load." is poker-native. Loss copy should frame as learning ("Tough hand") not punishment ("You Lost"). Apply the placement test voice (warm, collaborative, poker-savvy) as the benchmark for all copy.
+
+32. **Reserve accent colors for specific roles** — Gold appeared in 7+ UI roles (nav, CTAs, XP, achievements, progress, streaks, mastery). When everything is gold, nothing pops. Reserve gold for (1) primary CTAs and (2) mastery/achievement moments. Use white/felt-green for secondary emphasis like nav active states.
+
+33. **Use CSS grid with fixed column templates for tabular data** — `flex gap-4` with variable-width content creates misaligned columns across rows. `grid-cols-[60px_55px_52px_28px_1fr_60px_36px]` locks columns to fixed widths. Every row aligns perfectly regardless of content ("WON" vs "LOST", single-char vs multi-char grades).
+
+34. **Collapse optional form sections behind progressive disclosure** — GameSetup had 8+ decision sections on one page. Adding an "Advanced Settings" accordion with `showAdvanced || selectedSpotId` as the visibility condition keeps Quick Start users fast while giving manual users full control. Sticky CTA at bottom prevents scroll fatigue.
+
+35. **First-hand onboarding via localStorage-backed tooltips** — `useOnboarding` hook tracks which onboarding steps users have seen. Tooltips show on the poker table during the first hand only, dismissed with a single "Got it, let's play" button. Shared localStorage key means dismissing from GameTable also hides the ActionBar hint. Never shows in replay mode.
+
+36. **Always verify migrations are applied to remote databases** - Creating a migration locally with `prisma migrate dev` only applies it to your local DB. Remote databases (Neon, production Coolify) need `prisma migrate deploy` separately. If a feature works locally but fails in production with "table does not exist", check pending migrations. Coolify's start command includes `prisma migrate deploy` so production auto-applies, but dev DBs (like Neon for local dev) need manual runs.
 
 ## Potential Pitfalls
 
@@ -657,11 +667,11 @@ The original Dashboard was a flat vertical stack of cards — welcome banner, st
 
 The app uses three font families: DM Sans (sans, default), Playfair Display (display, serif), JetBrains Mono (mono). After experimentation, we settled on:
 
-- **DM Sans for everything by default** — the global `h1, h2, h3` rule applies only `tracking-tight`, not `font-display`
-- **Playfair Display for branding elements only** — applied via explicit `font-display` class on the welcome name ("Edward"), hero course title ("Hand Rankings"), and the sign-in page logo
-- This gives key headings a premium serif feel while keeping the rest of the UI consistent with the clean sans-serif
+- **DM Sans for everything by default** — body text, labels, small headings
+- **Playfair Display on ALL page headings** — applied via `font-display tracking-tight` on every h1 across all pages (Dashboard, ModuleList, Achievements, Leaderboard, GameHistory, RangeMatrix) plus branding elements (welcome name, hero course title, sign-in logo)
+- This gives every page a premium serif heading while keeping body text clean with sans-serif
 
-The lesson: serif fonts stand out more, but using them on all headings makes the site feel inconsistent. Reserve serif for the 2-3 elements you want to feel "special."
+The lesson: serif on ALL primary headings is fine — it creates consistency. The earlier approach of "only 2-3 special elements" created inconsistency because some pages had serif headings and others didn't.
 
 ## Future Considerations
 
@@ -673,4 +683,4 @@ The lesson: serif fonts stand out more, but using them on all headings makes the
 
 ---
 
-*Last updated: 2026-04-09 - Comprehensive accessibility/performance/design audit: WCAG AAA contrast fixes, ARIA labels on all icon buttons, focus traps in modals, Zustand individual selectors in PlayVsAI, React.lazy for game pages, Achievements stat strip redesign, poker-specific copy. Design context established in `.impeccable.md`.*
+*Last updated: 2026-04-09 - Full design audit + critique cycle: WCAG AAA contrast, ARIA/focus traps, Zustand selectors, React.lazy, delight micro-interactions (XP pop, card stagger, grade glow), first-hand onboarding tooltips, split hero card, unified poker-native brand voice, GameSetup accordion + sticky CTA, CSS grid alignment for History/Achievements, font-display on all page headings, keyboard shortcut hints, colorblind-safe win/loss icons. Design context in `.impeccable.md`.*
