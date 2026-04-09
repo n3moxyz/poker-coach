@@ -109,11 +109,12 @@ export default function Achievements() {
             Unlocked ({achievements.unlocked.length})
           </h2>
           <div className="grid md:grid-cols-2 gap-3">
-            {achievements.unlocked.map((achievement) => (
+            {achievements.unlocked.map((achievement, index) => (
               <AchievementCard
                 key={achievement.id}
                 achievement={achievement}
                 unlocked
+                index={index}
               />
             ))}
           </div>
@@ -152,18 +153,23 @@ interface AchievementCardProps {
     unlockedAt?: Date;
   };
   unlocked?: boolean;
+  index?: number;
 }
 
-const AchievementCard = memo(function AchievementCard({ achievement, unlocked = false }: AchievementCardProps) {
+const AchievementCard = memo(function AchievementCard({ achievement, unlocked = false, index = 0 }: AchievementCardProps) {
   const rarityColors = getRarityColor(achievement.rarity);
+  const isLegendary = achievement.rarity.toUpperCase() === 'LEGENDARY';
 
   return (
     <div
       className={cn(
         'achievement-badge',
         unlocked ? 'unlocked' : 'locked',
-        achievement.rarity.toLowerCase()
+        achievement.rarity.toLowerCase(),
+        unlocked && !isLegendary && 'animate-scale-in [animation-fill-mode:both]',
+        unlocked && isLegendary && 'animate-glow-pulse'
       )}
+      style={unlocked ? { animationDelay: `${index * 0.05}s` } : undefined}
     >
       {/* Rarity indicator */}
       <div

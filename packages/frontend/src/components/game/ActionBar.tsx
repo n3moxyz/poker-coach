@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import Minus from 'lucide-react/dist/esm/icons/minus';
 import Plus from 'lucide-react/dist/esm/icons/plus';
+import { useFirstHandTooltips } from '@/hooks/useOnboarding';
 
 interface ActionBarProps {
   canCheck: boolean;
@@ -36,6 +37,7 @@ export default function ActionBar({
   onRaise,
   onAllIn,
 }: ActionBarProps) {
+  const { showTooltips } = useFirstHandTooltips();
   const isBet = currentBet === 0;
   const raiseLabel = isBet ? 'Bet' : 'Raise';
   const [raiseAmount, setRaiseAmount] = useState(minRaise);
@@ -222,6 +224,13 @@ export default function ActionBar({
             {raiseLabel} to ${raiseAmount} [Enter]
           </button>
         </div>
+      )}
+
+      {/* First-hand hint */}
+      {showTooltips && (
+        <p className="text-xs text-gold/70 text-center mb-2 animate-fade-in">
+          Your turn — check, bet, or fold based on your hand strength
+        </p>
       )}
 
       {/* Action buttons */}
