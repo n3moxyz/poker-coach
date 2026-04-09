@@ -2,9 +2,9 @@ import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right';
+import BookOpen from 'lucide-react/dist/esm/icons/book-open';
 import Flame from 'lucide-react/dist/esm/icons/flame';
 import Gamepad2 from 'lucide-react/dist/esm/icons/gamepad-2';
-import Trophy from 'lucide-react/dist/esm/icons/trophy';
 import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
 import { useProgress, useModules } from '@/hooks/useApi';
 import { useGameStats, useGameHistory } from '@/hooks/useGame';
@@ -133,17 +133,41 @@ const HeroCourseCard = memo(function HeroCourseCard({
 }: HeroCourseCardProps) {
   if (!activeModule) {
     return (
-      <div className="card felt-bg h-full flex flex-col justify-center items-center text-center py-10 px-6">
-        <Trophy className="w-10 h-10 text-gold/60 mb-4" />
-        <h2 className="text-xl font-display font-bold text-white mb-2">
-          Deal Me In
-        </h2>
-        <p className="text-muted-foreground mb-5 max-w-sm">
-          Begin with Hand Rankings and work your way to mastering the game.
-        </p>
-        <Link to="/modules" className="btn-primary">
-          Browse Modules
-        </Link>
+      <div className="card h-full p-0 overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4">
+          {/* Learn path */}
+          <div className="felt-bg rounded-2xl p-6 border border-felt-light/30 flex flex-col justify-between">
+            <div>
+              <BookOpen className="w-8 h-8 text-emerald-400 mb-3" />
+              <h3 className="text-lg font-semibold text-white mb-1">
+                Learn the Basics
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Start with Hand Rankings — the foundation of every poker hand.
+              </p>
+            </div>
+            <Link to="/modules" className="btn-secondary mt-4 w-full text-center">
+              Start Module 1
+            </Link>
+          </div>
+
+          {/* Play path */}
+          <div className="bg-gold/5 rounded-2xl p-6 border border-gold/20 flex flex-col justify-between">
+            <div>
+              <Gamepad2 className="w-8 h-8 text-gold mb-3" />
+              <h3 className="text-lg font-semibold text-white mb-1">
+                Hit the Table
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Jump into a beginner-friendly hand with live coaching on every
+                decision.
+              </p>
+            </div>
+            <Link to="/play" className="btn-primary mt-4 w-full text-center">
+              Deal Me In
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }

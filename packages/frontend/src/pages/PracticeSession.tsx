@@ -488,9 +488,9 @@ export default function PracticeSession() {
                 : 'border-red-500/50 bg-red-500/10'
             )}
           >
-            <div className="flex items-center gap-3 mb-3">
+            <div className={cn('flex items-center gap-3 mb-3', currentResult.isCorrect && 'animate-scale-in')}>
               {currentResult.isCorrect ? (
-                <CheckCircle className="w-6 h-6 text-green-400" />
+                <CheckCircle className="w-6 h-6 text-green-400 animate-bounce-subtle" />
               ) : (
                 <XCircle className="w-6 h-6 text-red-400" />
               )}
@@ -503,7 +503,7 @@ export default function PracticeSession() {
                 {currentResult.isCorrect ? 'Correct!' : 'Incorrect'}
               </span>
               {currentResult.xp.earned > 0 && (
-                <span className="xp-badge ml-auto">
+                <span className="xp-badge ml-auto animate-xp-pop">
                   +{currentResult.xp.earned} XP
                 </span>
               )}

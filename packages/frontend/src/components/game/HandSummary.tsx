@@ -81,14 +81,15 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu, xpEarne
       {/* Overall Grade */}
       <div className={cn(
         'card border-2 text-center',
-        GRADE_COLORS[record.grade.grade as FeedbackGrade]
+        GRADE_COLORS[record.grade.grade as FeedbackGrade],
+        record.grade.grade === 'Good' && 'animate-glow-pulse'
       )}>
         <div className="text-sm text-muted-foreground mb-1">Overall Grade</div>
         <div className="text-3xl font-bold">{record.grade.score}/100</div>
         <div className="text-sm font-semibold uppercase mt-1">{record.grade.grade}</div>
         <div className="mt-2 pt-2 border-t border-white/10">
           {xpEarned != null && xpEarned > 0 ? (
-            <span className="text-sm font-bold text-gold">
+            <span className="text-sm font-bold text-gold animate-xp-pop">
               +{xpEarned} XP earned
             </span>
           ) : isSignedIn === false ? (
@@ -160,13 +161,14 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu, xpEarne
       {/* Result — moved below commentary to focus on learning */}
       <div className={cn(
         'card text-center',
-        won ? 'felt-bg border-gold/30' : 'border-red-500/20'
+        won ? 'felt-bg border-gold/30' : 'border-red-500/20',
+        won && 'animate-scale-in'
       )}>
-        <Trophy className={cn('w-8 h-8 mx-auto mb-2', won ? 'text-gold' : 'text-gray-500')} />
+        <Trophy className={cn('w-8 h-8 mx-auto mb-2', won ? 'text-gold animate-bounce-subtle' : 'text-gray-500')} />
         <h2 className={cn('text-xl font-bold mb-1', won ? 'text-gold' : 'text-red-400')}>
           {won ? 'You Won!' : 'You Lost'}
         </h2>
-        <div className={cn('text-sm font-semibold', chipDelta >= 0 ? 'text-green-400' : 'text-red-400')}>
+        <div className={cn('text-sm font-semibold', chipDelta >= 0 ? 'text-green-400' : 'text-red-400', chipDelta > 0 && 'animate-slide-up')}>
           {chipDelta >= 0 ? '+' : ''}{chipDelta} chips
         </div>
         <div className="text-xs text-muted-foreground mt-1">

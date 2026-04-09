@@ -2,6 +2,15 @@ import { cn } from '@/lib/utils';
 import { type PlayerState, type GamePhase, type HandAction } from '@/stores/gameStore';
 import PlayingCard, { CardBack } from '@/components/games/PlayingCard';
 import { type Card, cardToString } from '@/lib/poker';
+import { useFirstHandTooltips } from '@/hooks/useOnboarding';
+
+const CARD_STAGGER_CLASSES = [
+  'animate-scale-in',
+  'animate-stagger-1',
+  'animate-stagger-2',
+  'animate-stagger-3',
+  'animate-stagger-4',
+];
 
 interface TournamentInfo {
   blindLevel: number;
@@ -61,6 +70,8 @@ export default function GameTable({
   isReplay,
   tournamentInfo,
 }: GameTableProps) {
+  const { showTooltips, dismiss } = useFirstHandTooltips();
+  const showOnboarding = showTooltips && !isReplay;
   const showdown = phase === 'showdown';
   const lastActions = getPlayerLastActions(handActions, phase);
 
@@ -85,10 +96,10 @@ export default function GameTable({
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-1 sm:gap-1.5">
             <div className="flex gap-1 sm:gap-1.5">
               {communityCards.map((card, i) => (
-                <PlayingCard key={i} card={cardToString(card)} size="xs" className="sm:hidden" />
+                <PlayingCard key={cardToString(card)} card={cardToString(card)} size="xs" className={cn('sm:hidden', CARD_STAGGER_CLASSES[i])} />
               ))}
               {communityCards.map((card, i) => (
-                <PlayingCard key={`sm-${i}`} card={cardToString(card)} size="sm" className="hidden sm:block" />
+                <PlayingCard key={`sm-${cardToString(card)}`} card={cardToString(card)} size="sm" className={cn('hidden sm:block', CARD_STAGGER_CLASSES[i])} />
               ))}
               {/* Placeholder slots for upcoming cards */}
               {Array.from({ length: 5 - communityCards.length }).map((_, i) => (
@@ -99,7 +110,7 @@ export default function GameTable({
               ))}
             </div>
             {pot > 0 && (
-              <div className="bg-black/60 backdrop-blur-sm rounded-full px-2 sm:px-4 py-0.5 sm:py-1 border border-gold/30">
+              <div className="bg-black/60 backdrop-blur-sm rounded-full px-2 sm:px-4 py-0.5 sm:py-1 border border-gold/30 transition-all duration-500 drop-shadow-[0_0_8px_rgba(245,197,24,0.3)]">
                 <span className="text-gold font-bold text-xs sm:text-sm">Pot: ${pot}</span>
               </div>
             )}
@@ -171,6 +182,34 @@ export default function GameTable({
               </div>
             );
           })}
+
+          {/* Onboarding tooltips — first hand only */}
+          {showOnboarding && (
+            <>
+              {/* Tooltip: Community cards */}
+              <div className="absolute top-2 left-1/2 -translate-x-1/2 z-50 animate-slide-down">
+                <div className="bg-background-secondary border border-gold/30 rounded-xl px-4 py-3 shadow-lg max-w-[260px] text-center">
+                  <p className="text-sm text-white font-medium mb-1">Community Cards</p>
+                  <p className="text-xs text-muted-foreground">Shared cards appear here each street. Everyone uses them.</p>
+                </div>
+              </div>
+
+              {/* Tooltip: Your hand */}
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 animate-slide-up">
+                <div className="bg-background-secondary border border-gold/30 rounded-xl px-4 py-3 shadow-lg max-w-[240px] text-center">
+                  <p className="text-sm text-white font-medium mb-1">Your Hand</p>
+                  <p className="text-xs text-muted-foreground">Only you can see these cards. Make the best 5-card hand.</p>
+                </div>
+              </div>
+
+              {/* Dismiss button */}
+              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 z-50">
+                <button onClick={dismiss} className="btn-primary text-sm px-6 py-2 animate-scale-in">
+                  Got it, let&#39;s play
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
