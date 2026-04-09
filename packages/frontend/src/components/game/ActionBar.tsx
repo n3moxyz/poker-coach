@@ -247,7 +247,7 @@ export default function ActionBar({
           )}
         >
           Fold
-          <span className="block text-[10px] opacity-60">[F]</span>
+          <kbd className="hidden sm:inline ml-1 text-[10px] opacity-50 font-mono">F</kbd>
         </button>
 
         {/* Check or Call */}
@@ -263,7 +263,7 @@ export default function ActionBar({
             )}
           >
             Check
-            <span className="block text-[10px] opacity-60">[C]</span>
+            <kbd className="hidden sm:inline ml-1 text-[10px] opacity-50 font-mono">C</kbd>
           </button>
         ) : canCall ? (
           <button
@@ -277,7 +277,7 @@ export default function ActionBar({
             )}
           >
             Call ${callAmount}
-            <span className="block text-[10px] opacity-60">[C]</span>
+            <kbd className="hidden sm:inline ml-1 text-[10px] opacity-50 font-mono">C</kbd>
           </button>
         ) : null}
 
@@ -298,7 +298,7 @@ export default function ActionBar({
             )}
           >
             {raiseLabel}
-            <span className="block text-[10px] opacity-60">[R]</span>
+            <kbd className="hidden sm:inline ml-1 text-[10px] opacity-50 font-mono">R</kbd>
           </button>
         )}
       </div>

@@ -22,7 +22,7 @@ export default function RangeMatrix() {
     <div className="md:ml-64 pb-20 md:pb-6">
       {/* Header */}
       <div className="mb-4">
-        <h1 className="text-2xl font-bold text-white mb-1">Preflop Ranges</h1>
+        <h1 className="text-2xl font-bold text-white mb-1 font-display tracking-tight">Preflop Ranges</h1>
         <p className="text-sm text-muted-foreground">
           All 169 starting hands by tier. Select a position to see which hands to open.
         </p>
@@ -111,7 +111,7 @@ export default function RangeMatrix() {
                   <button
                     key={`${rowIdx}-${colIdx}`}
                     className={cn(
-                      'aspect-square flex items-center justify-center rounded-[3px] sm:rounded text-[8px] sm:text-[11px] font-medium transition-all cursor-pointer border border-transparent',
+                      'aspect-square min-h-[28px] sm:min-h-0 flex items-center justify-center rounded-[3px] sm:rounded text-[8px] sm:text-[11px] font-medium transition-all cursor-pointer border border-transparent',
                       tierStyle.bg,
                       tierStyle.text,
                       dimmed && 'opacity-15',

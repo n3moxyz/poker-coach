@@ -360,7 +360,7 @@ export default function PracticeSession() {
   if (error || !data) {
     return (
       <div className="md:ml-64 p-8 text-center">
-        <p className="text-red-400">Failed to load questions. Please try again.</p>
+        <p className="text-red-400">Questions are taking a moment to load.</p>
         <Link to={`/modules/${slug}`} className="text-gold hover:text-gold-light mt-4 inline-block">
           Back to Module
         </Link>

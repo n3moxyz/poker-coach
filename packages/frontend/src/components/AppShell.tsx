@@ -88,7 +88,9 @@ export default function AppShell({ children }: AppShellProps) {
                 className={cn(
                   'flex flex-col items-center justify-center gap-0.5 min-w-0 flex-1 py-2 transition-colors',
                   isActive
-                    ? 'text-gold'
+                    ? isPlay
+                      ? 'text-gold'
+                      : 'text-white'
                     : isPlay
                     ? 'text-gold/80 hover:text-gold'
                     : 'text-muted-foreground hover:text-white'

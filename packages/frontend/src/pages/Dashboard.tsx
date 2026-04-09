@@ -6,6 +6,8 @@ import BookOpen from 'lucide-react/dist/esm/icons/book-open';
 import Flame from 'lucide-react/dist/esm/icons/flame';
 import Gamepad2 from 'lucide-react/dist/esm/icons/gamepad-2';
 import BarChart3 from 'lucide-react/dist/esm/icons/bar-chart-3';
+import Check from 'lucide-react/dist/esm/icons/check';
+import X from 'lucide-react/dist/esm/icons/x';
 import { useProgress, useModules } from '@/hooks/useApi';
 import { useGameStats, useGameHistory } from '@/hooks/useGame';
 import {
@@ -147,7 +149,7 @@ const HeroCourseCard = memo(function HeroCourseCard({
               </p>
             </div>
             <Link to="/modules" className="btn-secondary mt-4 w-full text-center">
-              Start Module 1
+              Start Hand Rankings
             </Link>
           </div>
 
@@ -211,7 +213,7 @@ const HeroCourseCard = memo(function HeroCourseCard({
         to={`/modules/${activeModule.slug}`}
         className="btn-primary text-center w-full sm:w-auto sm:self-start"
       >
-        Continue Lesson
+        Continue {activeModule.name}
       </Link>
     </div>
   );
@@ -371,12 +373,12 @@ const RecentHandsCard = memo(function RecentHandsCard({
       {!hasHands ? (
         <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
           <BarChart3 className="w-8 h-8 text-muted/40 mb-2" />
-          <p className="text-sm text-muted-foreground">No hands yet</p>
+          <p className="text-sm text-muted-foreground">Ready for your first win?</p>
           <Link
             to="/play"
             className="text-xs text-gold hover:text-gold-light mt-1"
           >
-            Play your first hand
+            Deal your first hand
           </Link>
         </div>
       ) : (
@@ -390,7 +392,7 @@ const RecentHandsCard = memo(function RecentHandsCard({
                 <div className="flex items-center gap-2">
                   <span
                     className={cn(
-                      'text-xs font-semibold w-9',
+                      'text-xs font-semibold w-12 inline-flex items-center gap-0.5',
                       hand.result === 'win'
                         ? 'text-emerald-400'
                         : hand.result === 'loss'
@@ -398,6 +400,8 @@ const RecentHandsCard = memo(function RecentHandsCard({
                           : 'text-muted-foreground'
                     )}
                   >
+                    {hand.result === 'win' && <Check className="w-3 h-3" />}
+                    {hand.result === 'loss' && <X className="w-3 h-3" />}
                     {hand.result === 'win'
                       ? 'Won'
                       : hand.result === 'loss'
