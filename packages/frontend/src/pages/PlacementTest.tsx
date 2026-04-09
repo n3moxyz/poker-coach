@@ -294,7 +294,7 @@ export default function PlacementTest() {
         {/* Error state */}
         {submitError && !isSubmitting && (
           <div className="text-center space-y-3">
-            <p className="text-red-400">Failed to submit test. Please try again.</p>
+            <p className="text-red-400">Your answers didn't send. Let's try that again.</p>
             <div className="flex justify-center gap-3">
               <button
                 onClick={() => {

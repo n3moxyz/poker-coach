@@ -8,7 +8,7 @@ interface CoachingPanelProps {
 }
 
 const GRADE_STYLES: Record<FeedbackGrade, { bg: string; border: string; text: string; label: string }> = {
-  Good: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', label: 'Good Play' },
+  Good: { bg: 'bg-green-500/10', border: 'border-green-500/30', text: 'text-green-400', label: 'Good' },
   Okay: { bg: 'bg-yellow-500/10', border: 'border-yellow-500/30', text: 'text-yellow-400', label: 'Okay' },
   Mistake: { bg: 'bg-red-500/10', border: 'border-red-500/30', text: 'text-red-400', label: 'Mistake' },
 };

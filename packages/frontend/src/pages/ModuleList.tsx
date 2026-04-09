@@ -53,7 +53,7 @@ export default function ModuleList() {
   if (error) {
     return (
       <div className="md:ml-64 p-8 text-center">
-        <p className="text-red-400">Failed to load modules. Please try again.</p>
+        <p className="text-red-400">Modules are taking a moment to load.</p>
       </div>
     );
   }
@@ -62,7 +62,7 @@ export default function ModuleList() {
     <div className="md:ml-64 pb-20 md:pb-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">Learning Modules</h1>
+        <h1 className="text-2xl font-bold text-white mb-2 font-display tracking-tight">Learning Modules</h1>
         <p className="text-muted-foreground">
           Master each module to unlock the next. You have{' '}
           <span className="text-gold">{formatXp(data?.totalXp || 0)} XP</span>.
@@ -135,7 +135,9 @@ export default function ModuleList() {
                     <>
                       <span className="text-muted hidden sm:inline">·</span>
                       <span className="text-muted-foreground whitespace-nowrap">
-                        {formatXp(module.unlockRequirement)} XP
+                        {data?.totalXp != null && module.unlockRequirement > data.totalXp
+                          ? `Earn ${formatXp(module.unlockRequirement - data.totalXp)} more XP to unlock`
+                          : `Unlocks at ${formatXp(module.unlockRequirement)} XP`}
                       </span>
                     </>
                   )}

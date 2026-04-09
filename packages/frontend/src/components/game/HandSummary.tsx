@@ -151,11 +151,9 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu, xpEarne
         </div>
 
         {/* Coach's takeaway — combined lessons + note */}
-        {(analysis.keyLessons.length > 0 || analysis.coachNote) && (
-          <p className="text-sm text-purple-300 italic border-t border-border pt-3 leading-relaxed">
-            {analysis.coachNote || analysis.keyLessons[0]}
-          </p>
-        )}
+        <p className="text-sm text-purple-300 italic border-t border-border pt-3 leading-relaxed">
+          {analysis.coachNote || analysis.keyLessons[0] || 'Keep studying the analysis — every hand teaches you something.'}
+        </p>
       </div>
 
       {/* Result — moved below commentary to focus on learning */}
@@ -166,13 +164,13 @@ export default function HandSummary({ record, onPlayAgain, onBackToMenu, xpEarne
       )}>
         <Trophy className={cn('w-8 h-8 mx-auto mb-2', won ? 'text-gold animate-bounce-subtle' : 'text-gray-500')} />
         <h2 className={cn('text-xl font-bold mb-1', won ? 'text-gold' : 'text-red-400')}>
-          {won ? 'You Won!' : 'You Lost'}
+          {won ? 'You won!' : 'Tough hand'}
         </h2>
         <div className={cn('text-sm font-semibold', chipDelta >= 0 ? 'text-green-400' : 'text-red-400', chipDelta > 0 && 'animate-slide-up')}>
           {chipDelta >= 0 ? '+' : ''}{chipDelta} chips
         </div>
         <div className="text-xs text-muted-foreground mt-1">
-          Pot: ${record.pot}
+          {won ? `Took down a $${record.pot} pot` : `Pot: $${record.pot}`}
         </div>
       </div>
 

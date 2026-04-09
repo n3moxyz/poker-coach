@@ -72,7 +72,7 @@ export default function GameHistory() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-white">Hand History</h1>
+            <h1 className="text-2xl font-bold text-white font-display tracking-tight">Hand History</h1>
             <p className="text-sm text-muted-foreground">
               {total} hand{total !== 1 ? 's' : ''} played
             </p>
@@ -100,12 +100,12 @@ export default function GameHistory() {
       {!isLoading && hands.length === 0 && (
         <div className="card text-center py-12">
           <History className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-white mb-2">No hands on record</h2>
+          <h2 className="text-lg font-semibold text-white mb-2">Every legend starts somewhere</h2>
           <p className="text-muted-foreground mb-6">
-            Play a hand against the AI to start building your history.
+            Deal your first hand and start building your record.
           </p>
           <Link to="/play" className="btn-primary px-6 py-3">
-            Start Playing
+            Deal Me In
           </Link>
         </div>
       )}
@@ -365,32 +365,34 @@ function HandRow({ hand, onReplay }: { hand: GameHistoryEntry; onReplay: () => v
   const timeStr = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
   return (
-    <div className="card flex items-center gap-4">
+    <div className="card grid grid-cols-[60px_55px_52px_28px_1fr_60px_36px] items-center gap-3">
       {/* Date */}
-      <div className="text-center min-w-[60px]">
+      <div className="text-center">
         <div className="text-sm text-white">{dateStr}</div>
         <div className="text-xs text-muted-foreground">{timeStr}</div>
       </div>
 
       {/* Difficulty */}
-      <div className={cn('text-xs font-medium min-w-[50px]', diff.color)}>
+      <div className={cn('text-xs font-medium', diff.color)}>
         {diff.label}
       </div>
 
       {/* Result */}
-      <div className={cn('px-2 py-1 rounded text-xs font-bold uppercase', resultStyle.text, resultStyle.bg)}>
+      <div className={cn('px-2 py-1 rounded text-xs font-bold uppercase text-center', resultStyle.text, resultStyle.bg)}>
         {hand.result}
       </div>
 
       {/* Grade */}
-      {hand.overallGrade && (
-        <div className={cn('px-2 py-1 rounded border text-xs font-bold', gradeStyle)}>
-          {hand.overallGrade}
-        </div>
-      )}
+      <div>
+        {hand.overallGrade && (
+          <div className={cn('px-2 py-1 rounded border text-xs font-bold text-center', gradeStyle)}>
+            {hand.overallGrade}
+          </div>
+        )}
+      </div>
 
       {/* Chip delta */}
-      <div className="flex-1 text-right">
+      <div className="text-right">
         <span className={cn(
           'text-sm font-semibold',
           hand.chipsDelta > 0 ? 'text-green-400' : hand.chipsDelta < 0 ? 'text-red-400' : 'text-gray-400'
@@ -401,7 +403,7 @@ function HandRow({ hand, onReplay }: { hand: GameHistoryEntry; onReplay: () => v
       </div>
 
       {/* XP earned */}
-      <div className="text-right min-w-[60px]">
+      <div className="text-right">
         <span className="text-xs text-gold font-medium">+{hand.xpEarned} XP</span>
       </div>
 

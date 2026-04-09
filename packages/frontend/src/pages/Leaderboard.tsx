@@ -16,7 +16,7 @@ export default function Leaderboard() {
   if (error || !data) {
     return (
       <div className="md:ml-64 p-8 text-center">
-        <p className="text-red-400">Failed to load leaderboard. Please try again.</p>
+        <p className="text-red-400">Leaderboard's taking a moment. Want to try again?</p>
       </div>
     );
   }
@@ -27,7 +27,7 @@ export default function Leaderboard() {
     <div className="md:ml-64 pb-20 md:pb-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">Leaderboard</h1>
+        <h1 className="text-2xl font-bold text-white mb-2 font-display tracking-tight">Leaderboard</h1>
         <p className="text-muted-foreground">
           See how you rank among {totalPlayers} poker learners.
         </p>

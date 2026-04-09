@@ -18,7 +18,7 @@ export default function Achievements() {
   if (!achievementData) {
     return (
       <div className="md:ml-64 p-8 text-center">
-        <p className="text-red-400">Failed to load achievements. Please try again.</p>
+        <p className="text-red-400">Achievements are taking a moment to load.</p>
       </div>
     );
   }
@@ -29,7 +29,7 @@ export default function Achievements() {
     <div className="md:ml-64 pb-20 md:pb-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white mb-2">Achievements</h1>
+        <h1 className="text-2xl font-bold text-white mb-2 font-display tracking-tight">Achievements</h1>
         <p className="text-muted-foreground">
           Track your progress and unlock achievements.
         </p>
@@ -37,37 +37,26 @@ export default function Achievements() {
 
       {/* Quick stats strip */}
       {statsData && (
-        <div className="flex flex-wrap items-center gap-6 bg-background-secondary border border-border rounded-2xl px-6 py-4 mb-6">
-          <div className="flex items-center gap-2">
+        <div className="grid grid-cols-4 bg-background-secondary border border-border rounded-2xl py-4 mb-6">
+          <div className="flex flex-col items-center gap-1 border-r border-border">
             <TrendingUp className="w-4 h-4 text-gold" />
-            <div>
-              <div className="text-2xl font-bold text-white">{statsData.overview.level}</div>
-              <div className="text-xs text-muted-foreground">Level</div>
-            </div>
+            <div className="text-2xl font-bold text-white">{statsData.overview.level}</div>
+            <div className="text-xs text-muted-foreground">Level</div>
           </div>
-          <div className="w-px h-8 bg-border" />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center gap-1 border-r border-border">
             <Target className="w-4 h-4 text-blue-400" />
-            <div>
-              <div className="text-2xl font-bold text-white">{formatXp(statsData.overview.totalXp)}</div>
-              <div className="text-xs text-muted-foreground">XP</div>
-            </div>
+            <div className="text-2xl font-bold text-white">{formatXp(statsData.overview.totalXp)}</div>
+            <div className="text-xs text-muted-foreground">XP</div>
           </div>
-          <div className="w-px h-8 bg-border" />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center gap-1 border-r border-border">
             <Target className="w-4 h-4 text-green-400" />
-            <div>
-              <div className="text-2xl font-bold text-white">{statsData.overview.overallAccuracy}%</div>
-              <div className="text-xs text-muted-foreground">Accuracy</div>
-            </div>
+            <div className="text-2xl font-bold text-white">{statsData.overview.overallAccuracy}%</div>
+            <div className="text-xs text-muted-foreground">Accuracy</div>
           </div>
-          <div className="w-px h-8 bg-border" />
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-center gap-1">
             <Flame className="w-4 h-4 text-orange-400" />
-            <div>
-              <div className="text-2xl font-bold text-white">{statsData.streak.current}d</div>
-              <div className="text-xs text-muted-foreground">Streak</div>
-            </div>
+            <div className="text-2xl font-bold text-white">{statsData.streak.current}d</div>
+            <div className="text-xs text-muted-foreground">Streak</div>
           </div>
         </div>
       )}

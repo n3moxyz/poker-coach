@@ -66,6 +66,7 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
   const [customBb, setCustomBb] = useState(config.bigBlind);
   const [showBlindSchedule, setShowBlindSchedule] = useState(false);
   const [selectedSpotId, setSelectedSpotId] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Grey-out helpers: determine which config sections are pre-filled by the selected spot
   const selectedSpot = selectedSpotId ? COMMON_SPOTS.find(s => s.id === selectedSpotId) : null;
@@ -77,6 +78,9 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
 
   // Clear selected spot when user manually changes any setting
   const handleManualConfig = (updates: Partial<GameConfig>) => {
+    if (selectedSpotId) {
+      setShowAdvanced(true);
+    }
     setSelectedSpotId(null);
     onUpdateConfig(updates);
   };
@@ -230,7 +234,23 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
           })}
         </div>
 
-        {/* Hand Review Toggle */}
+      </div>
+
+      {/* Advanced settings toggle */}
+      <button
+        onClick={() => setShowAdvanced(!showAdvanced)}
+        className="w-full flex items-center justify-between py-3 text-sm text-muted-foreground hover:text-white transition-colors"
+        aria-expanded={showAdvanced}
+      >
+        <span>Advanced Settings</span>
+        <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", showAdvanced && "rotate-180")} />
+      </button>
+
+      {(showAdvanced || selectedSpotId) && (
+      <div className="space-y-8 animate-slide-up">
+
+      {/* Hand Review Toggle */}
+      <div className={cn('card space-y-4 transition-opacity duration-300', isCovered('showHandReview') && 'opacity-30')}>
         <label htmlFor="show-review" className="flex items-center gap-3 cursor-pointer group">
           <input
             id="show-review"
@@ -454,6 +474,9 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
         </div>
       )}
 
+      </div>
+      )}
+
       {/* Difficulty */}
       <div className={cn('card space-y-4 transition-opacity duration-300', isCovered('difficulty') && 'opacity-30')}>
         <div className="flex items-center gap-2 text-white">
@@ -482,29 +505,31 @@ export default function GameSetup({ config, onUpdateConfig, onStart }: GameSetup
         </div>
       </div>
 
-      {/* Start Button */}
-      {selectedSpotId && (
-        <p className="text-center text-sm text-gold animate-pulse -mb-4">
-          Settings ready — hit Deal Me In!
-        </p>
-      )}
-      <button
-        onClick={() => {
-          // Enforce min players before starting
-          if (isTournament && config.playerCount < 3) {
-            handleManualConfig({ playerCount: 3 });
-          }
-          onStart();
-        }}
-        className={cn(
-          'w-full py-5 text-xl font-bold rounded-xl bg-gradient-to-r from-gold/90 to-yellow-500/90 text-black shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 tracking-wide',
-          selectedSpotId
-            ? 'shadow-gold/40 ring-2 ring-gold/50 ring-offset-2 ring-offset-background'
-            : 'shadow-gold/20 hover:shadow-gold/40'
+      {/* Start Button — sticky at bottom */}
+      <div className="sticky bottom-0 bg-gradient-to-t from-background via-background to-transparent pt-6 pb-4 -mx-4 px-4 mt-4">
+        {selectedSpotId && (
+          <p className="text-center text-sm text-gold animate-pulse mb-2">
+            Settings ready — hit Deal Me In!
+          </p>
         )}
-      >
-        Deal Me In
-      </button>
+        <button
+          onClick={() => {
+            // Enforce min players before starting
+            if (isTournament && config.playerCount < 3) {
+              handleManualConfig({ playerCount: 3 });
+            }
+            onStart();
+          }}
+          className={cn(
+            'w-full py-5 text-xl font-bold rounded-xl bg-gradient-to-r from-gold/90 to-yellow-500/90 text-black shadow-lg hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 tracking-wide',
+            selectedSpotId
+              ? 'shadow-gold/40 ring-2 ring-gold/50 ring-offset-2 ring-offset-background'
+              : 'shadow-gold/20 hover:shadow-gold/40'
+          )}
+        >
+          Deal Me In
+        </button>
+      </div>
     </div>
   );
 }
