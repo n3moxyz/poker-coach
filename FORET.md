@@ -114,6 +114,10 @@ Examples of achievements:
 - "Week Warrior" - Maintain a 7-day streak
 - "Hand Master" - Master the Hand Rankings module
 
+## Bugs Encountered
+
+- Large JSON request bodies could be parsed without an explicit size cap, which is wasteful for a learning app whose payloads are tiny. The backend now sets `express.json({ limit: '1mb' })` in `packages/backend/src/index.ts` so accidental or abusive oversized payloads fail fast instead of quietly eating memory.
+
 ### Placement Test
 
 New users don't start from zero—they take a placement test first:
