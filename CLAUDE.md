@@ -352,7 +352,8 @@ New users take an initial assessment before accessing modules:
 - Claude Code OAuth tokens (`claude setup-token`) do NOT work with the Anthropic Messages API
 - Preflop coaching uses tier-based ranges (`preflopRanges.ts`), not numeric thresholds
 - Postflop coaching uses draw detection + board texture (`handAnalysis.ts`) for accurate feedback
-- `poker.ts` ↔ `handAnalysis.ts` have a circular ESM import — works because all calls are runtime
+- `poker.ts` ↔ `handAnalysis.ts` have a circular ESM import, works because all calls are runtime
+- Express JSON parsing is capped at `1mb` in `packages/backend/src/index.ts` to avoid oversized request payloads consuming unnecessary memory
 - Coaching feedback format: `message` = verdict (what you did + right/wrong), `detail` = optimal play
 - Hand summary layout: grade → hand review → result (win/loss at bottom, not top)
 - chipDelta uses `handStartChips` snapshot (captured before blinds) — NOT `state.players` at showdown
