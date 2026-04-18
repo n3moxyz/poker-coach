@@ -96,6 +96,9 @@ export default function HandReplayModal({ record, onClose }: HandReplayModalProp
           : ''
       }`
     : 'Hand start';
+  const replayStatusMessage = currentAction
+    ? `Action ${actionIndex + 2} of ${totalActions + 1}. ${actionDesc}. Current street ${PHASE_LABELS[state.phase] || state.phase}. Pot ${state.pot}.`
+    : `Hand start. Action 1 of ${totalActions + 1}. Current street ${PHASE_LABELS[state.phase] || state.phase}. Pot ${state.pot}.`;
 
   // Find coaching feedback for the current action (human actions only)
   const currentFeedback = currentAction && currentAction.playerId === 'human'
@@ -289,6 +292,7 @@ export default function HandReplayModal({ record, onClose }: HandReplayModalProp
 
           {/* Action description + play controls */}
           <div className="flex items-center gap-3">
+            <p className="sr-only" aria-live="polite">{replayStatusMessage}</p>
             <button
               onClick={() => setIsPlaying((p) => !p)}
               aria-label={isPlaying ? 'Pause replay' : 'Play replay'}
@@ -303,7 +307,7 @@ export default function HandReplayModal({ record, onClose }: HandReplayModalProp
             >
               <RotateCcw className="w-4 h-4" />
             </button>
-            <div className="flex-1 text-sm text-white">{actionDesc}</div>
+            <div className="flex-1 text-sm text-white" aria-hidden="true">{actionDesc}</div>
           </div>
 
           {/* Equity bar */}
