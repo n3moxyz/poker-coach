@@ -412,6 +412,7 @@ function HandRow({ hand, onReplay }: { hand: GameHistoryEntry; onReplay: () => v
         onClick={onReplay}
         className="p-2 rounded-lg hover:bg-gold/10 text-muted-foreground hover:text-gold transition-colors"
         title="Replay hand"
+        aria-label="Replay hand"
       >
         <PlayCircle className="w-5 h-5" />
       </button>
