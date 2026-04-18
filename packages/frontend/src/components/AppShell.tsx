@@ -79,7 +79,9 @@ export default function AppShell({ children }: AppShellProps) {
       <nav className="fixed bottom-0 left-0 right-0 md:hidden border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-safe">
         <div className="flex items-center justify-evenly h-16 px-1">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive = item.path === '/play'
+              ? location.pathname === item.path || location.pathname.startsWith('/play/')
+              : location.pathname === item.path;
             const isPlay = item.path === '/play';
             return (
               <Link
@@ -108,7 +110,9 @@ export default function AppShell({ children }: AppShellProps) {
       <aside className="hidden md:block fixed left-0 top-16 bottom-0 w-64 border-r border-border bg-background/50 p-4">
         <nav className="space-y-2">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive = item.path === '/play'
+              ? location.pathname === item.path || location.pathname.startsWith('/play/')
+              : location.pathname === item.path;
             const isPlay = item.path === '/play';
             return (
               <Link
