@@ -182,7 +182,9 @@ export default function ActionBar({
                 />
               ) : (
                 <button
+                  type="button"
                   onClick={startEditing}
+                  aria-label={`Edit ${raiseLabel.toLowerCase()} amount, currently $${raiseAmount}`}
                   className="text-lg font-bold text-gold min-w-[3rem] text-center cursor-text hover:underline"
                 >
                   ${raiseAmount}
