@@ -399,38 +399,28 @@ New users take an initial assessment before accessing modules:
 | Component | Service | URL/Access |
 |-----------|---------|------------|
 | Frontend | Vercel | `pokercoach.cc` (custom domain) |
-| Backend | Coolify on DigitalOcean | `api.pokercoach.cc` |
-| Database | PostgreSQL (in Coolify) | Internal to Coolify |
+| Backend | Node host | `api.pokercoach.cc` |
+| Database | PostgreSQL | Private network |
 | Domain | Cloudflare | `pokercoach.cc` |
-| Auth | Clerk | dashboard.clerk.com |
+| Auth | Clerk | Managed auth provider |
 
-### DigitalOcean Droplet
+### Private Runtime
 
-- **IP:** `203.0.113.10`
-- **Size:** $12/month (2GB RAM, 1 vCPU)
-- **Region:** Singapore (SGP1)
-- **OS:** Ubuntu 24.04
+Keep host IPs, dashboard URLs, region details, and provider console links in a private ops note or password manager. Public docs should only describe the shape of the deployment, not how to reach the control plane.
 
-### Coolify Dashboard
-
-- **URL:** `http://private-admin-host:8000`
-- **What's running:**
-  - Backend app (auto-deploys from GitHub `main` branch)
-  - PostgreSQL database
-
-### Backend Environment Variables (in Coolify)
+### Backend Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `DATABASE_URL` | Coolify PostgreSQL connection string |
-| `CLERK_SECRET_KEY` | From Clerk dashboard |
-| `CLERK_PUBLISHABLE_KEY` | From Clerk dashboard |
+| `DATABASE_URL` | PostgreSQL connection string |
+| `CLERK_SECRET_KEY` | Clerk backend key |
+| `CLERK_PUBLISHABLE_KEY` | Clerk publishable key |
 | `FRONTEND_URL` | `https://pokercoach.cc` |
 | `PORT` | `3001` |
 | `NODE_ENV` | `production` (runtime only, not buildtime) |
 | `ANTHROPIC_API_KEY` | (Optional) From console.anthropic.com, for AI coaching |
 
-### Backend Start Command (in Coolify)
+### Backend Start Command
 
 ```
 npx prisma migrate deploy && npx prisma db seed && npm start
@@ -441,7 +431,7 @@ npx prisma migrate deploy && npx prisma db seed && npm start
 | Type | Name | Content |
 |------|------|---------|
 | A | `@` | `76.76.21.21` (DNS only, points to Vercel) |
-| A | `api` | `203.0.113.10` (DNS only, not proxied) |
+| A/CNAME | `api` | Backend host target from private DNS/provider config |
 | CNAME | `www` | `cname.vercel-dns.com` (DNS only) |
 
 ### Vercel Environment Variables
@@ -449,7 +439,7 @@ npx prisma migrate deploy && npx prisma db seed && npm start
 | Variable | Value |
 |----------|-------|
 | `VITE_API_URL` | `https://api.pokercoach.cc/api` |
-| `VITE_CLERK_PUBLISHABLE_KEY` | From Clerk dashboard |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key |
 
 ### Deployment Flow
 
@@ -467,12 +457,9 @@ Starts backend on port 3001
 Traefik routes api.pokercoach.cc → container
 ```
 
-### Accessing Services (for new device setup)
+### Accessing Services (for maintainers)
 
-1. **Coolify:** Go to `http://private-admin-host:8000` and log in
-2. **Vercel:** Go to `vercel.com` → poker-coach project
-3. **Cloudflare:** Go to `dash.cloudflare.com` → pokercoach.cc
-4. **Clerk:** Go to `dashboard.clerk.com`
+Private deployment dashboards, admin URLs, and account-specific setup notes belong in a password manager or private ops doc, not in the public repository. Keep this repo limited to provider-agnostic setup steps and environment variable names.
 
 ## Design Context
 

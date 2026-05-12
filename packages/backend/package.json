@@ -2,6 +2,7 @@
   "name": "poker-coach-backend",
   "version": "1.0.0",
   "description": "Poker Coach API Server",
+  "license": "MIT",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
