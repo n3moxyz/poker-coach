@@ -67,6 +67,7 @@ export default function GameHistory() {
         <div className="flex items-center gap-3">
           <Link
             to="/play"
+            aria-label="Back to play"
             className="p-2 rounded-lg hover:bg-background-secondary text-muted-foreground hover:text-white transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
