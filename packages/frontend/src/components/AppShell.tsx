@@ -73,7 +73,7 @@ export default function AppShell({ children }: AppShellProps) {
       </header>
 
       {/* Main content */}
-      <main className="container mx-auto px-4 py-6 overflow-x-hidden">{children}</main>
+      <main id="main-content" className="container mx-auto px-4 py-6 overflow-x-hidden">{children}</main>
 
       {/* Bottom navigation (mobile) */}
       <nav className="fixed bottom-0 left-0 right-0 md:hidden border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-safe">
